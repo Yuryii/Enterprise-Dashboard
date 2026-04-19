@@ -1,0 +1,33 @@
+# Build results
+bin/
+obj/
+out/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+.idea/
+
+# NuGet
+packages/
+*.nupkg
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Node (Angular dashboard)
+node_modules/
+
+# Environment
+*.env
+appsettings.*.local.json
+
+# Sensitive
+*.pfx
+*.key
