@@ -1,0 +1,14 @@
+<Solution>
+  <Project Path="CAAdventureWorks/src/AppHost/AppHost.csproj" />
+  <Project Path="CAAdventureWorks/src/Application/Application.csproj" />
+  <Project Path="CAAdventureWorks/src/Domain/Domain.csproj" />
+  <Project Path="CAAdventureWorks/src/Infrastructure/Infrastructure.csproj" />
+  <Project Path="CAAdventureWorks/src/ServiceDefaults/ServiceDefaults.csproj" />
+  <Project Path="CAAdventureWorks/src/Shared/Shared.csproj" />
+  <Project Path="CAAdventureWorks/src/Web/Web.csproj" />
+  <Project Path="CAAdventureWorks/tests/Application.FunctionalTests/Application.FunctionalTests.csproj" />
+  <Project Path="CAAdventureWorks/tests/Application.UnitTests/Application.UnitTests.csproj" />
+  <Project Path="CAAdventureWorks/tests/Domain.UnitTests/Domain.UnitTests.csproj" />
+  <Project Path="CAAdventureWorks/tests/Infrastructure.IntegrationTests/Infrastructure.IntegrationTests.csproj" />
+  <Project Path="CAAdventureWorks/tests/TestAppHost/TestAppHost.csproj" />
+</Solution>
