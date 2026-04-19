@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using CAAdventureWorks.Application.Common.Exceptions;
 using CAAdventureWorks.Application.Common.Interfaces;
 using CAAdventureWorks.Application.Common.Security;
@@ -11,9 +11,7 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
     private readonly IUser _user;
     private readonly IIdentityService _identityService;
 
-    public AuthorizationBehaviour(
-        IUser user,
-        IIdentityService identityService)
+    public AuthorizationBehaviour(IUser user, IIdentityService identityService)
     {
         _user = user;
         _identityService = identityService;
@@ -25,7 +23,6 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
 
         if (authorizeAttributes.Any())
         {
-            // Must be authenticated user
             if (_user.Id == null)
             {
                 throw new UnauthorizedAccessException();
@@ -42,8 +39,7 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
                 {
                     foreach (var role in roles)
                     {
-                        var isInRole = _user.Roles?.Any(x => role == x) ?? false;
-                        if (isInRole)
+                        if (_identityService.IsInRole(role.Trim()))
                         {
                             authorized = true;
                             break;
@@ -51,7 +47,6 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
                     }
                 }
 
-                // Must be a member of at least one role in roles
                 if (!authorized)
                 {
                     throw new ForbiddenAccessException();
@@ -64,9 +59,7 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
             {
                 foreach (var policy in authorizeAttributesWithPolicies.Select(a => a.Policy))
                 {
-                    var authorized = await _identityService.AuthorizeAsync(_user.Id, policy);
-
-                    if (!authorized)
+                    if (!_identityService.IsInRole(policy))
                     {
                         throw new ForbiddenAccessException();
                     }
@@ -74,7 +67,6 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
             }
         }
 
-        // User is authorized / authorization not required
         return await next();
     }
 }

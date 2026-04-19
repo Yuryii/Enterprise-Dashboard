@@ -1,12 +1,12 @@
-﻿using CAAdventureWorks.Application.Common.Interfaces;
+using System.Security.Claims;
+using CAAdventureWorks.Application.Common.Interfaces;
 using CAAdventureWorks.Infrastructure.Data;
 using CAAdventureWorks.Infrastructure.Data.Interceptors;
 using CAAdventureWorks.Infrastructure.Identity;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -14,8 +14,8 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        var connectionString = builder.Configuration.GetConnectionString(Services.Database);
-        Guard.Against.Null(connectionString, message: $"Connection string '{Services.Database}' not found.");
+        var connectionString = builder.Configuration.GetConnectionString("AdventureWorks");
+        Guard.Against.Null(connectionString, message: "Connection string 'AdventureWorks' not found.");
 
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
@@ -33,16 +33,34 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
-        builder.Services.AddAuthentication()
-            .AddBearerToken(IdentityConstants.BearerScheme);
+        var keycloakAuthority = builder.Configuration["Keycloak:Authority"] ?? "http://localhost:8080/realms/AdventureWorks";
+        var keycloakAudience = builder.Configuration["Keycloak:Audience"] ?? "adventureworks-api";
 
-        builder.Services.AddAuthorizationBuilder();
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.Authority = keycloakAuthority;
+            options.Audience = keycloakAudience;
+            options.RequireHttpsMetadata = false;
 
-        builder.Services
-            .AddIdentityCore<ApplicationUser>()
-            .AddRoles<IdentityRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>()
-            .AddApiEndpoints();
+            options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                RoleClaimType = ClaimTypes.Role,
+                NameClaimType = ClaimTypes.Name,
+            };
+        });
+
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy("Administrator", policy => policy.RequireRole("Administrator"))
+            .AddPolicy("Manager", policy => policy.RequireRole("Manager", "Administrator"));
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();

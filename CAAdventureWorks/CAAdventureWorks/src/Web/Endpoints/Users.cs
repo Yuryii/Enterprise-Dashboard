@@ -1,7 +1,5 @@
-﻿using CAAdventureWorks.Infrastructure.Identity;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+using CAAdventureWorks.Application.Common.Interfaces;
+using Microsoft.AspNetCore.Http;
 
 namespace CAAdventureWorks.Web.Endpoints;
 
@@ -9,21 +7,15 @@ public class Users : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.MapIdentityApi<ApplicationUser>();
-
-        groupBuilder.MapPost(Logout, "logout").RequireAuthorization();
-    }
-
-    [EndpointSummary("Log out")]
-    [EndpointDescription("Logs out the current user by clearing the authentication cookie.")]
-    public static async Task<Results<Ok, UnauthorizedHttpResult>> Logout(SignInManager<ApplicationUser> signInManager, [FromBody] object empty)
-    {
-        if (empty != null)
+        groupBuilder.MapGet((IUser user) =>
         {
-            await signInManager.SignOutAsync();
-            return TypedResults.Ok();
-        }
+            if (user.Id == null)
+                return (IResult)TypedResults.Unauthorized();
 
-        return TypedResults.Unauthorized();
+            return TypedResults.Ok(new { user.Id, user.UserName, user.Roles });
+        }, "/me")
+        .WithName("GetCurrentUser")
+        .WithTags("Users")
+        .RequireAuthorization();
     }
 }

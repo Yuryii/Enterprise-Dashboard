@@ -1,16 +1,10 @@
-﻿using CAAdventureWorks.Application.Common.Models;
-
 namespace CAAdventureWorks.Application.Common.Interfaces;
 
 public interface IIdentityService
 {
-    Task<string?> GetUserNameAsync(string userId);
+    string? GetUserId();
 
-    Task<bool> IsInRoleAsync(string userId, string role);
+    string? GetUserName();
 
-    Task<bool> AuthorizeAsync(string userId, string policyName);
-
-    Task<(Result Result, string UserId)> CreateUserAsync(string userName, string password);
-
-    Task<Result> DeleteUserAsync(string userId);
+    bool IsInRole(string role);
 }

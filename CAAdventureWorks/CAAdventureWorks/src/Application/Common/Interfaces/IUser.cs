@@ -1,8 +1,10 @@
-﻿namespace CAAdventureWorks.Application.Common.Interfaces;
+namespace CAAdventureWorks.Application.Common.Interfaces;
 
 public interface IUser
 {
     string? Id { get; }
-    List<string>? Roles { get; }
 
+    string? UserName { get; }
+
+    List<string>? Roles { get; }
 }
