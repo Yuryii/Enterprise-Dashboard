@@ -7,15 +7,19 @@ public class Users : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.MapGet((IUser user) =>
-        {
-            if (user.Id == null)
-                return (IResult)TypedResults.Unauthorized();
+        groupBuilder.MapGet(GetCurrentUser, "/me")
+            .WithName("GetCurrentUser")
+            .WithTags("Users")
+            .RequireAuthorization();
+    }
 
-            return TypedResults.Ok(new { user.Id, user.UserName, user.Roles });
-        }, "/me")
-        .WithName("GetCurrentUser")
-        .WithTags("Users")
-        .RequireAuthorization();
+    [EndpointSummary("Get current user")]
+    [EndpointDescription("Retrieves the current authenticated user's information.")]
+    public static IResult GetCurrentUser(IUser user)
+    {
+        if (user.Id == null)
+            return TypedResults.Unauthorized();
+
+        return TypedResults.Ok(new { user.Id, user.UserName, user.Roles });
     }
 }

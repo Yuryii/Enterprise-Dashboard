@@ -39,8 +39,12 @@ app.MapScalarApiReference();
 
 app.UseExceptionHandler(options => { });
 
-app.Map("/", () => Results.Redirect("/scalar"));
+app.MapGet("/", () => Results.Redirect("/scalar"))
+    .WithName("RootRedirect")
+    .WithTags("System")
+    .ExcludeFromDescription();
 
+// Run the app
 app.MapDefaultEndpoints();
 app.MapEndpoints(typeof(Program).Assembly);
 
