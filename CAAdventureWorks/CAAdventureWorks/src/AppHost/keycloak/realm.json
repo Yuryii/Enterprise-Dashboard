@@ -1,0 +1,158 @@
+{
+  "realm": "AdventureWorks",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "Administrator",
+        "description": "Administrator role with full access"
+      },
+      {
+        "name": "Manager",
+        "description": "Manager role with elevated access"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "adventureworks-api",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "consentRequired": false,
+      "redirectUris": [
+        "http://localhost:5000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5000"
+      ]
+    },
+    {
+      "clientId": "adventureworks-web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "consentRequired": false,
+      "redirectUris": [
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "executive-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "executive-adventureworks@placeholder.com",
+      "firstName": "Executive",
+      "lastName": "Administrator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Manager@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Administrator", "Manager"]
+    },
+    {
+      "username": "information-services-manager",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "is-adventureworks@placeholder.com",
+      "firstName": "Information",
+      "lastName": "Services Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Manager@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Manager"]
+    },
+    {
+      "username": "finance-manager",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "finance-adventureworks@placeholder.com",
+      "firstName": "Finance",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Manager@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Manager"]
+    },
+    {
+      "username": "hr-manager",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "hr-adventureworks@placeholder.com",
+      "firstName": "Human Resources",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Manager@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Manager"]
+    },
+    {
+      "username": "qa-manager",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "qa-adventureworks@placeholder.com",
+      "firstName": "Quality Assurance",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Manager@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Manager"]
+    },
+    {
+      "username": "rd-manager",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "rd-adventureworks@placeholder.com",
+      "firstName": "Research & Development",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Manager@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Manager"]
+    }
+  ]
+}

@@ -35,6 +35,7 @@ public static class DependencyInjection
 
         var keycloakAuthority = builder.Configuration["Keycloak:Authority"] ?? "http://localhost:8080/realms/AdventureWorks";
         var keycloakAudience = builder.Configuration["Keycloak:Audience"] ?? "adventureworks-api";
+        var requireHttpsMetadata = !builder.Environment.IsDevelopment();
 
         builder.Services.AddAuthentication(options =>
         {
@@ -45,7 +46,7 @@ public static class DependencyInjection
         {
             options.Authority = keycloakAuthority;
             options.Audience = keycloakAudience;
-            options.RequireHttpsMetadata = false;
+            options.RequireHttpsMetadata = requireHttpsMetadata;
 
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {
@@ -57,6 +58,10 @@ public static class DependencyInjection
                 NameClaimType = ClaimTypes.Name,
             };
         });
+
+        builder.Services.AddHttpClient<IKeycloakService, KeycloakService>();
+
+        builder.Services.AddHostedService<KeycloakSeedService>();
 
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy("Administrator", policy => policy.RequireRole("Administrator"))
