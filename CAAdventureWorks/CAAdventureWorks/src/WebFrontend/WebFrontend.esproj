@@ -3,6 +3,7 @@
     <OutputType>library</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <IsAspireProjectResource>false</IsAspireProjectResource>
+    <OutputPath>bin\</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
