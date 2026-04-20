@@ -13,8 +13,7 @@ public class DepartmentsEndpoint : IEndpointGroup
     {
         groupBuilder.MapGet(GetDepartments, "/")
             .WithName("GetDepartments")
-            .WithTags("Departments")
-            .RequireAuthorization("Administrator");
+            .WithTags("Departments");
 
         groupBuilder.MapGet(GetDepartmentById, "/{id}")
             .WithName("GetDepartmentById")
