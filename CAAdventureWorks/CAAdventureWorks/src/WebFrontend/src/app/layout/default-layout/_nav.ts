@@ -532,3 +532,4 @@ export const navItems: INavData[] = [
     name: 'Links',
     class: 'mt-auto'
   },
+];

@@ -1,12 +1,14 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { delay, filter, map, tap } from 'rxjs/operators';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { delay, filter, map, map as mapOp, take, tap } from 'rxjs/operators';
+import { race, timer } from 'rxjs';
 
 import { ColorModeService } from '@coreui/angular';
 import { IconSetService } from '@coreui/icons-angular';
 import { iconSubset } from './icons/icon-subset';
+import { OidcSecurityService } from 'angular-auth-oidc-client';
 
 @Component({
     selector: 'app-root',
@@ -20,6 +22,7 @@ export class AppComponent implements OnInit {
   readonly #activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   readonly #router = inject(Router);
   readonly #titleService = inject(Title);
+  readonly #oidcSecurityService = inject(OidcSecurityService);
 
   readonly #colorModeService = inject(ColorModeService);
   readonly #iconSetService = inject(IconSetService);
@@ -33,14 +36,13 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-
-    this.#router.events.pipe(
-        takeUntilDestroyed(this.#destroyRef)
-      ).subscribe((evt) => {
-      if (!(evt instanceof NavigationEnd)) {
-        return;
-      }
-    });
+    // Auth check with 5s timeout — prevents hanging if Keycloak is unreachable
+    race(
+      this.#oidcSecurityService.checkAuth().pipe(take(1)),
+      timer(5000).pipe(mapOp(() => null))
+    ).pipe(
+      takeUntilDestroyed(this.#destroyRef)
+    ).subscribe();
 
     this.#activatedRoute.queryParams
       .pipe(
