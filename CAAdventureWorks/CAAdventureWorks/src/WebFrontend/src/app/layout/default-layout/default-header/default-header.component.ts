@@ -1,6 +1,7 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet, AsyncPipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { map } from 'rxjs/operators';
 
 import {
   AvatarComponent,
@@ -23,15 +24,23 @@ import {
 } from '@coreui/angular';
 
 import { IconDirective } from '@coreui/icons-angular';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-default-header',
   templateUrl: './default-header.component.html',
-  imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, NavItemComponent, NavLinkDirective, RouterLink, RouterLinkActive, NgTemplateOutlet, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective]
+  imports: [
+    ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective,
+    HeaderNavComponent, NavItemComponent, NavLinkDirective, RouterLink, RouterLinkActive,
+    NgTemplateOutlet, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective,
+    AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective,
+    DropdownDividerDirective, AsyncPipe
+  ]
 })
 export class DefaultHeaderComponent extends HeaderComponent {
 
   readonly #colorModeService = inject(ColorModeService);
+  readonly #authService = inject(AuthService);
   readonly colorMode = this.#colorModeService.colorMode;
 
   readonly colorModes = [
@@ -44,6 +53,11 @@ export class DefaultHeaderComponent extends HeaderComponent {
     const currentMode = this.colorMode();
     return this.colorModes.find(mode => mode.name === currentMode)?.icon ?? 'cilSun';
   });
+
+  readonly user$ = this.#authService.userData$;
+  readonly roles$ = this.#authService.userData$.pipe(
+    map(data => (data as any)?.realm_access?.roles ?? [])
+  );
 
   constructor() {
     super();
@@ -126,4 +140,15 @@ export class DefaultHeaderComponent extends HeaderComponent {
     { id: 4, title: 'Angular Version', value: 100, color: 'success' }
   ];
 
+  logout(): void {
+    this.#authService.logout();
+  }
+
+  getUserName(user: any): string {
+    return user?.name || user?.preferred_username || user?.email || 'User';
+  }
+
+  getUserEmail(user: any): string {
+    return user?.email || '';
+  }
 }

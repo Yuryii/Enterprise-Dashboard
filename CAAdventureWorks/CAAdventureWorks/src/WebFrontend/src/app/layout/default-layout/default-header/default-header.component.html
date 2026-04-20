@@ -59,51 +59,54 @@
 <ng-template #userDropdown>
   <c-dropdown [popperOptions]="{ placement: 'bottom-start' }" variant="nav-item">
     <button [caret]="false" cDropdownToggle class="py-0 pe-0" aria-label="Open user menu">
-      <c-avatar
-        shape="rounded-1"
-        size="md"
-        src="./assets/images/avatars/8.jpg"
-        status="success"
-        textColor="primary"
-        alt="User avatar"
-      />
+      @if (user$ | async; as user) {
+        <c-avatar
+          shape="rounded-1"
+          size="md"
+          [src]="user.picture || './assets/images/avatars/8.jpg'"
+          status="success"
+          textColor="primary"
+          [alt]="getUserName(user)"
+        />
+      } @else {
+        <c-avatar
+          shape="rounded-1"
+          size="md"
+          src="./assets/images/avatars/8.jpg"
+          status="success"
+          textColor="primary"
+          alt="User avatar"
+        />
+      }
     </button>
     <ul cDropdownMenu class="pt-0 w-auto">
       <li>
         <h6 cDropdownHeader class="bg-body-secondary text-body-secondary fw-semibold py-2 rounded-top">
-          Account
+          @if (user$ | async; as user) {
+            {{ getUserName(user) }}
+          } @else {
+            Account
+          }
         </h6>
       </li>
-      <li>
-        <a cDropdownItem routerLink="">
-          <svg cIcon class="me-2" name="cilBell"></svg>
-          Updates
-          <c-badge class="ms-2 float-end" color="info"> 42</c-badge>
-        </a>
-      </li>
-      <li>
-        <a cDropdownItem routerLink="/apps/email/inbox">
-          <svg cIcon class="me-2" name="cilEnvelopeOpen"></svg>
-          Messages
-          <c-badge class="ms-2 float-end" color="success">
-            42
-          </c-badge>
-        </a>
-      </li>
-      <li>
-        <a cDropdownItem routerLink="">
-          <svg cIcon class="me-2" name="cilTask"></svg>
-          Tasks
-          <c-badge class="ms-2 float-end" color="danger"> 42</c-badge>
-        </a>
-      </li>
-      <li>
-        <a cDropdownItem routerLink="">
-          <svg cIcon class="me-2" name="cilCommentSquare"></svg>
-          Comments
-          <c-badge class="ms-auto" color="warning"> 42</c-badge>
-        </a>
-      </li>
+      @if (user$ | async; as user) {
+        @if (getUserEmail(user)) {
+          <li>
+            <span cDropdownItem class="text-body-secondary small">
+              {{ getUserEmail(user) }}
+            </span>
+          </li>
+        }
+        @if (roles$ | async; as roles) {
+          @if (roles.length > 0) {
+            <li>
+              <span cDropdownItem class="text-body-secondary small">
+                Roles: {{ roles.join(', ') }}
+              </span>
+            </li>
+          }
+        }
+      }
       <li>
         <h6 cDropdownHeader class="bg-body-secondary text-body-secondary fw-semibold py-2">
           Settings
@@ -123,37 +126,13 @@
         </a>
       </li>
       <li>
-        <a cDropdownItem routerLink="">
-          <svg cIcon class="me-2" name="cilCreditCard"></svg>
-          Payments
-          <c-badge class="ms-2 float-end" color="secondary">
-            42
-          </c-badge>
-        </a>
-      </li>
-      <li>
-        <a cDropdownItem routerLink="">
-          <svg cIcon class="me-2" name="cilFile"></svg>
-          Projects
-          <c-badge class="ms-2 float-end" color="primary">
-            42
-          </c-badge>
-        </a>
-      </li>
-      <li>
         <hr cDropdownDivider />
       </li>
       <li>
-        <a cDropdownItem routerLink="">
-          <svg cIcon class="me-2" name="cilLockLocked"></svg>
-          Lock Account
-        </a>
-      </li>
-      <li>
-        <a cDropdownItem routerLink="">
+        <button cDropdownItem (click)="logout()">
           <svg cIcon class="me-2" name="cilAccountLogout"></svg>
           Logout
-        </a>
+        </button>
       </li>
     </ul>
   </c-dropdown>
