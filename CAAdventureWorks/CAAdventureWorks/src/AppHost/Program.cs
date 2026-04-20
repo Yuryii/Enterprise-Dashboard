@@ -27,7 +27,7 @@ var frontend = builder.AddJavaScriptApp(Services.WebFrontend, "../WebFrontend", 
     .WithReference(web)
     .WaitFor(web)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 4200, env: "PORT")
+    .WithHttpEndpoint(env: "PORT")
     .WithEnvironment("apiBaseUrl", web.GetEndpoint("http"))
     .WithEnvironment("keycloakUrl", $"{keycloak.GetEndpoint("http")}/realms/CAAdventureWorks")
     .WithEnvironment(context =>
