@@ -44,7 +44,8 @@ Plus orchestration and shared concerns:
 ```
 ├── AppHost/           # Microsoft Aspire application host
 ├── ServiceDefaults/   # OpenTelemetry, resilience, service discovery defaults
-└── Shared/           # Shared models and utilities
+├── Shared/           # Shared models and utilities
+└── WebFrontend/      # Angular 21 admin dashboard (CoreUI)
 ```
 
 ### Clean Architecture Layers
@@ -72,6 +73,7 @@ Plus orchestration and shared concerns:
 | API Docs | Scalar (OpenAPI UI) | - |
 | Orchestration | Microsoft Aspire | Latest |
 | Observability | OpenTelemetry | Latest |
+| Frontend | Angular 21 + CoreUI | 5.6.21 |
 
 ## Project Structure
 
@@ -82,7 +84,7 @@ CAAdventureWorks/
 │   │   ├── Program.cs            # Orchestration entry point
 │   │   └── keycloak/
 │   │       └── realm-export.json # Keycloak realm configuration
-│   ├── Application/               # Application layer
+│   ├── Application/             # Application layer
 │   │   ├── Common/
 │   │   │   ├── Behaviors/        # MediatR pipeline behaviors
 │   │   │   │   ├── AuthorizationBehaviour.cs
@@ -110,10 +112,11 @@ CAAdventureWorks/
 │   │       └── IdentityService.cs
 │   ├── ServiceDefaults/          # Aspire service defaults
 │   ├── Shared/                   # Shared utilities
-│   └── Web/                      # Web layer
-│       ├── Program.cs            # Web API entry point
-│       ├── Endpoints/             # Minimal API endpoint groups
-│       └── Services/             # Web-scoped services
+│   ├── Web/                      # Web layer
+│   │   ├── Program.cs            # Web API entry point
+│   │   ├── Endpoints/            # Minimal API endpoint groups
+│   │   └── Services/             # Web-scoped services
+│   └── WebFrontend/              # Angular 21 admin dashboard (CoreUI)
 ├── tests/                        # Test projects
 │   ├── Application.FunctionalTests/
 │   ├── Application.UnitTests/
@@ -133,6 +136,8 @@ CAAdventureWorks/
 - [SQL Server LocalDB](https://learn.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb) or SQL Server
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for Aspire orchestration)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) or [VS Code](https://code.visualstudio.com/) with C# extension
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Node.js 20+](https://nodejs.org/) (for Angular frontend)
 
 ## Getting Started
 
@@ -170,6 +175,7 @@ dotnet run --project src/AppHost
 
 The Aspire dashboard will open automatically, showing:
 - **Web API** endpoint
+- **Angular Frontend** at port 4200
 - **Scalar API Reference** at `/scalar`
 - **Keycloak** admin console at `http://localhost:8080`
 - Health checks and telemetry

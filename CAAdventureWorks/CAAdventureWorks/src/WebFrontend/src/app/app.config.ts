@@ -9,6 +9,8 @@ import {
   withViewTransitions
 } from '@angular/router';
 import { IconSetService } from '@coreui/icons-angular';
+import { providePrimeNG } from 'primeng/config';
+import Aura from '@primeuix/themes/aura';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -26,7 +28,12 @@ export const appConfig: ApplicationConfig = {
       withHashLocation()
     ),
     IconSetService,
-    provideAnimationsAsync()
+    provideAnimationsAsync(),
+    providePrimeNG({
+      theme: {
+        preset: Aura
+      }
+    })
   ]
 };
 

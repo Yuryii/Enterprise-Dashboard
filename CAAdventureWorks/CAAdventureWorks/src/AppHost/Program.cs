@@ -22,4 +22,17 @@ var web = builder.AddProject<Projects.Web>(Services.WebApi)
         url.Url = "/scalar";
     });
 
+// Angular Frontend
+var frontend = builder.AddJavaScriptApp(Services.WebFrontend, "../WebFrontend", "start")
+    .WithReference(web)
+    .WaitFor(web)
+    .WithExternalHttpEndpoints()
+    .WithHttpEndpoint(port: 4200, env: "PORT")
+    .WithEnvironment("apiBaseUrl", web.GetEndpoint("http"))
+    .WithEnvironment("keycloakUrl", $"{keycloak.GetEndpoint("http")}/realms/CAAdventureWorks")
+    .WithEnvironment(context =>
+    {
+        context.EnvironmentVariables["NG_CLI_ANALYTICS"] = "false";
+    });
+
 builder.Build().Run();

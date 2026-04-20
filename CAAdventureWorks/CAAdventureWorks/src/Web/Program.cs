@@ -26,11 +26,12 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseCors(static builder =>
     builder.AllowAnyMethod()
         .AllowAnyHeader()
         .AllowAnyOrigin());
+
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();

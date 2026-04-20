@@ -39,6 +39,7 @@
               "src/assets"
             ],
             "styles": [
+              "node_modules/primeicons/primeicons.css",
               "src/scss/styles.scss"
             ],
             "scripts": [],

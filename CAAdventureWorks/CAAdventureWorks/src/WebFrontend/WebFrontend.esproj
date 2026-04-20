@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>library</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsAspireProjectResource>false</IsAspireProjectResource>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Watch Include="..\..\src\WebFrontend\**\*" />
+  </ItemGroup>
+</Project>
