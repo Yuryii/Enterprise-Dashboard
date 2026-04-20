@@ -3,10 +3,10 @@ using CAAdventureWorks.Application.Common.Interfaces;
 using CAAdventureWorks.Infrastructure.Data;
 using CAAdventureWorks.Infrastructure.Data.Interceptors;
 using CAAdventureWorks.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -58,10 +58,6 @@ public static class DependencyInjection
                 NameClaimType = ClaimTypes.Name,
             };
         });
-
-        builder.Services.AddHttpClient<IKeycloakService, KeycloakService>();
-
-        builder.Services.AddHostedService<KeycloakSeedService>();
 
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy("Administrator", policy => policy.RequireRole("Administrator"))
