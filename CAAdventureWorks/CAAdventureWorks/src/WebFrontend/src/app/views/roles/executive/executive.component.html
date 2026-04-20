@@ -1,0 +1,45 @@
+<c-row>
+  <c-col xs>
+    <c-card class="mb-4">
+      <c-card-header>
+        <strong>{{ title }}</strong>
+        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
+      </c-card-header>
+      <c-card-body>
+        <div class="text-center py-5">
+          <svg cIcon class="icon icon-xl text-primary mb-3" name="cil-chart-line"></svg>
+          <h3>{{ title }}</h3>
+          <p class="text-body-secondary">Executive Dashboard - Full access to all data and reports</p>
+          <div class="mt-4">
+            <c-row>
+              <c-col xs="12" md="4">
+                <c-card class="border-primary">
+                  <c-card-body>
+                    <h5>Revenue Overview</h5>
+                    <p class="text-body-secondary">Company-wide financial metrics</p>
+                  </c-card-body>
+                </c-card>
+              </c-col>
+              <c-col xs="12" md="4">
+                <c-card class="border-info">
+                  <c-card-body>
+                    <h5>Employee Metrics</h5>
+                    <p class="text-body-secondary">HR statistics and workforce data</p>
+                  </c-card-body>
+                </c-card>
+              </c-col>
+              <c-col xs="12" md="4">
+                <c-card class="border-success">
+                  <c-card-body>
+                    <h5>Production Status</h5>
+                    <p class="text-body-secondary">Manufacturing KPIs and targets</p>
+                  </c-card-body>
+                </c-card>
+              </c-col>
+            </c-row>
+          </div>
+        </div>
+      </c-card-body>
+    </c-card>
+  </c-col>
+</c-row>

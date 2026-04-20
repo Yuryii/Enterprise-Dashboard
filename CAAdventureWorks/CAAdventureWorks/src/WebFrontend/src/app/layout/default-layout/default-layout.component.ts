@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { NgScrollbar } from 'ngx-scrollbar';
 
@@ -12,11 +12,12 @@ import {
   SidebarHeaderComponent,
   SidebarNavComponent,
   SidebarToggleDirective,
-  SidebarTogglerDirective
+  SidebarTogglerDirective,
+  INavData
 } from '@coreui/angular';
 
 import { DefaultFooterComponent, DefaultHeaderComponent } from './';
-import { navItems } from './_nav';
+import { NavService } from '../core/services/nav.service';
 
 function isOverflown(element: HTMLElement) {
   return (
@@ -47,6 +48,14 @@ function isOverflown(element: HTMLElement) {
     ShadowOnScrollDirective
   ]
 })
-export class DefaultLayoutComponent {
-  public navItems = [...navItems];
+export class DefaultLayoutComponent implements OnInit {
+  private navService = inject(NavService);
+  public navItems: INavData[] = [];
+
+  async ngOnInit(): Promise<void> {
+    await this.navService.filterNavItems();
+    this.navService.filteredNavItems$.subscribe((items) => {
+      this.navItems = items;
+    });
+  }
 }

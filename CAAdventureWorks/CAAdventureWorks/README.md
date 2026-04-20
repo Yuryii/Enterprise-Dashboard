@@ -1,6 +1,6 @@
 # CAAdventureWorks
 
-A production-ready ASP.NET Core Web API built on **Clean Architecture**, featuring the full **AdventureWorks** database schema, **Microsoft Aspire** orchestration, and **Keycloak** authentication.
+A production-ready ASP.NET Core Web API built on **Clean Architecture**, featuring the full **AdventureWorks** database schema, **Microsoft Aspire** orchestration, **Keycloak** authentication, and an **Angular 21** admin dashboard.
 
 This project was generated using the [Clean.Architecture.Solution.Template](https://github.com/jasontaylordev/CleanArchitecture) version **10.8.0**.
 
@@ -13,6 +13,15 @@ This project was generated using the [Clean.Architecture.Solution.Template](http
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [Keycloak Authentication](#keycloak-authentication)
+  - [Realm & Clients](#realm--clients)
+  - [Roles](#roles)
+  - [Admin Access](#admin-access)
+  - [Frontend Authentication Flow](#frontend-authentication-flow)
+- [Angular Frontend Authentication](#angular-frontend-authentication)
+  - [Authentication Flow](#authentication-flow)
+  - [Auth Service & Guards](#auth-service--guards)
+  - [Environment Configuration](#environment-configuration)
+  - [HTTP Interceptor](#http-interceptor)
 - [Authorization Policies](#authorization-policies)
 - [API Endpoints](#api-endpoints)
 - [Database Schema](#database-schema)
@@ -195,20 +204,16 @@ The API will be available at `https://localhost:5001` (or `http://localhost:5000
 
 Keycloak is used for identity and access management with JWT Bearer token authentication.
 
-### Realm Configuration
-
-- **Realm**: AdventureWorks
-- **Version**: 26.6.1
-- **Token Lifespan**: 5 minutes (300 seconds)
-
-### Keycloak Clients
+### Realm & Clients
 
 | Client ID | Protocol | Purpose |
 |-----------|----------|---------|
-| `adventureworks-api` | openid-connect | API authentication |
-| `adventureworks-web` | openid-connect | Web application |
+| `adventureworks-api` | openid-connect | API authentication (resource server) |
+| `adventureworks-web` | openid-connect | Angular SPA (public client, PKCE) |
 
-### Keycloak Roles
+Both clients belong to the **AdventureWorks** realm (version 26.6.1) and share the same realm roles.
+
+### Roles
 
 | Role | Description |
 |------|-------------|
@@ -228,45 +233,132 @@ Keycloak is used for identity and access management with JWT Bearer token authen
 | Shipping-and-Receiving | Logistics access |
 | Facilities-And-Maintenance | Facilities access |
 
-### Keycloak Admin Access
+### Admin Access
 
-- **URL**: http://localhost:8080
-- **Admin Console**: http://localhost:8080/admin/
-- **Username**: `admin`
-- **Password**: `admin123`
+| | URL |
+|---|---|
+| Keycloak | http://localhost:8080 |
+| Admin Console | http://localhost:8080/admin/ |
+| Default credentials | `admin` / `admin123` |
 
-### Getting an Access Token
+### Frontend Authentication Flow
 
-To authenticate with the API, obtain a JWT token from Keycloak:
+The Angular SPA uses the **Authorization Code Flow with PKCE** (no client secret):
+
+1. User visits `http://localhost:4200`
+2. `authGuard` checks `isAuthenticated$` — redirects to `/login` if not authenticated
+3. User clicks **Login with Keycloak**
+4. Redirects to Keycloak login page
+5. After login, Keycloak redirects back to Angular with an authorization code
+6. `angular-auth-oidc-client` exchanges the code for tokens (access token, ID token, refresh token)
+7. Access token is attached to API requests via `authInterceptor`
+8. Header dropdown shows user name, email, and roles
+
+```mermaid
+flowchart TD
+    Start[User visits app] --> CheckAuth{Check isAuthenticated}
+    CheckAuth -->|No| LoginPage[Login Page]
+    CheckAuth -->|Yes| Dashboard[Dashboard]
+    LoginPage -->|Click Login with Keycloak| KeycloakLogin[Keycloak Login Page]
+    KeycloakLogin -->|Login success| KeycloakCallback[Keycloak redirects to Angular]
+    KeycloakCallback --> Exchange[Exchange code for tokens]
+    Exchange --> StoreTokens[Store tokens in session storage]
+    StoreTokens --> Dashboard
+
+    Dashboard -->|API Request| Interceptor[Auth Interceptor]
+    Interceptor -->|Attach Bearer token| API[ASP.NET Core API]
+    API -->|Validate JWT & audience| Keycloak[Keycloak validates token]
+    Keycloak -->|Token valid| BackendResponse[Return data with roles]
+
+    Dashboard -->|User clicks logout| Logout[Call oidcSecurityService.logoff]
+    Logout -->|Clear tokens| LoginPage
+```
+
+> **Note:** If the API returns 401/403, ensure the JWT token includes `adventureworks-api` in its `aud` (audience) claim. This requires an **Audience mapper** on the `adventureworks-web` client in Keycloak. See [Troubleshooting](#token-validation-errors) for details.
+
+### Getting an Access Token (Backend-to-Backend)
+
+For backend services or direct API testing:
 
 ```bash
 curl -X POST "http://localhost:8080/realms/AdventureWorks/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=password" \
   -d "client_id=adventureworks-api" \
+  -d "client_secret=<client-secret>" \
   -d "username=<username>" \
   -d "password=<password>"
 ```
 
-Response:
+## Angular Frontend Authentication
 
-```json
-{
-  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 300,
-  "refresh_token": "...",
-  "token_type": "Bearer"
-}
+The Angular 21 SPA integrates with Keycloak using `angular-auth-oidc-client`.
+
+### Authentication Flow
+
+The frontend uses the **Authorization Code Flow with PKCE** (public client, no client secret). The `angular-auth-oidc-client` library handles token storage, silent renew, and refresh.
+
+### Auth Service & Guards
+
+| File | Purpose |
+|------|---------|
+| `core/services/auth.service.ts` | Wrapper around `OidcSecurityService` — `login()`, `logout()`, `isAuthenticated$`, `userData$`, `accessToken$`, `getRoles()` |
+| `core/guards/auth.guard.ts` | Protects routes — redirects to `/login` if not authenticated |
+| `core/guards/role.guard.ts` | Role-based access — redirects to `/dashboard` if user lacks required roles |
+
+```typescript
+// Protecting a route with authGuard
+{ path: '', loadComponent: () => import('./layout').then(m => m.DefaultLayoutComponent),
+  canActivate: [authGuard], ... }
+
+// Protecting a route with roleGuard
+{ path: 'admin', canActivate: [roleGuard(['Executive'])], ... }
 ```
 
-### Using the Token
+### Environment Configuration
 
-Include the token in API requests:
-
-```bash
-curl -X GET "http://localhost:5001/departments" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+```typescript
+// environment.ts (development)
+export const environment = {
+  production: false,
+  keycloak: {
+    authority: 'http://localhost:8080/realms/AdventureWorks',
+    clientId: 'adventureworks-web',
+    redirectUri: 'http://localhost:4200',
+    postLogoutRedirectUri: 'http://localhost:4200',
+    scope: 'openid profile email roles',
+    responseType: 'code',
+    silentRenew: true,
+    useRefreshToken: true,
+    showDebugInformation: true,
+  },
+  apiUrl: 'http://localhost:5000',
+};
 ```
+
+### HTTP Interceptor
+
+The `authInterceptor` automatically attaches the Bearer token to every HTTP request:
+
+```typescript
+// core/interceptors/auth.interceptor.ts
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);
+  return authService.accessToken$.pipe(
+    first((token) => token !== null && token !== undefined),
+    switchMap((token) => {
+      const authReq = req.clone({
+        setHeaders: { Authorization: `Bearer ${token}` },
+      });
+      return next(authReq);
+    })
+  );
+};
+```
+
+### DefaultHeader Integration
+
+The header component displays the authenticated user's name, email, and roles from the Keycloak ID token. The logout button clears tokens and redirects to the login page.
 
 ## Authorization Policies
 
@@ -479,13 +571,29 @@ sqllocaldb create MSSQLLocalDB
 
 ### Token Validation Errors
 
-Ensure `appsettings.Development.json` has `RequireHttpsMetadata: false`:
+If the API returns **401 Unauthorized** after successful login, the JWT token's audience (`aud`) claim may not include `adventureworks-api`. Tokens issued to the `adventureworks-web` client default to audience `adventureworks-web` only.
+
+**Solution — add an Audience mapper to the `adventureworks-web` client in Keycloak:**
+
+1. Go to **Clients** → **adventureworks-web** → **Client scopes**
+2. Click **adventureworks-web-dedicated**
+3. Click **Add mapper** → **By configuration** → **Audience**
+4. Configure:
+   - **Name**: `audience-for-api`
+   - **Included Client Audience**: `adventureworks-api`
+   - **Add to ID token**: `OFF`
+   - **Add to access token**: `ON`
+5. Click **Save**
+6. **Logout and login again** to get a new token
+
+After this, the token's `aud` claim will contain both `adventureworks-web` and `adventureworks-api`.
+
+**Alternative — update `appsettings.Development.json` to accept the web client as audience:**
 
 ```json
 {
   "Keycloak": {
-    "Authority": "http://localhost:8080/realms/AdventureWorks",
-    "RequireHttpsMetadata": false
+    "Audience": "adventureworks-web"
   }
 }
 ```

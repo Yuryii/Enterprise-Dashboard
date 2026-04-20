@@ -8,11 +8,9 @@ export const roleGuard = (requiredRoles: string[]): CanActivateFn => {
     const authService = inject(AuthService);
     const router = inject(Router);
 
-    const hasRole = await firstValueFrom(
-      authService.isAuthenticated$
-    );
+    const isAuthenticated = await firstValueFrom(authService.isAuthenticated$);
 
-    if (!hasRole) {
+    if (!isAuthenticated) {
       router.navigate(['/login']);
       return false;
     }
@@ -21,6 +19,7 @@ export const roleGuard = (requiredRoles: string[]): CanActivateFn => {
     if (hasAnyRole) {
       return true;
     }
+
     router.navigate(['/dashboard']);
     return false;
   };

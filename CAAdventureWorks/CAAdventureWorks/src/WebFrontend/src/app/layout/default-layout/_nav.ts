@@ -1,5 +1,9 @@
 import { INavData } from '@coreui/angular';
 
+export interface NavRole extends INavData {
+  roles?: string[];
+}
+
 export const navItems: INavData[] = [
   {
     name: 'Dashboard',
@@ -428,5 +432,103 @@ export const navItems: INavData[] = [
     url: 'https://coreui.io/angular/docs/',
     iconComponent: { name: 'cil-description' },
     attributes: { target: '_blank' }
-  }
-];
+  },
+  {
+    title: true,
+    name: 'Departments'
+  },
+  {
+    name: 'Executive',
+    url: '/roles/executive',
+    iconComponent: { name: 'cil-chart-line' },
+    roles: ['Executive']
+  } as NavRole,
+  {
+    name: 'Human Resources',
+    url: '/roles/human-resources',
+    iconComponent: { name: 'cil-user-follow' },
+    roles: ['HumanResources', 'Executive']
+  } as NavRole,
+  {
+    name: 'Finance',
+    url: '/roles/finance',
+    iconComponent: { name: 'cil-dollar' },
+    roles: ['Finance', 'Executive']
+  } as NavRole,
+  {
+    name: 'Information Services',
+    url: '/roles/information-services',
+    iconComponent: { name: 'cil-code' },
+    roles: ['Information-Services', 'Executive']
+  } as NavRole,
+  {
+    name: 'Facilities',
+    url: '/roles/facilities',
+    iconComponent: { name: 'cil-building' },
+    roles: ['Facilities-And-Maintenance', 'Executive']
+  } as NavRole,
+  {
+    name: 'Production',
+    url: '/roles/production',
+    iconComponent: { name: 'cilFactory' },
+    roles: ['Production', 'Production-Control', 'Executive']
+  } as NavRole,
+  {
+    name: 'Production Control',
+    url: '/roles/production-control',
+    iconComponent: { name: 'cil-settings' },
+    roles: ['Production-Control', 'Executive']
+  } as NavRole,
+  {
+    name: 'Sales',
+    url: '/roles/sales',
+    iconComponent: { name: 'cil-cart' },
+    roles: ['Sales', 'Marketing', 'Executive']
+  } as NavRole,
+  {
+    name: 'Marketing',
+    url: '/roles/marketing',
+    iconComponent: { name: 'cil-bullhorn' },
+    roles: ['Marketing', 'Sales', 'Executive']
+  } as NavRole,
+  {
+    name: 'Purchasing',
+    url: '/roles/purchasing',
+    iconComponent: { name: 'cil-package' },
+    roles: ['Purchasing', 'Executive']
+  } as NavRole,
+  {
+    name: 'Quality Assurance',
+    url: '/roles/quality-assurance',
+    iconComponent: { name: 'cil-check-circle' },
+    roles: ['Quality-Assurance', 'Document-Control', 'Executive']
+  } as NavRole,
+  {
+    name: 'Document Control',
+    url: '/roles/document-control',
+    iconComponent: { name: 'cil-description' },
+    roles: ['Document-Control', 'Quality-Assurance', 'Executive']
+  } as NavRole,
+  {
+    name: 'Engineering',
+    url: '/roles/engineering',
+    iconComponent: { name: 'cil-contact' },
+    roles: ['Engineering', 'Tool-Design', 'Executive']
+  } as NavRole,
+  {
+    name: 'Tool Design',
+    url: '/roles/tool-design',
+    iconComponent: { name: 'cil-construction' },
+    roles: ['Tool-Design', 'Engineering', 'Executive']
+  } as NavRole,
+  {
+    name: 'Shipping & Receiving',
+    url: '/roles/shipping-receiving',
+    iconComponent: { name: 'cil-truck' },
+    roles: ['Shipping-and-Receiving', 'Executive']
+  } as NavRole,
+  {
+    title: true,
+    name: 'Links',
+    class: 'mt-auto'
+  },

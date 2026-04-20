@@ -44,7 +44,13 @@ export class AuthService {
 
   async hasAnyRole(roles: string[]): Promise<boolean> {
     const userRoles = await this.getRoles();
-    return roles.some((role) => userRoles.includes(role));
+    const result = roles.some((role) =>
+      userRoles.some(
+        (userRole) => userRole.toLowerCase() === role.toLowerCase()
+      )
+    );
+    console.log('[AuthService] hasAnyRole check:', roles, 'User roles:', userRoles, 'Result:', result);
+    return result;
   }
 
   async getUserName(): Promise<string> {
