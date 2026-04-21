@@ -1,18 +1,27 @@
 ---
 name: Feature request
-about: Suggest an idea for a new feature in CoreUI Free Angular Admin Template.
+about: Suggest an idea for a new feature in SmartDash.
 title: ''
 labels: feature
 assignees: ''
 
 ---
 
-Before opening:
+## Is your feature request related to a problem?
 
-- [Search for duplicate or closed issues](https://github.com/coreui/coreui-free-angular-admin-template/issues?utf8=%E2%9C%93&q=is%3Aissue)
-- Read the [contributing guidelines](https://github.com/coreui/coreui-free-angular-admin-template/blob/main/.github/CONTRIBUTING.md)
+Please describe the problem you're trying to solve.
 
-Feature requests must include:
 
-- As much detail as possible for what we should add and why it's important to Bootstrap
-- Relevant links to prior art, screenshots, or live demos whenever possible
+## Describe the solution you'd like
+
+Please describe what you would like to happen.
+
+
+## Describe alternatives you've considered
+
+Please describe any alternative solutions you've considered.
+
+
+## Additional context
+
+Please add any other context or screenshots about the feature request here.

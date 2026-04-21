@@ -39,7 +39,7 @@ export const routes: Routes = [
   },
   {
     path: 'production',
-    canActivate: [roleGuard(['Production', 'Production-Control', 'Executive'])],
+    canActivate: [roleGuard(['Production', 'Executive'])],
     loadComponent: () =>
       import('./production/production.component').then((m) => m.ProductionComponent),
     data: { title: 'Production' }
@@ -53,14 +53,14 @@ export const routes: Routes = [
   },
   {
     path: 'sales',
-    canActivate: [roleGuard(['Sales', 'Marketing', 'Executive'])],
+    canActivate: [roleGuard(['Sales', 'Executive'])],
     loadComponent: () =>
       import('./sales/sales.component').then((m) => m.SalesComponent),
     data: { title: 'Sales' }
   },
   {
     path: 'marketing',
-    canActivate: [roleGuard(['Marketing', 'Sales', 'Executive'])],
+    canActivate: [roleGuard(['Marketing', 'Executive'])],
     loadComponent: () =>
       import('./marketing/marketing.component').then((m) => m.MarketingComponent),
     data: { title: 'Marketing' }
@@ -74,7 +74,7 @@ export const routes: Routes = [
   },
   {
     path: 'quality-assurance',
-    canActivate: [roleGuard(['Quality-Assurance', 'Document-Control', 'Executive'])],
+    canActivate: [roleGuard(['Quality-Assurance', 'Executive'])],
     loadComponent: () =>
       import('./quality-assurance/quality-assurance.component').then((m) => m.QualityAssuranceComponent),
     data: { title: 'Quality Assurance' }
@@ -88,7 +88,7 @@ export const routes: Routes = [
   },
   {
     path: 'engineering',
-    canActivate: [roleGuard(['Engineering', 'Tool-Design', 'Executive'])],
+    canActivate: [roleGuard(['Engineering', 'Executive'])],
     loadComponent: () =>
       import('./engineering/engineering.component').then((m) => m.EngineeringComponent),
     data: { title: 'Engineering' }

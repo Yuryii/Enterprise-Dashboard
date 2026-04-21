@@ -1,9 +1,8 @@
-### Bug reports
+# SmartDash Support
 
-See the [contributing guidelines](CONTRIBUTING.md) for sharing bug reports.
+For general troubleshooting or help getting started, please contact the development team or open a discussion.
 
-### How-to
+## Resources
 
-For general troubleshooting or help getting started:
-
-- Go to [Discussions](https://github.com/coreui/coreui-free-angular-admin-template/discussions).
+- Documentation (coming soon)
+- Issue Tracker

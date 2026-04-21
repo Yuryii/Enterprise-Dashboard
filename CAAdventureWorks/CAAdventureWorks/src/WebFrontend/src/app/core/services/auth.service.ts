@@ -26,15 +26,57 @@ export class AuthService {
     this.oidcSecurityService.logoff();
   }
 
+  /**
+   * Returns both Keycloak roles AND policy names the user can access.
+   * Policy names are derived by expanding which policies the user's Keycloak roles grant access to.
+   */
   async getRoles(): Promise<string[]> {
-    // Parse trực tiếp từ access_token trong sessionStorage
     const token = await firstValueFrom(
       this.oidcSecurityService.getAccessToken(),
     );
     if (!token) return [];
 
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload?.realm_access?.roles ?? [];
+    const keycloakRoles: string[] = payload?.realm_access?.roles ?? [];
+
+    // Policy names that a given Keycloak role grants access to
+    const policyAccessMap: Record<string, string[]> = {
+      Executive: ['Executive'],
+      'Information-Services': [
+        'Information-Services',
+        'Executive-General-And-Administration-Manager',
+      ],
+      Finance: ['Finance', 'Executive-General-And-Administration-Manager'],
+      HumanResources: [
+        'Human-Resources',
+        'Executive-General-And-Administration-Manager',
+      ],
+      'Facilities-And-Maintenance': [
+        'Facilities-And-Maintenance',
+        'Executive-General-And-Administration-Manager',
+      ],
+      'Quality-Assurance': ['Quality-Assurance', 'Quality-Assurance-Manager'],
+      'Document-Control': ['Document-Control', 'Quality-Assurance-Manager'],
+      Engineering: ['Engineering', 'Research-and-Development'],
+      'Tool-Design': ['Tool-Design', 'Research-and-Development'],
+      Production: ['Production', 'Manufacturing'],
+      'Production-Control': ['Production-Control', 'Manufacturing'],
+      Sales: ['Sales', 'Sales-and-Marketing'],
+      Marketing: ['Marketing', 'Sales-and-Marketing'],
+      Purchasing: ['Inventory-Management'],
+      'Shipping-and-Receiving': ['Shipping-and-Receiving'],
+    };
+
+    const policies = new Set<string>();
+    for (const role of keycloakRoles) {
+      policies.add(role);
+      const accessiblePolicies = policyAccessMap[role];
+      if (accessiblePolicies) {
+        accessiblePolicies.forEach((p) => policies.add(p));
+      }
+    }
+
+    return Array.from(policies);
   }
 
   hasRole(role: string): boolean {

@@ -8,7 +8,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WithEnvironment("KC_BOOTSTRAP_ADMIN_USERNAME", "admin")
     .WithEnvironment("KC_BOOTSTRAP_ADMIN_PASSWORD", "admin")
-    .WithRealmImport("keycloak/realm-export.json");
+    .WithRealmImport("keycloak/realm-export.json")
+    .WithDataVolume();
 
 // Web API - connects to Keycloak managed by Aspire
 var web = builder.AddProject<Projects.Web>(Services.WebApi)

@@ -1,286 +1,306 @@
-[![@coreui angular](https://img.shields.io/badge/@coreui%20-angular-lightgrey.svg?style=flat-square)](https://github.com/coreui/angular)
-[![npm-coreui-angular][npm-coreui-angular-badge]][npm-coreui-angular]
-[![npm-coreui-angular][npm-coreui-angular-badge-next]][npm-coreui-angular]
-[![NPM downloads][npm-coreui-angular-download]][npm-coreui-angular]  
-[![@coreui coreui](https://img.shields.io/badge/@coreui%20-coreui-lightgrey.svg?style=flat-square)](https://github.com/coreui/coreui)
-[![npm package][npm-coreui-badge]][npm-coreui]
-[![NPM downloads][npm-coreui-download]][npm-coreui]  
-![angular](https://img.shields.io/badge/angular-^21.2.0-lightgrey.svg?style=flat-square&logo=angular)
+# CAAdventureWorks
 
-[npm-coreui-angular]: https://www.npmjs.com/package/@coreui/angular
+A modern full-stack enterprise application built with .NET Aspire, ASP.NET Core, Entity Framework Core, and Angular 21.
 
-[npm-coreui-angular-badge]: https://img.shields.io/npm/v/@coreui/angular.png?style=flat-square
+## Architecture Overview
 
-[npm-coreui-angular-badge-next]: https://img.shields.io/npm/v/@coreui/angular/next?style=flat-square&color=red
+The solution follows a clean, layered architecture orchestrated by [Microsoft .NET Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/):
 
-[npm-coreui-angular-download]: https://img.shields.io/npm/dm/@coreui/angular.svg?style=flat-square
+```
+CAAdventureWorks/
+├── src/
+│   ├── AppHost/              # .NET Aspire orchestration host
+│   ├── Application/          # Application layer (MediatR, AutoMapper, FluentValidation)
+│   ├── Domain/               # Domain entities and interfaces
+│   ├── Infrastructure/       # EF Core, Identity, JWT auth, interceptors
+│   ├── ServiceDefaults/      # .NET Aspire service defaults (OpenTelemetry, resilience)
+│   ├── Shared/               # Shared DTOs and constants
+│   ├── Web/                  # ASP.NET Core Web API with Minimal API endpoints
+│   └── WebFrontend/          # Angular 21 admin dashboard (SmartDash)
+```
 
-[npm-coreui]: https://www.npmjs.com/package/@coreui/coreui
+### Backend — .NET Stack
 
-[npm-coreui-badge]: https://img.shields.io/npm/v/@coreui/coreui.png?style=flat-square
+| Project | Role |
+|---|---|
+| `AppHost` | Aspire orchestrator — wires up all services, Keycloak, and the Angular frontend in a single local run |
+| `Web` | ASP.NET Core 10 Web API exposing Minimal API endpoints; hosts Scalar API reference |
+| `Application` | Business logic layer using **MediatR** (CQRS pattern), **AutoMapper**, and **FluentValidation** |
+| `Domain` | Domain entities and interfaces; references `MediatR.Contracts` and `Microsoft.EntityFrameworkCore` |
+| `Infrastructure` | EF Core `SqlServer` data access, JWT Bearer authentication via **Keycloak**, auditable entity interceptors, domain event dispatching |
+| `ServiceDefaults` | Standard Aspire configuration: OpenTelemetry (OTLP), HTTP resilience, service discovery |
+| `Shared` | Shared types and constants (targets `net10.0`) |
 
-[npm-coreui-download]: https://img.shields.io/npm/dm/@coreui/coreui.svg?style=flat-square
+### Frontend — Angular Stack
 
-# CoreUI Free Admin Dashboard Template for Angular 21
+| Package | Version | Purpose |
+|---|---|---|
+| Angular | 21 | Core framework |
+| CoreUI Angular | ~5.6 | Responsive UI component library |
+| PrimeNG | ^21.1 | Advanced UI components |
+| angular-auth-oidc-client | ^21 | OIDC/OAuth2 authentication |
+| angular-gridster2 | ^21 | Drag-and-drop dashboard grid |
+| Chart.js / @coreui/angular-chartjs | — | Data visualization |
+| Vitest + Playwright | 4.x | Unit and component testing |
 
-CoreUI is meant to be the UX game changer. Pure & transparent code is devoid of redundant components, so the app is light enough to offer ultimate user
-experience. This means mobile devices also, where the navigation is just as easy and intuitive as on a desktop or laptop. The CoreUI Layout API lets you
-customize your project for almost any device – be it Mobile, Web or WebApp – CoreUI covers them all!
+The frontend communicates with the Web API over HTTPS and authenticates via the **Keycloak** realm `CAAdventureWorks`.
 
-- [CoreUI Angular Admin Dashboard Template & UI Components Library](https://coreui.io/angular)
-- [CoreUI Angular Demo](https://coreui.io/angular/demo/5.0/free/)
-- [CoreUI Angular Docs](https://coreui.io/angular/docs/)
+---
 
 ## Table of Contents
 
-* [Versions](#versions)
-* [CoreUI Pro](#coreui-pro)
-* [Quick Start](#quick-start)
-* [Installation](#installation)
-* [Basic usage](#basic-usage)
-* [What's included](#whats-included)
-* [Documentation](#documentation)
-* [Versioning](#versioning)
-* [Creators](#creators)
-* [Community](#community)
-* [Copyright and License](#copyright-and-license)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Solution Structure](#solution-structure)
+- [Backend — Web API](#backend--web-api)
+  - [Running the API](#running-the-api)
+  - [API Documentation](#api-documentation)
+  - [Authentication](#authentication)
+  - [Authorization Policies](#authorization-policies)
+  - [Database](#database)
+- [Frontend — SmartDash](#frontend--smartdash)
+  - [Prerequisites](#prerequisites-1)
+  - [Installation](#installation)
+  - [Development Server](#development-server)
+  - [Building](#building)
+  - [Testing](#testing)
+- [Orchestration with .NET Aspire](#orchestration-with-net-aspire)
+- [Keycloak](#keycloak)
 
-## Versions
+---
 
-* [CoreUI Free Bootstrap Admin Template](https://github.com/coreui/coreui-free-bootstrap-admin-template)
-* [CoreUI Free Angular Admin Template](https://github.com/coreui/coreui-free-angular-admin-template)
-* [CoreUI Free React.js Admin Template](https://github.com/coreui/coreui-free-react-admin-template)
-* [CoreUI Free Vue.js Admin Template](https://github.com/coreui/coreui-free-vue-admin-template)
+## Prerequisites
 
-## CoreUI Pro
+### Required
 
-* 💪  [CoreUI Pro Angular Admin Template](https://coreui.io/product/angular-dashboard-template/)
-* 💪  [CoreUI Pro Bootstrap Admin Template](https://coreui.io/product/bootstrap-dashboard-template/)
-* 💪  [CoreUI Pro React Admin Template](https://coreui.io/product/react-dashboard-template/)
-* 💪  [CoreUI Pro Next.js Admin Template](https://coreui.io/product/next-js-dashboard-template/)
-* 💪  [CoreUI Pro Vue Admin Template](https://coreui.io/product/vue-dashboard-template/)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
+- [.NET Aspire Workload](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/setup-tooling) — install via `dotnet workload install aspire`
+- [Node.js](https://nodejs.org/) LTS — Angular 21 requires `^20.19.0 || ^22.12.0 || ^24.0.0`
+- [npm](https://www.npmjs.com/) `>= 10`
 
-## CoreUI PRO Angular Admin Templates
+### Recommended
 
-| Default Theme                                                                                                                                                                      | Light Theme                                                                                                                                                                    |
-|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [![CoreUI PRO Angular Admin Template](https://coreui.io/images/templates/coreui_pro_default_light_dark.webp)](https://coreui.io/product/angular-dashboard-template/?theme=default) | [![CoreUI PRO Angular Admin Template](https://coreui.io/images/templates/coreui_pro_light_light_dark.webp)](https://coreui.io/product/angular-dashboard-template/?theme=light) |
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — required for Aspire's local container orchestration (Keycloak, SQL Server)
+- [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (or use the container managed by Aspire)
 
-| Modern Theme                                                                                                                                                                             | Bright Theme                                                                                                                                                                    |
-|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [![CoreUI PRO Angular Admin Template](https://coreui.io/images/templates/coreui_pro_default_v3_light_dark.webp)](https://coreui.io/product/angular-dashboard-template/?theme=default-v3) | [![CoreUI PRO React Admin Template](https://coreui.io/images/templates/coreui_pro_light_v3_light_dark.webp)](https://coreui.io/product/angular-dashboard-template/?theme=light) |
+---
 
 ## Quick Start
 
-- [Download the latest release](https://github.com/coreui/coreui-free-angular-admin-template/)
-- Clone the repo: `git clone https://github.com/coreui/coreui-free-angular-admin-template.git`
-
-#### <i>Prerequisites</i>
-
-Before you begin, make sure your development environment includes `Node.js®` and an `npm` package manager.
-
-###### Node.js
-
-[**Angular 21**](https://angular.io/guide/what-is-angular) requires `Node.js` LTS version `^20.19.0 || ^22.12.0 || ^24.0.0`.
-
-- To check your version, run `node -v` in a terminal/console window.
-- To get `Node.js`, go to [nodejs.org](https://nodejs.org/).
-
-###### Angular CLI
-
-Install the Angular CLI globally using a terminal/console window.
+### 1. Clone and build
 
 ```bash
-npm install -g @angular/cli
+git clone <repository-url>
+cd CAAdventureWorks
+dotnet restore
+dotnet build
+```
+
+### 2. Start with .NET Aspire (recommended)
+
+This starts the full stack — Keycloak, SQL Server (via Aspire), the Web API, and the Angular frontend — with a single command:
+
+```bash
+cd src/AppHost
+dotnet run
+```
+
+Aspire will open its dashboard showing all running services and their endpoints. By default:
+- **Web API** — `https://localhost:<port>/scalar` (Scalar API reference)
+- **Angular Frontend** — `https://localhost:<port>/webfrontend`
+- **Keycloak Admin Console** — `https://localhost:8080` (admin / admin)
+
+### 3. Alternative — Run pieces independently
+
+```bash
+# Backend API only
+cd src/Web
+dotnet run
+
+# Frontend only (from WebFrontend directory)
+cd src/WebFrontend
+npm install
+npm start
+```
+
+---
+
+## Solution Structure
+
+```
+src/
+├── AppHost/
+│   ├── Program.cs            # Aspire resource composition
+│   ├── Extensions.cs         # Aspire extension methods
+│   ├── AppHost.csproj
+│   └── appsettings.json
+├── Application/
+│   ├── Application.csproj    # MediatR, AutoMapper, FluentValidation
+│   └── (CQRS handlers, validators, DTOs)
+├── Domain/
+│   ├── Domain.csproj         # Domain entities, interfaces
+│   └── (Entities, events)
+├── Infrastructure/
+│   ├── DependencyInjection.cs # Service registration, auth policies
+│   ├── Data/                  # EF Core DbContext, initialiser, interceptors
+│   └── Identity/              # IdentityService
+├── ServiceDefaults/
+│   └── ServiceDefaults.csproj # OpenTelemetry, resilience, service discovery
+├── Shared/
+│   └── Shared.csproj          # net10.0 shared types
+├── Web/
+│   ├── Program.cs             # Web API pipeline, endpoint mapping
+│   ├── Web.csproj
+│   └── Infrastructure/        # Minimal API helpers, exception handlers
+└── WebFrontend/               # Angular 21 application
+    ├── angular.json
+    ├── package.json
+    └── src/
+        ├── app/
+        │   ├── icons/         # Custom branding icons
+        │   └── layout/        # Default layout components
+        └── assets/            # Brand images, static files
+```
+
+---
+
+## Backend — Web API
+
+### Running the API
+
+```bash
+cd src/Web
+dotnet run
+```
+
+The API listens on `https://localhost:<port>` (configured by Aspire or `appsettings.json`).
+
+### API Documentation
+
+API reference is served via **Scalar** at `/scalar`. When running under Aspire, navigate to the **Scalar API Reference** link shown in the Aspire dashboard.
+
+### Authentication
+
+The Web API uses **JWT Bearer authentication** backed by **Keycloak**:
+
+- Authority and audience are read from `Keycloak:Authority` and `Keycloak:Audience` configuration.
+- In production, HTTPS metadata is required (`RequireHttpsMetadata = true`).
+- Role claims are mapped from `ClaimTypes.Role`; name claims from `ClaimTypes.Name`.
+
+### Authorization Policies
+
+The following role-based authorization policies are registered:
+
+| Policy | Required Roles |
+|---|---|
+| `Executive-General-And-Administration-Manager` | Executive, Information-Services, Finance, HumanResources, Facilities-And-Maintenance |
+| `Executive` | Executive |
+| `Information-Services` | Information-Services |
+| `Finance` | Finance |
+| `Human-Resources` | HumanResources |
+| `Facilities-And-Maintenance` | Facilities-And-Maintenance |
+| `Quality-Assurance-Manager` | Document-Control, Quality-Assurance |
+| `Document-Control` | Document-Control |
+| `Quality-Assurance` | Quality-Assurance |
+| `Research-and-Development` | Engineering, Tool-Design |
+| `Engineering` | Engineering |
+| `Tool-Design` | Tool-Design |
+| `Manufacturing` | Production, Production-Control |
+| `Production` | Production |
+| `Sales-and-Marketing` | Sales, Marketing |
+| `Sales` | Sales |
+| `Marketing` | Marketing |
+| `Inventory-Management` | Purchasing |
+| `Shipping-and-Receiving` | Shipping-and-Receiving |
+
+### Database
+
+- **Provider**: SQL Server via `Microsoft.EntityFrameworkCore.SqlServer`
+- **Connection**: Configured as `AdventureWorks` in `appsettings.json`; managed by Aspire when running locally
+- **Initialisation**: `ApplicationDbContextInitialiser` runs on first start in Development mode (creates schema if needed)
+- **Interceptors**:
+  - `AuditableEntityInterceptor` — auto-populates audit fields (CreatedAt, CreatedBy, ModifiedAt, ModifiedBy)
+  - `DispatchDomainEventsInterceptor` — dispatches domain events after `SaveChanges`
+
+---
+
+## Frontend — SmartDash
+
+The Angular frontend lives in `src/WebFrontend` and provides a responsive admin dashboard.
+
+### Prerequisites
+
+Verify your environment:
+
+```bash
+node -v   # ^20.19.0 || ^22.12.0 || ^24.0.0
+npm -v    # >= 10
 ```
 
 ### Installation
 
-``` bash
-$ npm install
-$ npm update
+```bash
+cd src/WebFrontend
+npm install
 ```
 
-### Basic usage
-
-``` bash
-# dev server with hot reload at http://localhost:4200
-$ npm start
-```
-
-Navigate to [http://localhost:4200](http://localhost:4200). The app will automatically reload if you change any of the source files.
-
-#### Build
-
-Run `build` to build the project. The build artifacts will be stored in the `dist/` directory.
+### Development Server
 
 ```bash
-# build for production with minification
-$ npm run build
+npm start          # or: ng serve
 ```
 
-## What's included
+The app will be available at `http://localhost:4200`. It automatically reloads when source files change.
 
-Within the download you'll find the following directories and files, logically grouping common assets and providing both compiled and minified variations.
-You'll see something like this:
+### Building
 
-```
-coreui-free-angular-admin-template
-├── src/                         # project root
-│   ├── app/                     # main app directory
-|   │   ├── icons/               # icons set for the app
-|   │   ├── layout/              # layout 
-|   |   │   └── default-layout/  # layout components
-|   |   |       └── _nav.js      # sidebar navigation config
-|   │   └── views/               # application views
-│   ├── assets/                  # images, icons, etc.
-│   ├── components/              # components for demo only
-│   ├── scss/                    # scss styles
-│   └── index.html               # html template
-│
-├── angular.json
-├── README.md
-└── package.json
+```bash
+npm run build          # Production build (output: dist/smartdash/)
+npm run build:dev      # Development build
+npm run watch          # Watch mode for iterative development
 ```
 
-## Documentation
+Production builds replace `src/environments/environment.ts` with `environment.production.ts` and enable output hashing.
 
-The documentation for the CoreUI Admin Template is hosted at our website [CoreUI for Angular](https://coreui.io/angular/)
+### Testing
+
+Unit tests run via Vitest:
+
+```bash
+npm test              # Run tests once
+npm test -- --watch  # Watch mode
+```
 
 ---
 
-## Versioning
+## Orchestration with .NET Aspire
 
-For transparency into our release cycle and in striving to maintain backward compatibility, CoreUI Free Admin Template is maintained
-under [the Semantic Versioning guidelines](http://semver.org/).
+The `AppHost` project wires everything together:
 
-See [the Releases section of our project](https://github.com/coreui/coreui-free-angular-admin-template/releases) for changelogs for each release version.
+1. **Keycloak** — imported from `keycloak/realm-export.json` with admin credentials (admin/admin) and a persistent data volume
+2. **Web API** — references Keycloak for auth; waits for Keycloak before starting; exposes Scalar at `/scalar`
+3. **WebFrontend** — Angular dev server started via Aspire's JavaScript hosting; receives `apiBaseUrl`, `keycloakUrl`, and `NG_CLI_ANALYTICS=false` as environment variables
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.2.
-
-## Development server
-
-To start a local development server, run:
+Run the full stack:
 
 ```bash
-ng serve
+cd src/AppHost
+dotnet run
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+---
 
-## Code scaffolding
+## Keycloak
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Keycloak is managed by .NET Aspire and runs at port `8080`. The realm `CAAdventureWorks` is imported on first start.
 
-```bash
-ng generate component component-name
-```
+- **Admin Console**: `http://localhost:8080` — sign in with `admin` / `admin`
+- **Realm URL for Angular**: `http://localhost:8080/realms/CAAdventureWorks`
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+The Angular frontend uses `angular-auth-oidc-client` to handle the OIDC flow against this realm.
 
-```bash
-ng generate --help
-```
+---
 
-## Building
+## License
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://angular.dev/guide/testing/migrating-to-vitest), use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
-
-## Creators
-
-**Łukasz Holeczek**
-
-* <https://twitter.com/lukaszholeczek>
-* <https://github.com/mrholek>
-* <https://github.com/coreui>
-
-**CoreUI team**
-
-* https://github.com/orgs/coreui/people
-
-## Community
-
-Get updates on CoreUI's development and chat with the project maintainers and community members.
-
-- Follow [@core_ui on Twitter](https://twitter.com/core_ui).
-- Read and subscribe to [CoreUI Blog](https://coreui.io/blog/).
-
-## Support CoreUI Development
-
-CoreUI is an MIT-licensed open source project and is completely free to use. However, the amount of effort needed to maintain and develop new features for the
-project is not sustainable without proper financial backing. You can support development by buying the [CoreUI PRO](https://coreui.io/pricing/) or by becoming a
-sponsor via [Open Collective](https://opencollective.com/coreui/).
-
-<!--- StartOpenCollectiveBackers -->
-
-### Platinum Sponsors
-
-Support this project by [becoming a Platinum Sponsor](https://opencollective.com/coreui/contribute/platinum-sponsor-40959/). A large company logo will be added
-here with a link to your website.
-
-<a href="https://opencollective.com/coreui/contribute/platinum-sponsor-40959/checkout"><img src="https://opencollective.com/coreui/tiers/platinum-sponsor/0/avatar.svg?avatarHeight=100"></a>
-
-### Gold Sponsors
-
-Support this project by [becoming a Gold Sponsor](https://opencollective.com/coreui/contribute/gold-sponsor-40960/). A big company logo will be added here with
-a link to your website.
-
-<a href="https://opencollective.com/coreui/contribute/gold-sponsor-40960/checkout"><img src="https://opencollective.com/coreui/tiers/gold-sponsor/0/avatar.svg?avatarHeight=100"></a>
-
-### Silver Sponsors
-
-Support this project by [becoming a Silver Sponsor](https://opencollective.com/coreui/contribute/silver-sponsor-40967/). A medium company logo will be added
-here with a link to your website.
-
-<a href="https://opencollective.com/coreui/contribute/silver-sponsor-40967/checkout"><img src="https://opencollective.com/coreui/tiers/gold-sponsor/0/avatar.svg?avatarHeight=100"></a>
-
-### Bronze Sponsors
-
-Support this project by [becoming a Bronze Sponsor](https://opencollective.com/coreui/contribute/bronze-sponsor-40966/). The company avatar will show up here
-with a link to your OpenCollective Profile.
-
-<a href="https://opencollective.com/coreui/contribute/bronze-sponsor-40966/checkout"><img src="https://opencollective.com/coreui/tiers/bronze-sponsor/0/avatar.svg?avatarHeight=100"></a>
-
-### Backers
-
-Thanks to all the backers and sponsors! Support this project by [becoming a backer](https://opencollective.com/coreui/contribute/backer-40965/).
-
-<a href="https://opencollective.com/coreui/contribute/backer-40965/checkout" target="_blank" rel="noopener"><img src="https://opencollective.com/coreui/backers.svg?width=890"></a>
-
-<!--- EndOpenCollectiveBackers -->
-
-## Copyright and License
-
-copyright 2026 creativeLabs Łukasz Holeczek.
-
-Code released under [the MIT license](https://github.com/coreui/coreui-free-react-admin-template/blob/master/LICENSE).
-There is only one limitation you can't re-distribute the CoreUI as stock. You can’t do this if you modify the CoreUI. In the past, we faced some problems with
-persons who tried to sell CoreUI based templates.
+Code in this repository is released under the MIT license.

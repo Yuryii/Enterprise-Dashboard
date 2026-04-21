@@ -1,10 +1,10 @@
 {
-  "name": "coreui-free-angular-admin-template",
-  "version": "5.6.21",
-  "copyright": "Copyright 2026 creativeLabs Łukasz Holeczek",
+  "name": "smartdash",
+  "version": "1.0.0",
+  "copyright": "Copyright 2026 SmartDash",
   "license": "MIT",
-  "author": "The CoreUI Team (https://github.com/orgs/coreui/people) and contributors",
-  "homepage": "https://coreui.io/angular",
+  "author": "SmartDash Team",
+  "homepage": "https://smartdash.example.com",
   "config": {
     "theme": "default",
     "coreui_library_short_version": "5.6",
@@ -40,6 +40,7 @@
     "@coreui/utils": "^2.0.2",
     "@primeuix/themes": "^2.0.3",
     "angular-auth-oidc-client": "^21.0.1",
+    "angular-gridster2": "^21.0.1",
     "chart.js": "^4.5.1",
     "ngx-scrollbar": "^13.0.3",
     "primeicons": "^7.0.0",
@@ -64,11 +65,11 @@
     "npm": ">=10"
   },
   "bugs": {
-    "url": "https://github.com/coreui/coreui-free-angular-admin-template/issues"
+    "url": "https://github.com/smartdash/smartdash/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/coreui/coreui-free-angular-admin-template.git"
+    "url": "git+https://github.com/smartdash/smartdash.git"
   },
   "overrides": {
     "undici": "^7.24.0"

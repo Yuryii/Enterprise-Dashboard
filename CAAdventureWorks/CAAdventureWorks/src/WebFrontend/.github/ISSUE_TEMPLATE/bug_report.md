@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Tell us about a bug you may have identified in CoreUI Free Angular Admin Template.
+about: Tell us about a bug you may have identified in SmartDash.
 title: ''
 labels: ''
 assignees: ''
@@ -9,12 +9,24 @@ assignees: ''
 
 Before opening:
 
-- [Search for duplicate or closed issues](https://github.com/coreui/coreui-free-angular-admin-template/issues?utf8=%E2%9C%93&q=is%3Aissue)
-- [Validate](https://html5.validator.nu/) any HTML to avoid common problems
-- Read the [contributing guidelines](https://github.com/coreui/coreui-free-angular-admin-template/blob/v4-dev/.github/CONTRIBUTING.md)
+- [ ] Search for duplicate or closed issues
+- [ ] Validate any HTML to avoid common problems
 
 Bug reports must include:
 
-- Operating system and version (Windows, macOS, Android, iOS)
-- Browser and version (Chrome, Firefox, Safari, Microsoft Edge, Opera, Android Browser)
-- A [reduced test case](https://css-tricks.com/reduced-test-cases/) or suggested fix using [CodePen](https://codepen.io/) or [JS Bin](https://jsbin.com/)
+- Operating system and version (Windows, macOS, Linux)
+- Browser and version (Chrome, Firefox, Safari, Microsoft Edge)
+- A reduced test case or suggested fix
+
+Steps to reproduce:
+1. 
+2. 
+3. 
+
+Expected behavior:
+
+
+Actual behavior:
+
+
+Additional context:

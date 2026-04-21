@@ -60,10 +60,13 @@ public static class DependencyInjection
         });
 
         builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("Executive-General-And-Administration-Manager", policy =>
-        policy.RequireRole("Executive", "Information-Services", "Finance", "HumanResources", "Facilities-And-Maintenance"))
+    // Executive — chỉ xem được component Executive
     .AddPolicy("Executive", policy =>
         policy.RequireRole("Executive"))
+    // Executive-General-And-Administration-Manager — xem Executive + 4 sub-component
+    .AddPolicy("Executive-General-And-Administration-Manager", policy =>
+        policy.RequireRole("Executive", "Information-Services", "Finance", "HumanResources", "Facilities-And-Maintenance"))
+    // Sub-components: Information-Services, Finance, Human-Resources, Facilities-And-Maintenance
     .AddPolicy("Information-Services", policy =>
         policy.RequireRole("Information-Services"))
     .AddPolicy("Finance", policy =>
@@ -72,22 +75,26 @@ public static class DependencyInjection
         policy.RequireRole("HumanResources"))
     .AddPolicy("Facilities-And-Maintenance", policy =>
         policy.RequireRole("Facilities-And-Maintenance"))
+    // Quality-Assurance-Manager — xem Quality-Assurance + Document-Control
     .AddPolicy("Quality-Assurance-Manager", policy =>
-        policy.RequireRole("Document-Control", "Quality-Assurance"))
-    .AddPolicy("Document-Control", policy =>
-        policy.RequireRole("Document-Control"))
+        policy.RequireRole("Quality-Assurance", "Document-Control"))
     .AddPolicy("Quality-Assurance", policy =>
         policy.RequireRole("Quality-Assurance"))
+    .AddPolicy("Document-Control", policy =>
+        policy.RequireRole("Document-Control"))
+    // Research-and-Development — xem Engineering + Tool-Design
     .AddPolicy("Research-and-Development", policy =>
         policy.RequireRole("Engineering", "Tool-Design"))
     .AddPolicy("Engineering", policy =>
         policy.RequireRole("Engineering"))
     .AddPolicy("Tool-Design", policy =>
         policy.RequireRole("Tool-Design"))
+    // Manufacturing — xem Production + Production-Control
     .AddPolicy("Manufacturing", policy =>
         policy.RequireRole("Production", "Production-Control"))
     .AddPolicy("Production", policy =>
         policy.RequireRole("Production"))
+    // Sales-and-Marketing — xem Sales + Marketing
     .AddPolicy("Sales-and-Marketing", policy =>
         policy.RequireRole("Sales", "Marketing"))
     .AddPolicy("Sales", policy =>
