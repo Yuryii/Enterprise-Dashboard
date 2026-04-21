@@ -5,10 +5,10 @@ using CAAdventureWorks.Shared;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Keycloak - import realm from realm-export.json
-// Default admin: admin / admin123 (set via WithAdminCredentials for master realm)
 var keycloak = builder.AddKeycloak("keycloak", 8080)
-    .WithRealmImport("keycloak/realm-export.json")
-    .WithDataVolume();
+    .WithEnvironment("KC_BOOTSTRAP_ADMIN_USERNAME", "admin")
+    .WithEnvironment("KC_BOOTSTRAP_ADMIN_PASSWORD", "admin")
+    .WithRealmImport("keycloak/realm-export.json");
 
 // Web API - connects to Keycloak managed by Aspire
 var web = builder.AddProject<Projects.Web>(Services.WebApi)
