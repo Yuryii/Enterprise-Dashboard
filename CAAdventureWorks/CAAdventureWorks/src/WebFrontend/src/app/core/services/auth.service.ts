@@ -8,11 +8,11 @@ export class AuthService {
   private oidcSecurityService = inject(OidcSecurityService);
 
   isAuthenticated$ = this.oidcSecurityService.isAuthenticated$.pipe(
-    map((result) => result.isAuthenticated)
+    map((result) => result.isAuthenticated),
   );
 
   userData$ = this.oidcSecurityService.userData$.pipe(
-    map((result) => result.userData as any)
+    map((result) => result.userData as any),
   );
 
   accessToken$: Observable<string> = this.oidcSecurityService.getAccessToken();
@@ -27,8 +27,14 @@ export class AuthService {
   }
 
   async getRoles(): Promise<string[]> {
-    const userData = await firstValueFrom(this.oidcSecurityService.getUserData());
-    return (userData as any)?.realm_access?.roles ?? [];
+    // Parse trực tiếp từ access_token trong sessionStorage
+    const token = await firstValueFrom(
+      this.oidcSecurityService.getAccessToken(),
+    );
+    if (!token) return [];
+
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload?.realm_access?.roles ?? [];
   }
 
   hasRole(role: string): boolean {
@@ -46,26 +52,34 @@ export class AuthService {
     const userRoles = await this.getRoles();
     const result = roles.some((role) =>
       userRoles.some(
-        (userRole) => userRole.toLowerCase() === role.toLowerCase()
-      )
+        (userRole) => userRole.toLowerCase() === role.toLowerCase(),
+      ),
     );
-    console.log('[AuthService] hasAnyRole check:', roles, 'User roles:', userRoles, 'Result:', result);
+    console.log(
+      '[AuthService] hasAnyRole check:',
+      roles,
+      'User roles:',
+      userRoles,
+      'Result:',
+      result,
+    );
     return result;
   }
 
   async getUserName(): Promise<string> {
-    const userData = await firstValueFrom(this.oidcSecurityService.getUserData());
+    const userData = await firstValueFrom(
+      this.oidcSecurityService.getUserData(),
+    );
     const data = userData as any;
     return (
-      data?.name ||
-      data?.preferred_username ||
-      data?.email ||
-      'Unknown User'
+      data?.name || data?.preferred_username || data?.email || 'Unknown User'
     );
   }
 
   async getUserEmail(): Promise<string> {
-    const userData = await firstValueFrom(this.oidcSecurityService.getUserData());
+    const userData = await firstValueFrom(
+      this.oidcSecurityService.getUserData(),
+    );
     return (userData as any)?.email || '';
   }
 }
