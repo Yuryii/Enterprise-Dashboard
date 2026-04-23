@@ -1,17 +1,257 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<!-- Sales Dashboard -->
+<div class="sales-app">
+
+  <!-- Main Content -->
+  <div class="sales-content">
+
+    <!-- Loading State -->
+    @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading dashboard...</p>
+    </div>
+    }
+
+    <!-- Error State -->
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Retry</button>
+    </div>
+    }
+
+    <!-- Dashboard Content -->
+    @if (!loading() && !errorMessage() && dashboard()) {
+
+    <!-- Action Buttons - No Background -->
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <!-- Filters Card -->
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-success mb-3" name="cil-cart"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Sales Dashboard - Orders and customer management</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <!-- Filter Row -->
+          <c-row class="align-items-end">
+            <c-col md="2">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="territoryId" class="small">Vùng</label>
+              <select cSelect formControlName="territoryId" id="territoryId">
+                <option [ngValue]="null">Tất cả vùng</option>
+                @for (territory of dashboard()?.filterOptions?.territories; track territory.id) {
+                <option [ngValue]="territory.id">{{ territory.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="productCategoryId" class="small">Danh mục</label>
+              <select cSelect formControlName="productCategoryId" id="productCategoryId">
+                <option [ngValue]="null">Tất cả danh mục</option>
+                @for (cat of dashboard()?.filterOptions?.categories; track cat.id) {
+                <option [ngValue]="cat.id">{{ cat.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="onlineOrderFlag" class="small">Kênh bán</label>
+              <select cSelect formControlName="onlineOrderFlag" id="onlineOrderFlag">
+                <option [ngValue]="null">Tất cả</option>
+                <option [ngValue]="true">Trực tuyến</option>
+                <option [ngValue]="false">Cửa hàng</option>
+              </select>
+            </c-col>
+
+            <c-col md="2">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <!-- KPI Cards -->
+    <c-row class="mb-4 kpi-row">
+      @for (card of kpiCards(); track card.label) {
+      <c-col sm="6" lg="3">
+        <c-card class="kpi-card-custom">
+          <c-card-body>
+            <div class="kpi-card-header">
+              <div class="kpi-icon-wrap" [ngClass]="'accent-' + card.accent">
+                <span class="kpi-emoji" aria-hidden="true">
+                  @switch (card.icon) {
+                  @case ('cilDollar') { 💰 }
+                  @case ('cilCart') { 🛒 }
+                  @case ('cilBox') { 📦 }
+                  @default { 📈 }
+                  }
+                </span>
+              </div>
+              <div class="kpi-label">{{ card.label }}</div>
+            </div>
+
+            <div class="kpi-value-large">
+              @if (card.format === 'currency') {
+              {{ card.value | currency:'USD':'symbol':'1.0-0' }}
+              } @else {
+              {{ card.value | number:'1.0-0' }}
+              }
+            </div>
+
+            <div class="kpi-footnote">Cập nhật theo bộ lọc hiện tại</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <!-- Charts Grid -->
+    <c-row>
+      <!-- Row 1: Customer Segments & Category Mix -->
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân khúc khách hàng</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="customerSegmentChartData()" [options]="customerSegmentOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân loại sản phẩm</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="categoryMixChartData()" [options]="categoryMixOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="12" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Đơn hàng và tăng trưởng</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ kết hợp</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="orderGrowthChartData()" [options]="orderGrowthOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 2: Revenue Trend & Order Status -->
+    <c-row>
+      <c-col md="8">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Xu hướng doanh thu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="revenueTrendChartData()" [options]="revenueTrendOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Trạng thái đơn hàng</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="orderStatusChartData()" [options]="orderStatusOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 3: Top Products & Sales by Territory -->
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Sản phẩm bán chạy</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topProductsChartData()" [options]="topProductsOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Doanh số theo vùng</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ xếp hạng</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="territoryChartData()" [options]="territoryOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 4: Top Customers -->
+    <c-row>
+      <c-col xs="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top khách hàng theo doanh thu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ xếp hạng</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topCustomersChartData()" [options]="topCustomersOptions"
+              [height]="350"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    }
+
+  </div>
+
+</div>

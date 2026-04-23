@@ -16,6 +16,8 @@ public sealed class SalesDashboardResponseDto
 
     public IReadOnlyList<ProductPerformanceItemDto> TopProducts { get; init; } = [];
 
+    public IReadOnlyList<TopCustomerItemDto> TopCustomers { get; init; } = [];
+
     public IReadOnlyList<CustomerSegmentItemDto> CustomerSegments { get; init; } = [];
 
     public IReadOnlyList<OrderStatusItemDto> OrderStatuses { get; init; } = [];
@@ -78,6 +80,8 @@ public sealed class RevenueTrendPointDto
     public decimal Revenue { get; init; }
 
     public int Orders { get; init; }
+
+    public decimal? GrowthRate { get; init; }
 }
 
 public sealed class SalesPerformanceItemDto
@@ -132,6 +136,21 @@ public sealed class CustomerSegmentItemDto
     public int Orders { get; init; }
 
     public int Customers { get; init; }
+}
+
+public sealed class TopCustomerItemDto
+{
+    public int CustomerId { get; init; }
+
+    public string CustomerName { get; init; } = string.Empty;
+
+    public string? AccountNumber { get; init; }
+
+    public decimal Revenue { get; init; }
+
+    public int Orders { get; init; }
+
+    public decimal AverageOrderValue { get; init; }
 }
 
 public sealed class OrderStatusItemDto

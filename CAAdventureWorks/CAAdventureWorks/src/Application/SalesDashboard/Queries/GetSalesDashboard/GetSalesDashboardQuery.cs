@@ -1,6 +1,7 @@
 using CAAdventureWorks.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CAAdventureWorks.Application.SalesDashboard.Queries.GetSalesDashboard;
 
@@ -12,12 +13,17 @@ public sealed record GetSalesDashboardQuery(
     int? ProductCategoryId = null,
     bool? OnlineOrderFlag = null) : IRequest<SalesDashboardResponseDto>;
 
-public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
+public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context, ILogger<GetSalesDashboardQueryHandler> logger)
     : IRequestHandler<GetSalesDashboardQuery, SalesDashboardResponseDto>
 {
     public async Task<SalesDashboardResponseDto> Handle(GetSalesDashboardQuery request, CancellationToken cancellationToken)
     {
-        var headers = context.SalesOrderHeaders
+        try
+        {
+            logger.LogInformation("🔍 [Sales Dashboard] Bắt đầu tải dữ liệu với filters: StartDate={StartDate}, EndDate={EndDate}, TerritoryId={TerritoryId}, SalesPersonId={SalesPersonId}, ProductCategoryId={ProductCategoryId}, OnlineOrderFlag={OnlineOrderFlag}",
+                request.StartDate, request.EndDate, request.TerritoryId, request.SalesPersonId, request.ProductCategoryId, request.OnlineOrderFlag);
+
+            var headers = context.SalesOrderHeaders
             .AsNoTracking()
             .Where(x => !request.StartDate.HasValue || x.OrderDate >= request.StartDate.Value)
             .Where(x => !request.EndDate.HasValue || x.OrderDate <= request.EndDate.Value)
@@ -25,78 +31,118 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
             .Where(x => !request.SalesPersonId.HasValue || x.SalesPersonId == request.SalesPersonId.Value)
             .Where(x => !request.OnlineOrderFlag.HasValue || x.OnlineOrderFlag == request.OnlineOrderFlag.Value);
 
-        var details =
-            from detail in context.SalesOrderDetails.AsNoTracking()
-            join header in headers on detail.SalesOrderId equals header.SalesOrderId
-            join product in context.Products.AsNoTracking() on detail.ProductId equals product.ProductId
-            join subcategory in context.ProductSubcategories.AsNoTracking()
-                on product.ProductSubcategoryId equals subcategory.ProductSubcategoryId into subcategoryJoin
-            from subcategory in subcategoryJoin.DefaultIfEmpty()
-            join category in context.ProductCategories.AsNoTracking()
-                on subcategory.ProductCategoryId equals category.ProductCategoryId into categoryJoin
-            from category in categoryJoin.DefaultIfEmpty()
-            select new SalesDashboardDetailRow
+            // If filtering by category, we need to filter headers first
+            if (request.ProductCategoryId.HasValue)
             {
-                SalesOrderId = detail.SalesOrderId,
-                ProductId = detail.ProductId,
-                ProductName = product.Name,
-                CategoryId = category != null ? category.ProductCategoryId : null,
-                CategoryName = category != null ? category.Name : "Uncategorized",
-                SubcategoryName = subcategory != null ? subcategory.Name : "Uncategorized",
-                OrderQty = detail.OrderQty,
-                UnitPrice = detail.UnitPrice,
-                UnitPriceDiscount = detail.UnitPriceDiscount,
-                LineTotal = detail.LineTotal
+                var orderIdsWithCategory = context.SalesOrderDetails
+                    .AsNoTracking()
+                    .Join(context.Products.AsNoTracking(), d => d.ProductId, p => p.ProductId, (d, p) => new { d.SalesOrderId, p.ProductSubcategoryId })
+                    .Join(context.ProductSubcategories.AsNoTracking(), x => x.ProductSubcategoryId, s => s.ProductSubcategoryId, (x, s) => new { x.SalesOrderId, s.ProductCategoryId })
+                    .Where(x => x.ProductCategoryId == request.ProductCategoryId.Value)
+                    .Select(x => x.SalesOrderId)
+                    .Distinct();
+
+                headers = headers.Where(x => orderIdsWithCategory.Contains(x.SalesOrderId));
+            }
+
+            var details =
+                from detail in context.SalesOrderDetails.AsNoTracking()
+                join header in headers on detail.SalesOrderId equals header.SalesOrderId
+                join product in context.Products.AsNoTracking() on detail.ProductId equals product.ProductId
+                join subcategory in context.ProductSubcategories.AsNoTracking()
+                    on product.ProductSubcategoryId equals subcategory.ProductSubcategoryId into subcategoryJoin
+                from subcategory in subcategoryJoin.DefaultIfEmpty()
+                join category in context.ProductCategories.AsNoTracking()
+                    on subcategory.ProductCategoryId equals category.ProductCategoryId into categoryJoin
+                from category in categoryJoin.DefaultIfEmpty()
+                select new SalesDashboardDetailRow
+                {
+                    SalesOrderId = detail.SalesOrderId,
+                    ProductId = detail.ProductId,
+                    ProductName = product.Name,
+                    CategoryId = category != null ? category.ProductCategoryId : null,
+                    CategoryName = category != null ? category.Name : "Uncategorized",
+                    SubcategoryName = subcategory != null ? subcategory.Name : "Uncategorized",
+                    OrderQty = detail.OrderQty,
+                    UnitPrice = detail.UnitPrice,
+                    UnitPriceDiscount = detail.UnitPriceDiscount,
+                    LineTotal = detail.LineTotal
+                };
+
+            // Test with minimal data first
+            logger.LogInformation("📊 [Sales Dashboard] Bước 1/13: Đang build Overview...");
+            var overview = await BuildOverviewAsync(headers, details, cancellationToken);
+
+            logger.LogInformation("📈 [Sales Dashboard] Bước 2/13: Đang build Revenue Trend...");
+            var revenueTrend = await BuildRevenueTrendAsync(headers, cancellationToken);
+
+            logger.LogInformation("👤 [Sales Dashboard] Bước 3/13: Đang build Sales By Person...");
+            var salesByPerson = await BuildSalesByPersonAsync(headers, cancellationToken);
+
+            logger.LogInformation("🌍 [Sales Dashboard] Bước 4/13: Đang build Sales By Territory...");
+            var salesByTerritory = await BuildSalesByTerritoryAsync(headers, cancellationToken);
+
+            logger.LogInformation("📦 [Sales Dashboard] Bước 5/13: Đang build Category Mix...");
+            var categoryMix = await BuildCategoryMixAsync(details, cancellationToken);
+
+            logger.LogInformation("🏆 [Sales Dashboard] Bước 6/13: Đang build Top Products...");
+            var topProducts = await BuildTopProductsAsync(details, cancellationToken);
+
+            logger.LogInformation("🛒 [Sales Dashboard] Bước 7/13: Đang build Top Customers...");
+            var topCustomers = await BuildTopCustomersAsync(headers, cancellationToken);
+
+            logger.LogInformation("👥 [Sales Dashboard] Bước 8/13: Đang build Customer Segments...");
+            var customerSegments = await BuildCustomerSegmentsAsync(headers, cancellationToken);
+
+            logger.LogInformation("📋 [Sales Dashboard] Bước 9/13: Đang build Order Statuses...");
+            var orderStatuses = await BuildOrderStatusesAsync(headers, cancellationToken);
+
+            logger.LogInformation("🎯 [Sales Dashboard] Bước 10/13: Đang build Quota...");
+            var quota = await BuildQuotaAsync(request, headers, cancellationToken);
+
+            logger.LogInformation("🚚 [Sales Dashboard] Bước 11/13: Đang build Shipping...");
+            var shipping = await BuildShippingAsync(headers, cancellationToken);
+
+            logger.LogInformation("💡 [Sales Dashboard] Bước 12/13: Đang build Sales Reasons...");
+            var salesReasons = await BuildSalesReasonsAsync(headers, cancellationToken);
+
+            logger.LogInformation("🔧 [Sales Dashboard] Bước 13/13: Đang build Filter Options...");
+            var filterOptions = await BuildFilterOptionsAsync(cancellationToken);
+
+            logger.LogInformation("✅ [Sales Dashboard] Hoàn thành tải dữ liệu thành công!");
+
+            return new SalesDashboardResponseDto
+            {
+                Filters = new SalesDashboardAppliedFilterDto
+                {
+                    StartDate = request.StartDate,
+                    EndDate = request.EndDate,
+                    TerritoryId = request.TerritoryId,
+                    SalesPersonId = request.SalesPersonId,
+                    ProductCategoryId = request.ProductCategoryId,
+                    OnlineOrderFlag = request.OnlineOrderFlag
+                },
+                Overview = overview,
+                RevenueTrend = revenueTrend,
+                SalesByPerson = salesByPerson,
+                SalesByTerritory = salesByTerritory,
+                CategoryMix = categoryMix,
+                TopProducts = topProducts,
+                TopCustomers = topCustomers,
+                CustomerSegments = customerSegments,
+                OrderStatuses = orderStatuses,
+                Quota = quota,
+                Shipping = shipping,
+                SalesReasons = salesReasons,
+                FilterOptions = filterOptions
             };
-
-        if (request.ProductCategoryId.HasValue)
-        {
-            details = details.Where(x => x.CategoryId == request.ProductCategoryId.Value);
-
-            var matchedOrderIds = details
-                .Select(x => x.SalesOrderId)
-                .Distinct();
-
-            headers = headers.Where(x => matchedOrderIds.Contains(x.SalesOrderId));
         }
-
-        var overview = await BuildOverviewAsync(headers, details, cancellationToken);
-        var revenueTrend = await BuildRevenueTrendAsync(headers, cancellationToken);
-        var salesByPerson = await BuildSalesByPersonAsync(headers, cancellationToken);
-        var salesByTerritory = await BuildSalesByTerritoryAsync(headers, cancellationToken);
-        var categoryMix = await BuildCategoryMixAsync(details, cancellationToken);
-        var topProducts = await BuildTopProductsAsync(details, cancellationToken);
-        var customerSegments = await BuildCustomerSegmentsAsync(headers, cancellationToken);
-        var orderStatuses = await BuildOrderStatusesAsync(headers, cancellationToken);
-        var quota = await BuildQuotaAsync(request, headers, cancellationToken);
-        var shipping = await BuildShippingAsync(headers, cancellationToken);
-        var salesReasons = await BuildSalesReasonsAsync(headers, cancellationToken);
-        var filterOptions = await BuildFilterOptionsAsync(cancellationToken);
-
-        return new SalesDashboardResponseDto
+        catch (Exception ex)
         {
-            Filters = new SalesDashboardAppliedFilterDto
-            {
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
-                TerritoryId = request.TerritoryId,
-                SalesPersonId = request.SalesPersonId,
-                ProductCategoryId = request.ProductCategoryId,
-                OnlineOrderFlag = request.OnlineOrderFlag
-            },
-            Overview = overview,
-            RevenueTrend = revenueTrend,
-            SalesByPerson = salesByPerson,
-            SalesByTerritory = salesByTerritory,
-            CategoryMix = categoryMix,
-            TopProducts = topProducts,
-            CustomerSegments = customerSegments,
-            OrderStatuses = orderStatuses,
-            Quota = quota,
-            Shipping = shipping,
-            SalesReasons = salesReasons,
-            FilterOptions = filterOptions
-        };
+            logger.LogError(ex, "❌ [Sales Dashboard] LỖI khi tải dữ liệu: {ErrorMessage}. StackTrace: {StackTrace}",
+                ex.Message, ex.StackTrace);
+            throw;
+        }
     }
 
     private static async Task<SalesOverviewDto> BuildOverviewAsync(
@@ -154,9 +200,9 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
         IQueryable<Domain.Entities.SalesOrderHeader> headers,
         CancellationToken cancellationToken)
     {
-        return await headers
+        var trendData = await headers
             .GroupBy(x => new { x.OrderDate.Year, x.OrderDate.Month })
-            .Select(group => new RevenueTrendPointDto
+            .Select(group => new
             {
                 Period = $"{group.Key.Year}-{group.Key.Month:00}",
                 Year = group.Key.Year,
@@ -167,6 +213,35 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
             .OrderBy(x => x.Year)
             .ThenBy(x => x.Month)
             .ToListAsync(cancellationToken);
+
+        // Calculate growth rate: (current month - previous month) / previous month * 100
+        var result = new List<RevenueTrendPointDto>();
+        for (int i = 0; i < trendData.Count; i++)
+        {
+            var current = trendData[i];
+            decimal? growthRate = null;
+
+            if (i > 0)
+            {
+                var previous = trendData[i - 1];
+                if (previous.Orders > 0)
+                {
+                    growthRate = ((decimal)(current.Orders - previous.Orders) / previous.Orders) * 100;
+                }
+            }
+
+            result.Add(new RevenueTrendPointDto
+            {
+                Period = current.Period,
+                Year = current.Year,
+                Month = current.Month,
+                Revenue = current.Revenue,
+                Orders = current.Orders,
+                GrowthRate = growthRate
+            });
+        }
+
+        return result;
     }
 
     private async Task<IReadOnlyList<SalesPerformanceItemDto>> BuildSalesByPersonAsync(
@@ -204,23 +279,27 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
             .ToListAsync(cancellationToken);
     }
 
-    private static async Task<IReadOnlyList<SalesPerformanceItemDto>> BuildSalesByTerritoryAsync(
+    private async Task<IReadOnlyList<SalesPerformanceItemDto>> BuildSalesByTerritoryAsync(
         IQueryable<Domain.Entities.SalesOrderHeader> headers,
         CancellationToken cancellationToken)
     {
-        return await headers
-            .Where(x => x.Territory != null)
-            .GroupBy(x => new { Id = x.TerritoryId ?? 0, x.Territory!.Name, x.Territory.Group })
-            .Select(group => new SalesPerformanceItemDto
+        var territoryData = await (
+            from header in headers
+            where header.TerritoryId != null
+            join territory in context.SalesTerritories.AsNoTracking() on header.TerritoryId equals territory.TerritoryId
+            group new { header, territory } by new { territory.TerritoryId, territory.Name, territory.Group } into grouped
+            select new SalesPerformanceItemDto
             {
-                Id = group.Key.Id,
-                Name = group.Key.Name,
-                Group = group.Key.Group,
-                Revenue = group.Sum(x => x.TotalDue),
-                Orders = group.Select(x => x.SalesOrderId).Distinct().Count()
+                Id = grouped.Key.TerritoryId,
+                Name = grouped.Key.Name,
+                Group = grouped.Key.Group,
+                Revenue = grouped.Sum(x => x.header.TotalDue),
+                Orders = grouped.Select(x => x.header.SalesOrderId).Distinct().Count()
             })
             .OrderByDescending(x => x.Revenue)
             .ToListAsync(cancellationToken);
+
+        return territoryData;
     }
 
     private static async Task<IReadOnlyList<CategoryMixItemDto>> BuildCategoryMixAsync(
@@ -261,44 +340,86 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
             .ToListAsync(cancellationToken);
     }
 
-    private static async Task<IReadOnlyList<CustomerSegmentItemDto>> BuildCustomerSegmentsAsync(
+    private async Task<IReadOnlyList<CustomerSegmentItemDto>> BuildCustomerSegmentsAsync(
         IQueryable<Domain.Entities.SalesOrderHeader> headers,
         CancellationToken cancellationToken)
     {
-        return await headers
-            .GroupBy(x => x.Customer.StoreId != null ? "Reseller / B2B" : "Individual / B2C")
-            .Select(group => new CustomerSegmentItemDto
+        var segments = await (
+            from header in headers
+            join customer in context.Customers.AsNoTracking() on header.CustomerId equals customer.CustomerId
+            group new { header, customer } by (customer.StoreId != null ? "Reseller / B2B" : "Individual / B2C") into grouped
+            select new CustomerSegmentItemDto
             {
-                Segment = group.Key,
-                Revenue = group.Sum(x => x.TotalDue),
-                Orders = group.Select(x => x.SalesOrderId).Distinct().Count(),
-                Customers = group.Select(x => x.CustomerId).Distinct().Count()
+                Segment = grouped.Key,
+                Revenue = grouped.Sum(x => x.header.TotalDue),
+                Orders = grouped.Select(x => x.header.SalesOrderId).Distinct().Count(),
+                Customers = grouped.Select(x => x.customer.CustomerId).Distinct().Count()
             })
             .OrderByDescending(x => x.Revenue)
             .ToListAsync(cancellationToken);
+
+        return segments;
     }
 
     private static async Task<IReadOnlyList<OrderStatusItemDto>> BuildOrderStatusesAsync(
         IQueryable<Domain.Entities.SalesOrderHeader> headers,
         CancellationToken cancellationToken)
     {
-        return await headers
+        var actualStatuses = await headers
             .GroupBy(x => x.Status)
             .Select(group => new OrderStatusItemDto
             {
                 Status = group.Key,
-                StatusLabel = group.Key == 1 ? "In Process"
-                    : group.Key == 2 ? "Approved"
-                    : group.Key == 3 ? "Backordered"
-                    : group.Key == 4 ? "Rejected"
-                    : group.Key == 5 ? "Shipped"
-                    : group.Key == 6 ? "Cancelled"
-                    : "Unknown",
+                StatusLabel = group.Key == 1 ? "Đang xử lý"
+                    : group.Key == 2 ? "Đã duyệt"
+                    : group.Key == 3 ? "Chờ hàng"
+                    : group.Key == 4 ? "Từ chối"
+                    : group.Key == 5 ? "Đã giao"
+                    : group.Key == 6 ? "Đã hủy"
+                    : "Không xác định",
                 Orders = group.Select(x => x.SalesOrderId).Distinct().Count(),
                 Revenue = group.Sum(x => x.TotalDue)
             })
-            .OrderBy(x => x.Status)
             .ToListAsync(cancellationToken);
+
+        // Ensure all 6 statuses are present (with 0 if not found)
+        var allStatuses = new List<OrderStatusItemDto>();
+        var statusLabels = new Dictionary<int, string>
+        {
+            { 1, "Đang xử lý" },
+            { 2, "Đã duyệt" },
+            { 3, "Chờ hàng" },
+            { 4, "Từ chối" },
+            { 5, "Đã giao" },
+            { 6, "Đã hủy" }
+        };
+
+        foreach (var status in statusLabels)
+        {
+            var existing = actualStatuses.FirstOrDefault(x => x.Status == status.Key);
+            if (existing != null)
+            {
+                allStatuses.Add(new OrderStatusItemDto
+                {
+                    Status = existing.Status,
+                    StatusLabel = $"{status.Value} ({existing.Orders})",
+                    Orders = existing.Orders,
+                    Revenue = existing.Revenue
+                });
+            }
+            else
+            {
+                allStatuses.Add(new OrderStatusItemDto
+                {
+                    Status = status.Key,
+                    StatusLabel = $"{status.Value} (0)",
+                    Orders = 0,
+                    Revenue = 0m
+                });
+            }
+        }
+
+        return allStatuses.OrderBy(x => x.Status).ToList();
     }
 
     private async Task<QuotaSummaryDto> BuildQuotaAsync(
@@ -308,18 +429,15 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
     {
         var actualSales = await headers.SumAsync(x => x.TotalDue, cancellationToken);
 
-        var quotaQuery = context.SalesPersonQuotaHistories
-            .AsNoTracking()
-            .Where(x => !request.StartDate.HasValue || x.QuotaDate >= request.StartDate.Value)
-            .Where(x => !request.EndDate.HasValue || x.QuotaDate <= request.EndDate.Value)
-            .Where(x => !request.SalesPersonId.HasValue || x.BusinessEntityId == request.SalesPersonId.Value);
+        var quotaQuery = from quota in context.SalesPersonQuotaHistories.AsNoTracking()
+                         join salesPerson in context.SalesPeople.AsNoTracking() on quota.BusinessEntityId equals salesPerson.BusinessEntityId
+                         where (!request.StartDate.HasValue || quota.QuotaDate >= request.StartDate.Value)
+                         where (!request.EndDate.HasValue || quota.QuotaDate <= request.EndDate.Value)
+                         where (!request.SalesPersonId.HasValue || quota.BusinessEntityId == request.SalesPersonId.Value)
+                         where (!request.TerritoryId.HasValue || salesPerson.TerritoryId == request.TerritoryId.Value)
+                         select quota.SalesQuota;
 
-        if (request.TerritoryId.HasValue)
-        {
-            quotaQuery = quotaQuery.Where(x => x.BusinessEntity.TerritoryId == request.TerritoryId.Value);
-        }
-
-        var targetSales = await quotaQuery.SumAsync(x => (decimal?)x.SalesQuota, cancellationToken) ?? 0m;
+        var targetSales = await quotaQuery.SumAsync(x => (decimal?)x, cancellationToken) ?? 0m;
 
         return new QuotaSummaryDto
         {
@@ -334,26 +452,30 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
         IQueryable<Domain.Entities.SalesOrderHeader> headers,
         CancellationToken cancellationToken)
     {
-        var aggregate = await headers
+        var shippedOrders = await headers
             .Where(x => x.ShipDate != null)
-            .GroupBy(_ => 1)
-            .Select(group => new
+            .Select(x => new
             {
-                TotalShippedOrders = group.Count(),
-                OnTimeOrders = group.Count(x => x.ShipDate <= x.DueDate),
-                FreightTotal = group.Sum(x => x.Freight),
-                AverageLeadTimeDays = group.Average(x => x.ShipDate!.Value.Subtract(x.OrderDate).TotalDays)
+                x.OrderDate,
+                ShipDate = x.ShipDate!.Value,
+                x.DueDate,
+                x.Freight
             })
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        var shippedOrders = aggregate?.TotalShippedOrders ?? 0;
+        var totalShippedOrders = shippedOrders.Count;
+        var onTimeOrders = shippedOrders.Count(x => x.ShipDate <= x.DueDate);
+        var freightTotal = shippedOrders.Sum(x => x.Freight);
+        var averageLeadTimeDays = totalShippedOrders == 0
+            ? 0d
+            : shippedOrders.Average(x => (x.ShipDate - x.OrderDate).TotalDays);
 
         return new ShippingSummaryDto
         {
-            OnTimeRate = shippedOrders == 0 ? 0m : (decimal)(aggregate?.OnTimeOrders ?? 0) / shippedOrders,
-            AverageLeadTimeDays = aggregate?.AverageLeadTimeDays ?? 0,
-            FreightTotal = aggregate?.FreightTotal ?? 0m,
-            FreightPerOrder = shippedOrders == 0 ? 0m : (aggregate?.FreightTotal ?? 0m) / shippedOrders
+            OnTimeRate = totalShippedOrders == 0 ? 0m : (decimal)onTimeOrders / totalShippedOrders,
+            AverageLeadTimeDays = averageLeadTimeDays,
+            FreightTotal = freightTotal,
+            FreightPerOrder = totalShippedOrders == 0 ? 0m : freightTotal / totalShippedOrders
         };
     }
 
@@ -379,6 +501,35 @@ public sealed class GetSalesDashboardQueryHandler(IApplicationDbContext context)
                     Revenue = grouped.Sum(x => x.header.TotalDue),
                     Orders = grouped.Select(x => x.relation.SalesOrderId).Distinct().Count()
                 })
+            .Take(10)
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<TopCustomerItemDto>> BuildTopCustomersAsync(
+        IQueryable<Domain.Entities.SalesOrderHeader> headers,
+        CancellationToken cancellationToken)
+    {
+        return await (
+                from header in headers
+                join customer in context.Customers.AsNoTracking() on header.CustomerId equals customer.CustomerId
+                group new { header, customer } by new
+                {
+                    customer.CustomerId,
+                    customer.AccountNumber
+                }
+                into grouped
+                select new TopCustomerItemDto
+                {
+                    CustomerId = grouped.Key.CustomerId,
+                    CustomerName = grouped.Key.AccountNumber ?? $"Customer {grouped.Key.CustomerId}",
+                    AccountNumber = grouped.Key.AccountNumber,
+                    Revenue = grouped.Sum(x => x.header.TotalDue),
+                    Orders = grouped.Select(x => x.header.SalesOrderId).Distinct().Count(),
+                    AverageOrderValue = grouped.Select(x => x.header.SalesOrderId).Distinct().Count() > 0
+                        ? grouped.Sum(x => x.header.TotalDue) / grouped.Select(x => x.header.SalesOrderId).Distinct().Count()
+                        : 0m
+                })
+            .OrderByDescending(x => x.Revenue)
             .Take(10)
             .ToListAsync(cancellationToken);
     }

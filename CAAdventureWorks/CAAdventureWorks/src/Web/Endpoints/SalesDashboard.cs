@@ -5,10 +5,10 @@ namespace CAAdventureWorks.Web.Endpoints;
 
 public sealed class SalesDashboardEndpoint : IEndpointGroup
 {
+    public static string RoutePrefix => "/api/salesdashboard";
+
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.RequireAuthorization();
-
         groupBuilder.MapGet(GetSalesDashboard, "/")
             .WithName("GetSalesDashboard")
             .WithTags("Sales Dashboard");
