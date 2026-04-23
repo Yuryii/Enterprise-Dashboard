@@ -1,17 +1,262 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="purchasing-app">
+  <div class="purchasing-content">
+    @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading purchasing dashboard...</p>
+    </div>
+    }
+
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Retry</button>
+    </div>
+    }
+
+    @if (!loading() && !errorMessage() && dashboard()) {
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3 filter-shell-card">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-info mb-3" name="cil-package"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Purchasing Dashboard - Vendors and inventory</p>
+        <div class="dashboard-heading mb-3">
+          <div>
+            <h2 class="page-title mb-1">{{ title }}</h2>
+            <p class="page-subtitle mb-0">{{ subtitle }}</p>
+          </div>
+          <div class="page-chip">Power BI style layout</div>
         </div>
+
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <c-row class="align-items-end g-3">
+            <c-col md="2">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </c-col>
+            <c-col md="2">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </c-col>
+            <c-col md="2">
+              <label cLabel for="vendorId" class="small">Vendor</label>
+              <select cSelect formControlName="vendorId" id="vendorId">
+                <option [ngValue]="null">Tất cả vendor</option>
+                @for (vendor of dashboard()?.filterOptions?.vendors; track vendor.id) {
+                <option [ngValue]="vendor.id">{{ vendor.name }}</option>
+                }
+              </select>
+            </c-col>
+            <c-col md="2">
+              <label cLabel for="productId" class="small">Sản phẩm</label>
+              <select cSelect formControlName="productId" id="productId">
+                <option [ngValue]="null">Tất cả sản phẩm</option>
+                @for (product of dashboard()?.filterOptions?.products; track product.id) {
+                <option [ngValue]="product.id">{{ product.name }}</option>
+                }
+              </select>
+            </c-col>
+            <c-col md="2">
+              <label cLabel for="shipMethodId" class="small">Vận chuyển</label>
+              <select cSelect formControlName="shipMethodId" id="shipMethodId">
+                <option [ngValue]="null">Tất cả</option>
+                @for (method of dashboard()?.filterOptions?.shipMethods; track method.id) {
+                <option [ngValue]="method.id">{{ method.name }}</option>
+                }
+              </select>
+            </c-col>
+            <c-col md="2">
+              <label cLabel for="status" class="small">Trạng thái</label>
+              <select cSelect formControlName="status" id="status">
+                <option [ngValue]="null">Tất cả</option>
+                <option [ngValue]="1">Pending</option>
+                <option [ngValue]="2">Approved</option>
+                <option [ngValue]="3">Rejected</option>
+                <option [ngValue]="4">Complete</option>
+              </select>
+            </c-col>
+            <c-col md="3">
+              <c-form-check>
+                <input cFormCheckInput type="checkbox" formControlName="preferredVendorOnly" id="preferredVendorOnly" />
+                <label cLabel for="preferredVendorOnly" class="small">Chỉ vendor ưu tiên</label>
+              </c-form-check>
+            </c-col>
+            <c-col md="3">
+              <c-form-check>
+                <input cFormCheckInput type="checkbox" formControlName="activeVendorOnly" id="activeVendorOnly" />
+                <label cLabel for="activeVendorOnly" class="small">Chỉ vendor active</label>
+              </c-form-check>
+            </c-col>
+            <c-col md="3">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng bộ lọc
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="mb-4 kpi-row">
+      @for (card of kpiCards(); track card.label) {
+      <c-col sm="6" lg="3">
+        <c-card class="kpi-card-custom">
+          <c-card-body>
+            <div class="kpi-card-header">
+              <div class="kpi-icon-wrap" [ngClass]="'accent-' + card.accent">
+                <span class="kpi-emoji" aria-hidden="true">
+                  @switch (card.icon) {
+                  @case ('cilDollar') { 💰 }
+                  @case ('cilCart') { 🧾 }
+                  @case ('cilBox') { 📦 }
+                  @default { 📈 }
+                  }
+                </span>
+              </div>
+              <div class="kpi-label">{{ card.label }}</div>
+            </div>
+            <div class="kpi-value-large">
+              @if (card.format === 'currency') {
+              {{ card.value | currency:'USD':'symbol':'1.0-0' }}
+              } @else {
+              {{ card.value | number:'1.0-0' }}
+              }
+            </div>
+            <div class="kpi-footnote">Cập nhật theo bộ lọc hiện tại</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="mb-3">
+      @for (item of healthCards(); track item.label) {
+      <c-col md="3">
+        <c-card class="metric-mini-card mb-3">
+          <c-card-body>
+            <div class="metric-mini-label">{{ item.label }}</div>
+            <div class="metric-mini-value">
+              @if (item.type === 'number') {
+              {{ item.value | number:'1.0-0' }}
+              } @else {
+              {{ item.value | percent:'1.0-1' }}
+              }
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="8">
+        <c-card class="mb-3 chart-card-tall">
+          <c-card-header>
+            <strong>Xu hướng chi mua theo tháng</strong>
+            <small class="text-body-secondary ms-2">Executive overview</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="spendTrendChartData()" [options]="spendTrendOptions" [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="4">
+        <c-card class="mb-3 chart-card-tall">
+          <c-card-header>
+            <strong>Trạng thái đơn mua</strong>
+            <small class="text-body-secondary ms-2">Operational mix</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="statusChartData()" [options]="statusChartOptions" [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top vendor theo giá trị mua</strong>
+            <small class="text-body-secondary ms-2">Supplier ranking</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topVendorChartData()" [options]="topVendorOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top sản phẩm mua vào</strong>
+            <small class="text-body-secondary ms-2">Spend by product</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topProductChartData()" [options]="topProductOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Tỷ lệ nhận hàng và reject theo vendor</strong>
+            <small class="text-body-secondary ms-2">Supplier quality</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="vendorRateChartData()" [options]="vendorRateOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Lead time theo vendor</strong>
+            <small class="text-body-secondary ms-2">Procurement responsiveness</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="leadTimeChartData()" [options]="leadTimeOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col xs="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Vendor theo khu vực</strong>
+            <small class="text-body-secondary ms-2">Sourcing footprint</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="regionChartData()" [options]="regionOptions" [height]="340"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+    }
+  </div>
+</div>

@@ -1,14 +1,269 @@
-import { Component } from '@angular/core';
-import { CardComponent, CardBodyComponent, CardHeaderComponent, RowComponent, ColComponent } from '@coreui/angular';
+import { CommonModule, CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ChartData, ChartOptions } from 'chart.js';
+import { ButtonDirective, CardBodyComponent, CardComponent, CardHeaderComponent, ColComponent, FormCheckComponent, FormCheckInputDirective, FormControlDirective, FormLabelDirective, FormSelectDirective, RowComponent } from '@coreui/angular';
+import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
+import { PurchasingDashboardService } from './purchasing-dashboard.service';
 
 @Component({
   selector: 'app-purchasing',
+  standalone: true,
   templateUrl: './purchasing.component.html',
   styleUrls: ['./purchasing.component.scss'],
-  imports: [CardComponent, CardBodyComponent, CardHeaderComponent, RowComponent, ColComponent, IconDirective]
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RowComponent,
+    ColComponent,
+    CardComponent,
+    CardHeaderComponent,
+    CardBodyComponent,
+    FormLabelDirective,
+    FormControlDirective,
+    FormSelectDirective,
+    FormCheckComponent,
+    FormCheckInputDirective,
+    ButtonDirective,
+    ChartjsComponent,
+    IconDirective,
+    CurrencyPipe,
+    DecimalPipe,
+    PercentPipe
+  ]
 })
-export class PurchasingComponent {
-  title = 'Purchasing';
-  subtitle = 'Vendor management, purchase orders, and inventory';
+export class PurchasingComponent implements OnInit {
+  private readonly fb = inject(FormBuilder);
+  private readonly purchasingDashboardService = inject(PurchasingDashboardService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly title = 'Purchasing';
+  readonly subtitle = 'Vendor performance, purchase orders, inbound operations';
+
+  readonly loading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly dashboard = signal<any>(null);
+
+  readonly filterForm = this.fb.group({
+    startDate: ['2013-01-01'],
+    endDate: ['2014-12-31'],
+    vendorId: [null as number | null],
+    status: [null as number | null],
+    shipMethodId: [null as number | null],
+    productId: [null as number | null],
+    preferredVendorOnly: [null as boolean | null],
+    activeVendorOnly: [true as boolean | null]
+  });
+
+  readonly kpiCards = computed(() => {
+    const overview = this.dashboard()?.overview;
+    if (!overview) return [];
+
+    return [
+      { label: 'Tổng chi mua', value: overview.totalSpend, format: 'currency', accent: 'primary', icon: 'cilDollar' },
+      { label: 'Đơn mua', value: overview.totalOrders, format: 'number', accent: 'success', icon: 'cilCart' },
+      { label: 'SL đặt mua', value: overview.totalOrderedQty, format: 'number', accent: 'info', icon: 'cilBox' },
+      { label: 'Giá trị TB/đơn', value: overview.averageOrderValue, format: 'currency', accent: 'warning', icon: 'cilChartLine' }
+    ];
+  });
+
+  readonly spendTrendChartData = computed<ChartData<'line'>>(() => {
+    const trend = this.dashboard()?.spendTrend ?? [];
+    return {
+      labels: trend.map((item: any) => item.period),
+      datasets: [{
+        label: 'Spend',
+        data: trend.map((item: any) => item.totalSpend),
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.12)',
+        fill: true,
+        tension: 0.35,
+        borderWidth: 3,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    };
+  });
+
+  readonly spendTrendOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,0.05)' } }
+    }
+  };
+
+  readonly statusChartData = computed<ChartData<'doughnut'>>(() => {
+    const statuses = this.dashboard()?.orderStatuses ?? [];
+    return {
+      labels: statuses.map((item: any) => item.statusLabel),
+      datasets: [{
+        data: statuses.map((item: any) => item.orders),
+        backgroundColor: ['#7c5cff', '#8f76ff', '#e8a07c', '#b29cff'],
+        borderWidth: 0
+      }]
+    };
+  });
+
+  readonly statusChartOptions: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '70%',
+    plugins: { legend: { position: 'bottom' } }
+  };
+
+  readonly topVendorChartData = computed<ChartData<'bar'>>(() => {
+    const items = this.dashboard()?.topVendors ?? [];
+    return {
+      labels: items.slice(0, 8).map((item: any) => item.vendorName),
+      datasets: [{
+        data: items.slice(0, 8).map((item: any) => item.totalSpend),
+        backgroundColor: '#7c5cff',
+        borderRadius: 6,
+        barThickness: 14
+      }]
+    };
+  });
+
+  readonly topVendorOptions: ChartOptions<'bar'> = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: '#eeeeee' } }, y: { grid: { display: false } } }
+  };
+
+  readonly topProductChartData = computed<ChartData<'bar'>>(() => {
+    const items = this.dashboard()?.topProducts ?? [];
+    return {
+      labels: items.slice(0, 8).map((item: any) => item.productName),
+      datasets: [{
+        data: items.slice(0, 8).map((item: any) => item.lineTotal),
+        backgroundColor: ['#7c5cff', '#8f76ff', '#a08cff', '#b29cff', '#d7ccff', '#c7b8ff', '#a78bfa', '#7e69ab'],
+        borderRadius: 6
+      }]
+    };
+  });
+
+  readonly topProductOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eeeeee' } } }
+  };
+
+  readonly vendorRateChartData = computed<ChartData<'bar'>>(() => {
+    const items = this.dashboard()?.vendorDeliveryRates ?? [];
+    return {
+      labels: items.slice(0, 6).map((item: any) => item.vendorName),
+      datasets: [
+        { label: 'Receive rate', data: items.slice(0, 6).map((item: any) => (item.receiveRate ?? 0) * 100), backgroundColor: '#667eea', borderRadius: 6 },
+        { label: 'Reject rate', data: items.slice(0, 6).map((item: any) => (item.rejectRate ?? 0) * 100), backgroundColor: '#ff8a65', borderRadius: 6 }
+      ]
+    };
+  });
+
+  readonly vendorRateOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: false, grid: { display: false } }, y: { beginAtZero: true, max: 100, ticks: { callback: (v) => `${v}%` } } }
+  };
+
+  readonly leadTimeChartData = computed<ChartData<'bar'>>(() => {
+    const items = this.dashboard()?.vendorLeadTimes ?? [];
+    return {
+      labels: items.slice(0, 8).map((item: any) => item.vendorName),
+      datasets: [{
+        label: 'Lead time (days)',
+        data: items.slice(0, 8).map((item: any) => item.averageLeadTimeDays),
+        backgroundColor: '#11998e',
+        borderRadius: 6
+      }]
+    };
+  });
+
+  readonly leadTimeOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eeeeee' } } }
+  };
+
+  readonly regionChartData = computed<ChartData<'bar'>>(() => {
+    const items = this.dashboard()?.vendorsByRegion ?? [];
+    return {
+      labels: items.slice(0, 8).map((item: any) => `${item.country} / ${item.stateProvince}`),
+      datasets: [{
+        label: 'Vendor count',
+        data: items.slice(0, 8).map((item: any) => item.vendorCount),
+        backgroundColor: '#764ba2',
+        borderRadius: 6
+      }]
+    };
+  });
+
+  readonly regionOptions: ChartOptions<'bar'> = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: '#eeeeee' } }, y: { grid: { display: false } } }
+  };
+
+  readonly healthCards = computed(() => {
+    const overview = this.dashboard()?.overview;
+    if (!overview) return [];
+
+    return [
+      { label: 'Tỷ lệ nhận hàng', value: overview.receiveRate },
+      { label: 'Tỷ lệ reject', value: overview.rejectRate },
+      { label: 'Vendor active', value: overview.activeVendors, type: 'number' },
+      { label: 'Vendor ưu tiên', value: overview.preferredVendors, type: 'number' }
+    ];
+  });
+
+  ngOnInit(): void {
+    this.loadDashboard();
+  }
+
+  loadDashboard(): void {
+    this.loading.set(true);
+    this.errorMessage.set(null);
+
+    this.purchasingDashboardService.getDashboard(this.filterForm.getRawValue())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.dashboard.set(response);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.errorMessage.set('Không thể tải dữ liệu Purchasing Dashboard.');
+          this.loading.set(false);
+        }
+      });
+  }
+
+  resetFilters(): void {
+    this.filterForm.reset({
+      startDate: '2013-01-01',
+      endDate: '2014-12-31',
+      vendorId: null,
+      status: null,
+      shipMethodId: null,
+      productId: null,
+      preferredVendorOnly: null,
+      activeVendorOnly: true
+    });
+    this.loadDashboard();
+  }
+
+  exportPDF(): void { alert('Chức năng xuất PDF đang được phát triển'); }
+  customizeLayout(): void { alert('Chức năng tùy chỉnh layout đang được phát triển'); }
+  saveFilter(): void { alert('Chức năng lưu bộ lọc đang được phát triển'); }
 }

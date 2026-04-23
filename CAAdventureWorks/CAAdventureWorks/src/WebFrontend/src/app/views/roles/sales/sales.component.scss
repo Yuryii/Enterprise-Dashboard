@@ -337,8 +337,72 @@ c-widget-stat-a {
         .card {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.08);
+            min-height: 80px;
+        }
+
+        .card-body>div:first-child {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .fs-4,
+        .fw-semibold {
+            margin-bottom: 0;
+            line-height: 1.15;
+            font-size: 1.15rem !important;
+        }
+
+        .card-body {
+            padding: 0.75rem 0.85rem 0.35rem !important;
+        }
+
+        .chart-wrapper,
+        c-chart {
+            height: 80px !important;
+            min-height: 80px !important;
+        }
+
+        canvas {
+            max-height: 80px !important;
+        }
+
+        .chartjs-tooltip {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        .sales-widget-action {
+            pointer-events: none;
+        }
+
+        .sales-widget-action:focus,
+        .sales-widget-action:hover {
+            box-shadow: none !important;
         }
     }
+}
+
+.sales-widget-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sales-widget-label {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.sales-widget-note {
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.15;
+    opacity: 0.92;
 }
 
 // ============================================

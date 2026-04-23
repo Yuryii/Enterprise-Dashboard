@@ -3,7 +3,7 @@ import { WidgetsBrandComponent } from '../widgets-brand/widgets-brand.component'
 import { IconDirective } from '@coreui/icons-angular';
 import { WidgetsEComponent } from '../widgets-e/widgets-e.component';
 import { WidgetsDropdownComponent } from '../widgets-dropdown/widgets-dropdown.component';
-import { DocsComponentsComponent, DocsExampleComponent } from '@docs-components/public-api';
+import { DocsComponentsComponent, DocsExampleComponent } from '../../../../components/public-api';
 import {
   CardBodyComponent,
   CardComponent,

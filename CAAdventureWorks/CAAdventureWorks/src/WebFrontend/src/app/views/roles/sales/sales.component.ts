@@ -9,10 +9,17 @@ import {
   CardComponent,
   CardHeaderComponent,
   ColComponent,
+  DropdownComponent,
+  DropdownDividerDirective,
+  DropdownItemDirective,
+  DropdownMenuDirective,
+  DropdownToggleDirective,
   FormControlDirective,
   FormLabelDirective,
   FormSelectDirective,
-  RowComponent
+  RowComponent,
+  TemplateIdDirective,
+  WidgetStatAComponent
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
@@ -29,12 +36,19 @@ import { SalesDashboardService } from './sales-dashboard.service';
     CardComponent,
     CardHeaderComponent,
     CardBodyComponent,
+    DropdownComponent,
+    DropdownDividerDirective,
+    DropdownItemDirective,
+    DropdownMenuDirective,
+    DropdownToggleDirective,
     FormLabelDirective,
     FormControlDirective,
     FormSelectDirective,
     ButtonDirective,
     ChartjsComponent,
     IconDirective,
+    TemplateIdDirective,
+    WidgetStatAComponent,
     CurrencyPipe,
     DecimalPipe
   ],

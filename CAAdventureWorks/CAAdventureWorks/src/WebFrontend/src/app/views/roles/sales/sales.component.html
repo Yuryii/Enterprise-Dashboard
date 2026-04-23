@@ -103,37 +103,48 @@
       </c-card-body>
     </c-card>
 
-    <!-- KPI Cards -->
-    <c-row class="mb-4 kpi-row">
-      @for (card of kpiCards(); track card.label) {
-      <c-col sm="6" lg="3">
-        <c-card class="kpi-card-custom">
-          <c-card-body>
-            <div class="kpi-card-header">
-              <div class="kpi-icon-wrap" [ngClass]="'accent-' + card.accent">
-                <span class="kpi-emoji" aria-hidden="true">
-                  @switch (card.icon) {
-                  @case ('cilDollar') { 💰 }
-                  @case ('cilCart') { 🛒 }
-                  @case ('cilBox') { 📦 }
-                  @default { 📈 }
-                  }
-                </span>
-              </div>
-              <div class="kpi-label">{{ card.label }}</div>
+    <c-row class="g-4 mb-4">
+      @for (card of kpiCards(); track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'danger'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.format === 'currency') {
+            {{ card.value | currency:'USD':'symbol':'1.0-0' }}
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
             </div>
-
-            <div class="kpi-value-large">
-              @if (card.format === 'currency') {
-              {{ card.value | currency:'USD':'symbol':'1.0-0' }}
-              } @else {
-              {{ card.value | number:'1.0-0' }}
-              }
-            </div>
-
-            <div class="kpi-footnote">Cập nhật theo bộ lọc hiện tại</div>
-          </c-card-body>
-        </c-card>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['January','February','March','April','May','June','July'], datasets: [{ label: 'My First dataset', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', pointHoverBorderColor: '#5856d6', data: [65, 59, 84, 84, 51, 55, 40] }] }
+                : i === 1
+                  ? { labels: ['January','February','March','April','May','June','July'], datasets: [{ label: 'My Second dataset', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [1, 18, 9, 17, 34, 22, 11] }] }
+                  : i === 2
+                    ? { labels: ['January','February','March','April','May','June','July'], datasets: [{ label: 'My Third dataset', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#f9b115', pointHoverBorderColor: '#f9b115', data: [78, 81, 80, 45, 34, 12, 40], fill: true }] }
+                    : { labels: ['January','February','March','April','May','June','July','August','September','October','November','December','January','February','March','April'], datasets: [{ label: 'My Fourth dataset', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [78, 81, 80, 45, 34, 12, 40, 85, 65, 23, 12, 98, 34, 84, 67, 82], barPercentage: 0.7 }] }"
+              [options]="i === 0
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 30, max: 89, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0.4 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                : i === 1
+                  ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: -9, max: 39, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                  : i === 2
+                    ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }
+                    : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }"
+              [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
       </c-col>
       }
     </c-row>
