@@ -117,7 +117,7 @@ export class SalesComponent implements OnInit {
       labels: trend.map((item: any) => item.period),
       datasets: [
         {
-          label: 'Revenue',
+          label: 'Doanh thu',
           data: trend.map((item: any) => item.revenue),
           borderColor: this.widgetChartPalette.primary,
           backgroundColor: 'transparent',
@@ -156,9 +156,13 @@ export class SalesComponent implements OnInit {
 
   readonly customerSegmentChartData = computed<ChartData<'pie'>>(() => {
     const segments = this.dashboard()?.customerSegments ?? [];
+    const segmentLabelMap: Record<string, string> = {
+      'Reseller / B2B': 'Đại lý / B2B',
+      'Individual / B2C': 'Cá nhân / B2C'
+    };
 
     return {
-      labels: segments.map((item: any) => item.segment),
+      labels: segments.map((item: any) => segmentLabelMap[item.segment] ?? item.segment),
       datasets: [
         {
           data: segments.map((item: any) => item.revenue),

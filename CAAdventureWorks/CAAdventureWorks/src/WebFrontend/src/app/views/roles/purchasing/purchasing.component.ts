@@ -3,7 +3,8 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
-import { ButtonDirective, CardBodyComponent, CardComponent, CardHeaderComponent, ColComponent, FormCheckComponent, FormCheckInputDirective, FormControlDirective, FormLabelDirective, FormSelectDirective, RowComponent } from '@coreui/angular';
+import { getStyle } from '@coreui/utils';
+import { ButtonDirective, CardBodyComponent, CardComponent, CardHeaderComponent, ColComponent, FormCheckComponent, FormCheckInputDirective, FormControlDirective, FormLabelDirective, FormSelectDirective, ProgressComponent, RowComponent, TemplateIdDirective, WidgetStatAComponent, WidgetStatBComponent } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { PurchasingDashboardService } from './purchasing-dashboard.service';
@@ -29,6 +30,10 @@ import { PurchasingDashboardService } from './purchasing-dashboard.service';
     ButtonDirective,
     ChartjsComponent,
     IconDirective,
+    TemplateIdDirective,
+    WidgetStatAComponent,
+    WidgetStatBComponent,
+    ProgressComponent,
     CurrencyPipe,
     DecimalPipe,
     PercentPipe
@@ -39,8 +44,25 @@ export class PurchasingComponent implements OnInit {
   private readonly purchasingDashboardService = inject(PurchasingDashboardService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly title = 'Purchasing';
-  readonly subtitle = 'Vendor performance, purchase orders, inbound operations';
+  private readonly widgetPiePalette = [
+    '#FF6384',
+    '#36A2EB',
+    '#FFCE56'
+  ];
+
+  private readonly purchasingChartPalette = {
+    trendLine: '#2563EB',
+    trendFill: 'rgba(37, 99, 235, 0.12)',
+    topVendor: '#0F766E',
+    topProducts: ['#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA'],
+    receiveRate: '#2563EB',
+    rejectRate: '#F97316',
+    leadTime: '#14B8A6',
+    region: '#F59E0B'
+  };
+
+  readonly title = 'Mua hàng';
+  readonly subtitle = 'Hiệu suất nhà cung cấp, đơn mua và vận hành nhập hàng';
 
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -74,10 +96,10 @@ export class PurchasingComponent implements OnInit {
     return {
       labels: trend.map((item: any) => item.period),
       datasets: [{
-        label: 'Spend',
+        label: 'Chi tiêu',
         data: trend.map((item: any) => item.totalSpend),
-        borderColor: '#667eea',
-        backgroundColor: 'rgba(102, 126, 234, 0.12)',
+        borderColor: this.purchasingChartPalette.trendLine,
+        backgroundColor: this.purchasingChartPalette.trendFill,
         fill: true,
         tension: 0.35,
         borderWidth: 3,
@@ -97,23 +119,40 @@ export class PurchasingComponent implements OnInit {
     }
   };
 
-  readonly statusChartData = computed<ChartData<'doughnut'>>(() => {
+  readonly statusChartData = computed<ChartData<'pie'>>(() => {
     const statuses = this.dashboard()?.orderStatuses ?? [];
+    const statusLabelMap: Record<string, string> = {
+      Pending: 'Chờ duyệt',
+      Approved: 'Đã duyệt',
+      Rejected: 'Từ chối',
+      Complete: 'Hoàn tất'
+    };
     return {
-      labels: statuses.map((item: any) => item.statusLabel),
+      labels: statuses.map((item: any) => statusLabelMap[item.statusLabel] ?? item.statusLabel),
       datasets: [{
         data: statuses.map((item: any) => item.orders),
-        backgroundColor: ['#7c5cff', '#8f76ff', '#e8a07c', '#b29cff'],
-        borderWidth: 0
+        backgroundColor: statuses.map((_: any, index: number) => this.widgetPiePalette[index % this.widgetPiePalette.length]),
+        borderWidth: 0,
+        hoverOffset: 6
       }]
     };
   });
 
-  readonly statusChartOptions: ChartOptions<'doughnut'> = {
+  readonly statusChartOptions: ChartOptions<'pie'> = {
     responsive: true,
     maintainAspectRatio: false,
-    cutout: '70%',
-    plugins: { legend: { position: 'bottom' } }
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          color: '#374151',
+          padding: 16,
+          font: { size: 13, weight: 500 }
+        }
+      }
+    }
   };
 
   readonly topVendorChartData = computed<ChartData<'bar'>>(() => {
@@ -122,7 +161,7 @@ export class PurchasingComponent implements OnInit {
       labels: items.slice(0, 8).map((item: any) => item.vendorName),
       datasets: [{
         data: items.slice(0, 8).map((item: any) => item.totalSpend),
-        backgroundColor: '#7c5cff',
+        backgroundColor: this.purchasingChartPalette.topVendor,
         borderRadius: 6,
         barThickness: 14
       }]
@@ -143,7 +182,9 @@ export class PurchasingComponent implements OnInit {
       labels: items.slice(0, 8).map((item: any) => item.productName),
       datasets: [{
         data: items.slice(0, 8).map((item: any) => item.lineTotal),
-        backgroundColor: ['#7c5cff', '#8f76ff', '#a08cff', '#b29cff', '#d7ccff', '#c7b8ff', '#a78bfa', '#7e69ab'],
+        backgroundColor: items
+          .slice(0, 8)
+          .map((_: any, index: number) => this.purchasingChartPalette.topProducts[index % this.purchasingChartPalette.topProducts.length]),
         borderRadius: 6
       }]
     };
@@ -161,8 +202,8 @@ export class PurchasingComponent implements OnInit {
     return {
       labels: items.slice(0, 6).map((item: any) => item.vendorName),
       datasets: [
-        { label: 'Receive rate', data: items.slice(0, 6).map((item: any) => (item.receiveRate ?? 0) * 100), backgroundColor: '#667eea', borderRadius: 6 },
-        { label: 'Reject rate', data: items.slice(0, 6).map((item: any) => (item.rejectRate ?? 0) * 100), backgroundColor: '#ff8a65', borderRadius: 6 }
+        { label: 'Tỷ lệ nhận hàng', data: items.slice(0, 6).map((item: any) => (item.receiveRate ?? 0) * 100), backgroundColor: this.purchasingChartPalette.receiveRate, borderRadius: 6 },
+        { label: 'Tỷ lệ từ chối', data: items.slice(0, 6).map((item: any) => (item.rejectRate ?? 0) * 100), backgroundColor: this.purchasingChartPalette.rejectRate, borderRadius: 6 }
       ]
     };
   });
@@ -179,9 +220,9 @@ export class PurchasingComponent implements OnInit {
     return {
       labels: items.slice(0, 8).map((item: any) => item.vendorName),
       datasets: [{
-        label: 'Lead time (days)',
+        label: 'Thời gian chờ (ngày)',
         data: items.slice(0, 8).map((item: any) => item.averageLeadTimeDays),
-        backgroundColor: '#11998e',
+        backgroundColor: this.purchasingChartPalette.leadTime,
         borderRadius: 6
       }]
     };
@@ -199,9 +240,9 @@ export class PurchasingComponent implements OnInit {
     return {
       labels: items.slice(0, 8).map((item: any) => `${item.country} / ${item.stateProvince}`),
       datasets: [{
-        label: 'Vendor count',
+        label: 'Số lượng nhà cung cấp',
         data: items.slice(0, 8).map((item: any) => item.vendorCount),
-        backgroundColor: '#764ba2',
+        backgroundColor: this.purchasingChartPalette.region,
         borderRadius: 6
       }]
     };
@@ -221,9 +262,9 @@ export class PurchasingComponent implements OnInit {
 
     return [
       { label: 'Tỷ lệ nhận hàng', value: overview.receiveRate },
-      { label: 'Tỷ lệ reject', value: overview.rejectRate },
-      { label: 'Vendor active', value: overview.activeVendors, type: 'number' },
-      { label: 'Vendor ưu tiên', value: overview.preferredVendors, type: 'number' }
+      { label: 'Tỷ lệ từ chối', value: overview.rejectRate },
+      { label: 'NCC hoạt động', value: overview.activeVendors, type: 'number' },
+      { label: 'NCC ưu tiên', value: overview.preferredVendors, type: 'number' }
     ];
   });
 
