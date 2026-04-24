@@ -4,14 +4,6 @@
   <!-- Main Content -->
   <div class="sales-content">
 
-    <!-- Loading State -->
-    @if (loading()) {
-    <div class="loading-overlay">
-      <div class="spinner"></div>
-      <p>Loading dashboard...</p>
-    </div>
-    }
-
     <!-- Error State -->
     @if (errorMessage()) {
     <div class="error-overlay">
@@ -22,7 +14,7 @@
     }
 
     <!-- Dashboard Content -->
-    @if (!loading() && !errorMessage() && dashboard()) {
+    @if (!errorMessage()) {
 
     <!-- Action Buttons - No Background -->
     <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
@@ -104,11 +96,34 @@
     </c-card>
 
     <c-row class="g-4 mb-4">
-      @for (card of kpiCards(); track card.label; let i = $index) {
+      @for (card of [
+      {
+      label: 'Tổng doanh thu',
+      format: 'currency',
+      value: dashboard()?.overview?.totalRevenue
+      },
+      {
+      label: 'Tổng đơn hàng',
+      format: 'number',
+      value: dashboard()?.overview?.totalOrders
+      },
+      {
+      label: 'Số lượng bán',
+      format: 'number',
+      value: dashboard()?.overview?.unitsSold
+      },
+      {
+      label: 'Giá trị TB/đơn',
+      format: 'currency',
+      value: dashboard()?.overview?.averageOrderValue
+      }
+      ]; track card.label; let i = $index) {
       <c-col sm="6" xl="3">
         <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'danger'">
           <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
-            @if (card.format === 'currency') {
+            @if (card.value == null) {
+            --
+            } @else if (card.format === 'currency') {
             {{ card.value | currency:'USD':'symbol':'1.0-0' }}
             } @else {
             {{ card.value | number:'1.0-0' }}
@@ -159,7 +174,7 @@
             <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
           </c-card-header>
           <c-card-body>
-            <c-chart type="doughnut" [data]="customerSegmentChartData()" [options]="customerSegmentOptions"></c-chart>
+            <c-chart type="pie" [data]="customerSegmentChartData()" [options]="customerSegmentOptions"></c-chart>
           </c-card-body>
         </c-card>
       </c-col>

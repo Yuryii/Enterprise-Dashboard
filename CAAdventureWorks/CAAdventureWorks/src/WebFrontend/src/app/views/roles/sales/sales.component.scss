@@ -38,6 +38,7 @@
     position: relative;
 }
 
+
 .sales-action-buttons {
     flex-wrap: wrap;
 
@@ -53,50 +54,56 @@
         gap: 6px;
         line-height: 1;
         box-shadow: none;
-        background: #ffffff;
+        background: var(--cui-body-bg, #ffffff);
+        border: 1px solid var(--cui-border-color, #d8e0ea);
+        color: var(--cui-body-color, #1f2937);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 
         svg {
             width: 14px;
             height: 14px;
             flex-shrink: 0;
+            color: currentColor;
+            fill: currentColor;
         }
     }
 
     .light-btn {
-        background: #ffffff;
-        border-color: #d8e0ea;
-        color: #718096;
+        background: var(--cui-body-bg, #ffffff);
+        border-color: var(--cui-border-color, #d8e0ea);
+        color: var(--cui-secondary-color, #718096);
 
         &:hover,
         &:focus,
         &:active {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: #4a5568;
+            background: var(--cui-tertiary-bg, #f8fafc);
+            border-color: var(--cui-border-color, #cbd5e1);
+            color: var(--cui-body-color, #4a5568);
+            box-shadow: 0 0 0 0.15rem rgba(124, 92, 255, 0.12);
         }
     }
 
     .secondary-btn svg {
-        color: #718096;
-        fill: #718096;
+        color: currentColor;
+        fill: currentColor;
     }
 
     .success-btn svg {
-        color: #718096;
-        fill: #718096;
+        color: currentColor;
+        fill: currentColor;
     }
 
     .warning-btn svg {
-        color: #718096;
-        fill: #718096;
+        color: currentColor;
+        fill: currentColor;
         opacity: 1;
     }
 
     .warning-btn {
-        color: #718096 !important;
+        color: var(--cui-secondary-color, #718096) !important;
 
         .button-icon {
-            color: #718096 !important;
+            color: currentColor !important;
             font-size: 14px;
             line-height: 1;
             display: inline-flex;
@@ -106,9 +113,9 @@
         svg,
         [cIcon],
         .icon {
-            color: #718096 !important;
-            fill: #718096 !important;
-            stroke: #718096 !important;
+            color: currentColor !important;
+            fill: currentColor !important;
+            stroke: currentColor !important;
             opacity: 1 !important;
         }
     }
@@ -328,6 +335,7 @@ c-chart {
     }
 }
 
+
 // ============================================
 // Widget Stats Customization
 // ============================================
@@ -420,6 +428,30 @@ select[cSelect] {
     font-size: 13px;
 }
 
+input[cFormControl]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(100);
+    opacity: 1;
+    cursor: pointer;
+}
+
+input[cFormControl] {
+    color-scheme: dark;
+
+    &::-webkit-calendar-picker-indicator {
+        background-color: transparent;
+
+    }
+}
+
+select[cSelect] {
+    width: 100%;
+    min-width: 0;
+}
+
+#productCategoryId {
+    min-width: 165px !important;
+}
+
 .apply-btn {
     min-height: 40px;
     border-radius: 10px;
@@ -482,6 +514,7 @@ select[cSelect] {
         padding: 16px;
     }
 
+
     .sales-action-buttons {
         justify-content: flex-start !important;
 
@@ -505,6 +538,7 @@ select[cSelect] {
     .sales-content {
         padding: 12px;
     }
+
 
     c-card {
         c-card-header {

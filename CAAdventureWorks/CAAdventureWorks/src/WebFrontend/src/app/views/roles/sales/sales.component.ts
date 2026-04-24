@@ -3,6 +3,7 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
+import { getStyle } from '@coreui/utils';
 import {
   ButtonDirective,
   CardBodyComponent,
@@ -60,6 +61,27 @@ export class SalesComponent implements OnInit {
   private readonly salesDashboardService = inject(SalesDashboardService);
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly widgetChartPalette = {
+    primary: getStyle('--cui-primary'),
+    info: getStyle('--cui-info'),
+    warning: getStyle('--cui-warning')
+  };
+
+  private readonly widgetChartSeriesPalette = [
+    this.widgetChartPalette.primary,
+    this.widgetChartPalette.info,
+    this.widgetChartPalette.warning
+  ];
+
+  private readonly widgetChartCustomerSegmentPalette = [
+    '#FF6384',
+    '#36A2EB',
+    '#FFCE56'
+  ];
+
+  private readonly barChartColor = '#f87979';
+  private readonly growthLineColor = getStyle('--cui-info') ?? '#00D8FF';
+
   readonly title = 'Sales';
   readonly subtitle = 'Dashboard';
 
@@ -97,14 +119,14 @@ export class SalesComponent implements OnInit {
         {
           label: 'Revenue',
           data: trend.map((item: any) => item.revenue),
-          borderColor: '#667eea',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          borderColor: this.widgetChartPalette.primary,
+          backgroundColor: 'transparent',
           fill: true,
           tension: 0.4,
           borderWidth: 3,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#667eea',
+          pointBackgroundColor: this.widgetChartPalette.primary,
           pointBorderColor: '#fff',
           pointBorderWidth: 2
         }
@@ -132,7 +154,7 @@ export class SalesComponent implements OnInit {
     }
   };
 
-  readonly customerSegmentChartData = computed<ChartData<'doughnut'>>(() => {
+  readonly customerSegmentChartData = computed<ChartData<'pie'>>(() => {
     const segments = this.dashboard()?.customerSegments ?? [];
 
     return {
@@ -140,7 +162,7 @@ export class SalesComponent implements OnInit {
       datasets: [
         {
           data: segments.map((item: any) => item.revenue),
-          backgroundColor: ['#667eea', '#764ba2', '#11998e', '#38ef7d'],
+          backgroundColor: segments.map((_: any, index: number) => this.widgetChartCustomerSegmentPalette[index % this.widgetChartCustomerSegmentPalette.length]),
           borderWidth: 0,
           hoverOffset: 6
         }
@@ -148,10 +170,9 @@ export class SalesComponent implements OnInit {
     };
   });
 
-  readonly customerSegmentOptions: ChartOptions<'doughnut'> = {
+  readonly customerSegmentOptions: ChartOptions<'pie'> = {
     responsive: true,
     maintainAspectRatio: false,
-    cutout: '72%',
     plugins: {
       legend: {
         position: 'right',
@@ -167,12 +188,30 @@ export class SalesComponent implements OnInit {
   };
 
   readonly orderStatusChartData = computed<ChartData<'doughnut'>>(() => {
-    const statuses = this.dashboard()?.orderStatuses ?? [];
+    const statuses = (this.dashboard()?.orderStatuses ?? []).filter((item: any) => (item.orders ?? 0) > 0);
+    const statusColors: Record<string, string> = {
+      'đã giao': getStyle('--cui-success') ?? '#4dbd74',
+      'dang giao': getStyle('--cui-info') ?? '#00D8FF',
+      'đang giao': getStyle('--cui-info') ?? '#00D8FF',
+      'dang xu ly': getStyle('--cui-danger') ?? '#f86c6b',
+      'đang xử lý': getStyle('--cui-danger') ?? '#f86c6b',
+      'đang xử lí': getStyle('--cui-danger') ?? '#f86c6b',
+      'cho xu ly': '#DD1B16',
+      'chờ xử lý': '#DD1B16',
+      'chờ xử lí': '#DD1B16'
+    };
+
     return {
       labels: statuses.map((item: any) => item.statusLabel),
       datasets: [{
         data: statuses.map((item: any) => item.orders),
-        backgroundColor: ['#7c5cff', '#d7d7d7', '#e8a07c', '#8f76ff', '#b29cff', '#cdbfff'],
+        backgroundColor: statuses.map((item: any, index: number) => {
+          const normalizedStatus = String(item.statusLabel ?? '')
+            .trim()
+            .toLowerCase();
+
+          return statusColors[normalizedStatus] ?? this.widgetChartCustomerSegmentPalette[index % this.widgetChartCustomerSegmentPalette.length];
+        }),
         borderWidth: 0,
         cutout: '68%'
       }]
@@ -237,7 +276,11 @@ export class SalesComponent implements OnInit {
       labels: groupedMix.slice(0, 4).map((item) => item.category),
       datasets: [{
         data: groupedMix.slice(0, 4).map((item) => item.revenue),
-        backgroundColor: ['#7c5cff', '#8f76ff', '#b29cff', '#d7ccff'],
+        backgroundColor: [
+          this.widgetChartPalette.primary,
+          this.widgetChartPalette.info,
+          this.widgetChartPalette.warning
+        ],
         borderRadius: 6
       }]
     };
@@ -259,7 +302,7 @@ export class SalesComponent implements OnInit {
       labels: products.slice(0, 6).map((item: any) => item.productName),
       datasets: [{
         data: products.slice(0, 6).map((item: any) => item.revenue),
-        backgroundColor: '#7c5cff',
+        backgroundColor: '#14b8a6',
         borderRadius: 6,
         barThickness: 12
       }]
@@ -283,7 +326,11 @@ export class SalesComponent implements OnInit {
       labels: territories.slice(0, 5).map((item: any) => item.name),
       datasets: [{
         data: territories.slice(0, 5).map((item: any) => item.revenue),
-        backgroundColor: ['#7c5cff', '#8f76ff', '#a08cff', '#b29cff', '#d7ccff'],
+        backgroundColor: [
+          this.widgetChartPalette.primary,
+          this.widgetChartPalette.info,
+          this.widgetChartPalette.warning
+        ],
         borderRadius: 6
       }]
     };
@@ -308,7 +355,7 @@ export class SalesComponent implements OnInit {
           type: 'bar' as const,
           label: 'Số đơn hàng',
           data: trend.map((item: any) => item.orders),
-          backgroundColor: '#7c5cff',
+          backgroundColor: this.barChartColor,
           borderRadius: 4,
           yAxisID: 'y'
         },
@@ -316,13 +363,15 @@ export class SalesComponent implements OnInit {
           type: 'line' as const,
           label: 'Tăng trưởng (%)',
           data: trend.map((item: any) => item.growthRate ?? 0),
-          borderColor: '#ff6b6b',
-          backgroundColor: 'rgba(255, 107, 107, 0.1)',
-          borderWidth: 2,
+          borderColor: this.growthLineColor,
+          backgroundColor: 'transparent',
+          borderWidth: 3,
           tension: 0.4,
           yAxisID: 'y1',
-          pointRadius: 3,
-          pointHoverRadius: 5
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: this.growthLineColor,
+          pointHoverBorderColor: this.growthLineColor
         }
       ]
     };
@@ -363,7 +412,7 @@ export class SalesComponent implements OnInit {
       labels: customers.slice(0, 10).map((item: any) => item.customerName || `KH ${item.customerId}`),
       datasets: [{
         data: customers.slice(0, 10).map((item: any) => item.revenue),
-        backgroundColor: '#7c5cff',
+        backgroundColor: '#f59e0b',
         borderRadius: 6,
         barThickness: 14
       }]
@@ -436,7 +485,6 @@ export class SalesComponent implements OnInit {
 
   customizeLayout(): void {
     console.log('Customizing dashboard layout...');
-    // TODO: Implement layout customization
     alert('Chức năng tùy chỉnh layout đang được phát triển');
   }
 
