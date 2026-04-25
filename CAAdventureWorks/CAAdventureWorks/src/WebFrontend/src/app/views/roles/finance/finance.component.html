@@ -1,17 +1,292 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<!-- Finance Dashboard -->
+<div class="finance-app">
+
+  <!-- Main Content -->
+  <div class="finance-content">
+
+    <!-- Error State -->
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Retry</button>
+    </div>
+    }
+
+    <!-- Dashboard Content -->
+    @if (!errorMessage()) {
+
+    <!-- Action Buttons - No Background -->
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <!-- Filters Card -->
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-success mb-3" name="cil-dollar"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Finance Dashboard - Financial reporting and budgets</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <!-- Filter Row -->
+          <c-row class="align-items-end">
+            <c-col md="3">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </c-col>
+
+            <c-col md="3">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </c-col>
+
+            <c-col md="3">
+              <label cLabel for="territoryId" class="small">Vùng</label>
+              <select cSelect formControlName="territoryId" id="territoryId">
+                <option [ngValue]="null">Tất cả vùng</option>
+                @for (territory of dashboard()?.filterOptions?.territories; track territory.id) {
+                <option [ngValue]="territory.id">{{ territory.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="3">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <!-- KPI Widgets -->
+    <c-row class="g-4 mb-4">
+      @for (card of [
+      {
+      label: 'Tổng doanh thu',
+      format: 'currency',
+      value: dashboard()?.overview?.totalRevenue
+      },
+      {
+      label: 'Tổng chi phí',
+      format: 'currency',
+      value: dashboard()?.overview?.totalExpense
+      },
+      {
+      label: 'Lợi nhuận',
+      format: 'currency',
+      value: dashboard()?.overview?.grossProfit
+      },
+      {
+      label: 'Biên lợi nhuận',
+      format: 'percent',
+      value: dashboard()?.overview?.profitMargin
+      }
+      ]; track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'success' : i === 1 ? 'danger' : i === 2 ? 'primary' : 'info'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.value == null) {
+            --
+            } @else if (card.format === 'currency') {
+            {{ card.value | currency:'USD':'symbol':'1.0-0' }}
+            } @else if (card.format === 'percent') {
+            {{ card.value | number:'1.1-1' }}%
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Revenue', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#2eb85c', pointHoverBorderColor: '#2eb85c', data: [65, 59, 84, 84, 51, 55, 40] }] }
+                : i === 1
+                  ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Expense', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#e55353', pointHoverBorderColor: '#e55353', data: [40, 45, 50, 48, 42, 38, 35] }] }
+                  : i === 2
+                    ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Profit', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#667eea', pointHoverBorderColor: '#667eea', data: [25, 14, 34, 36, 9, 17, 5], fill: true }] }
+                    : { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [{ label: 'Margin', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [38, 31, 40, 42, 18, 31, 13, 45, 35, 23, 12, 48], barPercentage: 0.7 }] }"
+              [options]="i === 0
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 30, max: 89, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0.4 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                : i === 1
+                  ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 30, max: 55, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                  : i === 2
+                    ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }
+                    : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }"
+              [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <!-- Charts Grid -->
+    <c-row>
+      <!-- Row 1: Revenue & Expense Trends -->
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Xu hướng doanh thu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="revenueTrendChartData()" [options]="lineChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Xu hướng chi phí</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="expenseTrendChartData()" [options]="lineChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 2: Profit Trend & Cash Flow -->
+    <c-row>
+      <c-col md="8">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Xu hướng lợi nhuận</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="profitTrendChartData()" [options]="lineChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Doanh thu theo tiền tệ</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="currencyChartData()" [options]="pieChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 3: Cash Flow & Payment Methods -->
+    <c-row>
+      <c-col md="8">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Dòng tiền (Cash Flow)</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ cột nhóm</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="cashFlowChartData()" [options]="barChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phương thức thanh toán</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="pie" [data]="paymentChartData()" [options]="pieChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 4: Tax by Region -->
+    <c-row>
+      <c-col xs="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Thuế theo vùng (Top 10)</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="taxChartData()" [options]="barChartOptions" [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 5: Financial Summary Cards -->
+    <c-row>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Tổng thuế</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalTax | currency:'USD':'symbol':'1.0-0' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Thuế suất TB</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.averageTaxRate | number:'1.1-1' }}%</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Dòng tiền ròng</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.cashFlow | currency:'USD':'symbol':'1.0-0' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Tổng đơn hàng</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalOrders | number:'1.0-0' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    }
+
+  </div>
+
+</div>

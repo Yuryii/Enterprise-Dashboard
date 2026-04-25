@@ -1,17 +1,360 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="sales-app marketing-app">
+  <div class="sales-content marketing-content">
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-warning mb-3" name="cil-bullhorn"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Marketing Dashboard - Campaigns and analytics</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+          <c-row class="align-items-end g-3">
+            <c-col md="4">
+              <label cLabel for="campaignType" class="small">Loại chiến dịch</label>
+              <select cSelect formControlName="campaignType" id="campaignType">
+                <option value="All">Tất cả chiến dịch</option>
+                <option value="Seasonal">Seasonal</option>
+                <option value="Flash Sale">Flash Sale</option>
+                <option value="Acquisition">Acquisition</option>
+                <option value="Partner Push">Partner Push</option>
+              </select>
+            </c-col>
+
+            <c-col md="4">
+              <label cLabel for="reviewSentiment" class="small">Tình trạng phản hồi</label>
+              <select cSelect formControlName="reviewSentiment" id="reviewSentiment">
+                <option value="All">Tất cả</option>
+                <option value="Positive">Tích cực</option>
+                <option value="Neutral">Trung lập</option>
+                <option value="Negative">Tiêu cực</option>
+              </select>
+            </c-col>
+
+            <c-col md="4">
+              <label cLabel for="targetSegment" class="small">Phân khúc mục tiêu</label>
+              <select cSelect formControlName="targetSegment" id="targetSegment">
+                <option value="All">Toàn bộ phân khúc</option>
+                <option value="High Potential">High Potential</option>
+                <option value="Growth">Growth</option>
+                <option value="Nurture">Nurture</option>
+              </select>
+            </c-col>
+
+            <c-col md="12">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng bộ lọc Marketing
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="g-4 mb-4">
+      @for (card of kpiCards(); track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'success'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.format === 'percent') {
+            {{ card.value | percent:'1.1-1' }}
+            } @else if (card.format === 'currency') {
+            {{ card.value | number:'1.0-0' }}
+            } @else if (card.format === 'decimal') {
+            {{ card.value | number:'1.2-2' }}
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Theo dõi ROI, mức đóng góp và tốc độ phản hồi thị trường</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['May','Jun','Jul','Aug','Sep','Oct'], datasets: [{ label: 'Revenue', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', pointHoverBorderColor: '#5856d6', data: [180, 220, 260, 310, 355, 398] }] }
+                : i === 1
+                  ? { labels: ['May','Jun','Jul','Aug','Sep','Oct'], datasets: [{ label: 'Orders', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [78, 90, 112, 126, 144, 160] }] }
+                  : i === 2
+                    ? { labels: ['May','Jun','Jul','Aug','Sep','Oct'], datasets: [{ label: 'Contribution', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#f9b115', data: [12, 14, 16, 18, 20, 21], fill: true }] }
+                    : { labels: ['May','Jun','Jul','Aug','Sep','Oct'], datasets: [{ label: 'ROI', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [1.6, 1.8, 2.1, 2.3, 2.5, 2.7], fill: true }] }"
+              [options]="{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1.5, tension: 0.35 }, point: { radius: 3, hitRadius: 10, hoverRadius: 3 } } }"
+              class="mt-2 mx-3" height="70" type="line"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="mb-3">
+      @for (item of brandHealthCards(); track item.label) {
+      <c-col md="3">
+        <c-card class="metric-mini-card mb-3">
+          <c-card-body>
+            <div class="metric-mini-label">{{ item.label }}</div>
+            <div class="metric-mini-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Doanh thu theo loại campaign</strong>
+            <small class="text-body-secondary ms-2">Bar chart</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="campaignRevenueByTypeChartData()" [options]="campaignRevenueByTypeOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6" xl="8">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Hiệu suất campaign theo thời gian</strong>
+            <small class="text-body-secondary ms-2">Line / Area</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="campaignTrendChartData()" [options]="campaignTrendOptions" [height]="260"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân bổ rating review</strong>
+            <small class="text-body-secondary ms-2">Brand & Product Reviews</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="pie" [data]="reviewRatingChartData()" [options]="reviewRatingOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Khối lượng review theo tháng</strong>
+            <small class="text-body-secondary ms-2">Review volume</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="reviewVolumeChartData()" [options]="reviewVolumeOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Funnel khách hàng mục tiêu</strong>
+            <small class="text-body-secondary ms-2">Targeting segments</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="targetingFunnelChartData()" [options]="targetingFunnelOptions" [height]="280"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Treemap dữ liệu cửa hàng mục tiêu</strong>
+            <small class="text-body-secondary ms-2">Phân bổ loại hình cửa hàng</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="store-type-grid">
+              @for (item of storeTypeTreemapRows(); track item.storeType) {
+              <div class="store-type-tile" [style.flex]="item.count">
+                <div class="store-type-label">{{ item.storeType }}</div>
+                <div class="store-type-value">{{ item.count }} điểm chạm</div>
+              </div>
+              }
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top campaign mang lại doanh thu</strong>
+            <small class="text-body-secondary ms-2">Campaign ROI</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Campaign</th>
+                    <th>Type</th>
+                    <th>Revenue</th>
+                    <th>Orders</th>
+                    <th>ROI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of topCampaignRows(); track item.specialOfferId) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">{{ item.description }}</div>
+                      <div class="text-body-secondary small">{{ item.category }}</div>
+                    </td>
+                    <td><span class="badge bg-primary">{{ item.type }}</span></td>
+                    <td>{{ item.revenue | number:'1.0-0' }}</td>
+                    <td>{{ item.orders | number:'1.0-0' }}</td>
+                    <td>{{ item.roi | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Review 1-2 sao cần xử lý</strong>
+            <small class="text-body-secondary ms-2">Khủng hoảng thương hiệu</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Reviewer</th>
+                    <th>Product</th>
+                    <th>Rating</th>
+                    <th>Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of lowRatingReviews(); track item.reviewer + item.reviewDate) {
+                  <tr>
+                    <td>{{ item.reviewer }}</td>
+                    <td>{{ item.product }}</td>
+                    <td><span class="badge bg-danger">{{ item.rating }} sao</span></td>
+                    <td class="marketing-comment-cell">{{ item.comment }}</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Danh sách cửa hàng mục tiêu</strong>
+            <small class="text-body-secondary ms-2">Demographics & segmentation</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Store</th>
+                    <th>Region</th>
+                    <th>Segment</th>
+                    <th>Area</th>
+                    <th>Lead Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of filteredStoreSegments(); track item.name) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">{{ item.name }}</div>
+                      <div class="text-body-secondary small">{{ item.annualRevenueBand }}</div>
+                    </td>
+                    <td>{{ item.region }}</td>
+                    <td><span class="badge bg-info">{{ item.segment }}</span></td>
+                    <td>{{ item.floorArea | number:'1.0-0' }} ft²</td>
+                    <td>{{ item.leadScore | number:'1.0-0' }}</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Data list remarketing</strong>
+            <small class="text-body-secondary ms-2">Email marketing / CRM</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Khách hàng</th>
+                    <th>Email</th>
+                    <th>Audience</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (lead of leadContacts(); track lead.email) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">{{ lead.fullName }}</div>
+                      <div class="text-body-secondary small">{{ lead.campaign }}</div>
+                    </td>
+                    <td>{{ lead.email }}</td>
+                    <td><span class="badge bg-success">{{ lead.audience }}</span></td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+  </div>
+</div>

@@ -1,17 +1,277 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="sales-app hr-app">
+  <div class="sales-content hr-content">
+    @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading HR dashboard...</p>
+    </div>
+    }
+
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Retry</button>
+    </div>
+    }
+
+    @if (!loading() && !errorMessage() && dashboard()) {
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-danger mb-3" name="cil-user-follow"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Human Resources Dashboard - Employee management and benefits</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <c-row class="align-items-end g-3">
+            <c-col md="2">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </c-col>
+
+            <c-col md="3">
+              <label cLabel for="departmentId" class="small">Phòng ban</label>
+              <select cSelect formControlName="departmentId" id="departmentId">
+                <option [ngValue]="null">Tất cả phòng ban</option>
+                @for (dept of dashboard()?.filterOptions?.departments; track dept.id) {
+                <option [ngValue]="dept.id">{{ dept.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="gender" class="small">Giới tính</label>
+              <select cSelect formControlName="gender" id="gender">
+                <option [ngValue]="null">Tất cả</option>
+                <option value="M">Nam</option>
+                <option value="F">Nữ</option>
+              </select>
+            </c-col>
+
+            <c-col md="3">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng
+              </button>
+            </c-col>
+
+            <c-col md="3">
+              <c-form-check>
+                <input cFormCheckInput type="checkbox" formControlName="salariedOnly" id="salariedOnly" />
+                <label cLabel for="salariedOnly" class="small">Chỉ lương tháng</label>
+              </c-form-check>
+            </c-col>
+
+            <c-col md="3">
+              <c-form-check>
+                <input cFormCheckInput type="checkbox" formControlName="activeOnly" id="activeOnly" />
+                <label cLabel for="activeOnly" class="small">Chỉ NV hoạt động</label>
+              </c-form-check>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="g-4 mb-4">
+      @for (card of [
+      {
+      label: 'Tổng nhân viên',
+      format: 'number',
+      value: dashboard()?.overview?.totalEmployees
+      },
+      {
+      label: 'NV hoạt động',
+      format: 'number',
+      value: dashboard()?.overview?.activeEmployees
+      },
+      {
+      label: 'Số phòng ban',
+      format: 'number',
+      value: dashboard()?.overview?.totalDepartments
+      },
+      {
+      label: 'Lương TB/giờ',
+      format: 'currency',
+      value: dashboard()?.overview?.averagePayRate
+      }
+      ]; track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'danger'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.value == null) {
+            --
+            } @else if (card.format === 'currency') {
+            {{ card.value | currency:'USD':'symbol':'1.0-2' }}
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Employees', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', pointHoverBorderColor: '#5856d6', data: [42, 48, 44, 52, 57, 61, 66] }] }
+                : i === 1
+                  ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Active', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [35, 39, 41, 44, 47, 49, 53] }] }
+                  : i === 2
+                    ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Departments', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#f9b115', pointHoverBorderColor: '#f9b115', data: [8, 8, 9, 9, 10, 10, 10], fill: true }] }
+                    : { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'], datasets: [{ label: 'Average Pay', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [28, 31, 30, 34, 33, 36, 37, 39], barPercentage: 0.7 }] }"
+              [options]="i === 0
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 30, max: 75, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0.4 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                : i === 1
+                  ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 25, max: 60, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                  : i === 2
+                    ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }
+                    : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }"
+              [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="mb-3">
+      @for (item of healthCards(); track item.label) {
+      <c-col md="3">
+        <c-card class="metric-mini-card mb-3">
+          <c-card-body>
+            <div class="metric-mini-label">{{ item.label }}</div>
+            <div class="metric-mini-value">
+              {{ item.value | number:'1.0-1' }}{{ item.suffix || '' }}
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân bố giới tính</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="genderChartData()" [options]="genderChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Thâm niên nhân viên</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="tenureChartData()" [options]="tenureChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="12" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Mức lương theo phòng ban</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ kết hợp</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="payRateChartData()" [options]="payRateChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="8">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Xu hướng tuyển dụng</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="employeeTrendChartData()" [options]="employeeTrendOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân bố ca làm việc</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="shiftChartData()" [options]="shiftChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Nhân viên theo phòng ban</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ xếp hạng</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="departmentChartData()" [options]="departmentChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top chức danh</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="jobTitleChartData()" [options]="jobTitleChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    }
+  </div>
+</div>

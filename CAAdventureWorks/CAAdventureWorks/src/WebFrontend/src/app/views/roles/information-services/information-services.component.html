@@ -1,17 +1,342 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<!-- Information Services Dashboard -->
+<div class="is-app">
+
+  <!-- Main Content -->
+  <div class="is-content">
+
+    <!-- Error State -->
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Retry</button>
+    </div>
+    }
+
+    <!-- Dashboard Content -->
+    @if (!errorMessage()) {
+
+    <!-- Action Buttons - No Background -->
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <!-- Filters Card -->
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-info mb-3" name="cil-code"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Information Services Dashboard - IT infrastructure and systems</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <!-- Filter Row -->
+          <c-row class="align-items-end">
+            <c-col md="3">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </c-col>
+
+            <c-col md="3">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </c-col>
+
+            <c-col md="3">
+              <label cLabel for="departmentId" class="small">Phòng ban</label>
+              <select cSelect formControlName="departmentId" id="departmentId">
+                <option [ngValue]="null">Tất cả phòng ban</option>
+                @for (dept of dashboard()?.filterOptions?.departments; track dept.id) {
+                <option [ngValue]="dept.id">{{ dept.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="3">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <!-- KPI Widgets -->
+    <c-row class="g-4 mb-4">
+      @for (card of [
+      {
+      label: 'Lỗi hệ thống',
+      format: 'number',
+      value: dashboard()?.overview?.totalSystemErrors
+      },
+      {
+      label: 'Thay đổi DB',
+      format: 'number',
+      value: dashboard()?.overview?.totalDatabaseChanges
+      },
+      {
+      label: 'Tài khoản',
+      format: 'number',
+      value: dashboard()?.overview?.totalUserAccounts
+      },
+      {
+      label: 'TK hoạt động',
+      format: 'number',
+      value: dashboard()?.overview?.activeUserAccounts
+      }
+      ]; track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'danger' : i === 1 ? 'warning' : i === 2 ? 'info' : 'success'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.value == null) {
+            --
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ label: 'Errors', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#dc3545', pointHoverBorderColor: '#dc3545', data: [12, 18, 9, 17, 14, 22, 11] }] }
+                : i === 1
+                  ? { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ label: 'DB Changes', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#ffc107', pointHoverBorderColor: '#ffc107', data: [5, 8, 6, 9, 7, 10, 8] }] }
+                  : i === 2
+                    ? { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ label: 'Accounts', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [290, 292, 295, 298, 300, 302, 305], fill: true }] }
+                    : { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ label: 'Active', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [285, 287, 290, 293, 295, 297, 300], barPercentage: 0.7 }] }"
+              [options]="i === 0
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 5, max: 25, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0.4 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                : i === 1
+                  ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 3, max: 12, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                  : i === 2
+                    ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }
+                    : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }"
+              [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <!-- Charts Grid -->
+    <c-row>
+      <!-- Row 1: Error Trend & Event Type Distribution -->
+      <c-col md="8">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Xu hướng lỗi hệ thống</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="errorTrendChartData()" [options]="errorTrendOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân loại sự kiện DB</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="eventTypeChartData()" [options]="eventTypeChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 2: Top Errors & User Accounts -->
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top lỗi phổ biến</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topErrorsChartData()" [options]="topErrorsChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Tài khoản theo phòng ban</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ cột nhóm</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="userAccountsChartData()" [options]="userAccountsChartOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 3: Password Age Distribution -->
+    <c-row>
+      <c-col xs="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân bố tuổi mật khẩu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="passwordAgeChartData()" [options]="passwordAgeChartOptions" [height]="280"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 4: Data Tables -->
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Người dùng có nhiều lỗi nhất</strong>
+            <small class="text-body-secondary ms-2">Top 10</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive">
+              <table cTable [striped]="true" [hover]="true" class="small">
+                <thead>
+                  <tr>
+                    <th>Tên người dùng</th>
+                    <th class="text-end">Số lỗi</th>
+                    <th class="text-end">Lỗi gần nhất</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (user of dashboard()?.usersWithMostErrors?.slice(0, 10); track user.userName) {
+                  <tr>
+                    <td>{{ user.userName }}</td>
+                    <td class="text-end">{{ user.errorCount }}</td>
+                    <td class="text-end">{{ user.lastError | date:'dd/MM/yyyy HH:mm' }}</td>
+                  </tr>
+                  }
+                  @if (!dashboard()?.usersWithMostErrors?.length) {
+                  <tr>
+                    <td colspan="3" class="text-center text-muted">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Hoạt động Database gần đây</strong>
+            <small class="text-body-secondary ms-2">Audit trail</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive">
+              <table cTable [striped]="true" [hover]="true" class="small">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Sự kiện</th>
+                    <th class="text-end">Số lần</th>
+                    <th class="text-end">Lần cuối</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (activity of dashboard()?.databaseActivity?.slice(0, 10); track activity.databaseUser + activity.event) {
+                  <tr>
+                    <td>{{ activity.databaseUser }}</td>
+                    <td>{{ activity.event }}</td>
+                    <td class="text-end">{{ activity.activityCount }}</td>
+                    <td class="text-end">{{ activity.lastActivity | date:'dd/MM HH:mm' }}</td>
+                  </tr>
+                  }
+                  @if (!dashboard()?.databaseActivity?.length) {
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- Row 5: System Information Cards -->
+    <c-row>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Phòng ban</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalDepartments || 0 }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Đổi MK gần đây</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.recentPasswordChanges || 0 }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Phiên bản DB</div>
+            <div class="fs-6 fw-semibold">{{ dashboard()?.overview?.currentDatabaseVersion || 'N/A' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3">
+        <c-card class="mb-3 text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Cập nhật lần cuối</div>
+            <div class="fs-6 fw-semibold">
+              @if (dashboard()?.overview?.lastDatabaseUpdate) {
+                {{ dashboard()?.overview?.lastDatabaseUpdate | date:'dd/MM/yyyy' }}
+              } @else {
+                N/A
+              }
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    }
+
+  </div>
+
+</div>

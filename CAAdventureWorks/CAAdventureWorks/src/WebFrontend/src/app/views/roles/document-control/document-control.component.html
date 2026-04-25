@@ -1,17 +1,351 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="sales-app document-control-app">
+  <div class="sales-content document-control-content">
+    @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading Document Control dashboard...</p>
+    </div>
+    }
+
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Retry</button>
+    </div>
+    }
+
+    @if (!loading() && !errorMessage() && dashboard()) {
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-primary mb-3" name="cil-description"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Document Control Dashboard - Documents and compliance</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <c-row class="align-items-end g-3">
+            <c-col md="3">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </c-col>
+
+            <c-col md="3">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="status" class="small">Trạng thái</label>
+              <select cSelect formControlName="status" id="status">
+                <option [ngValue]="null">Tất cả</option>
+                @for (status of dashboard()?.filterOptions?.statuses; track status.id) {
+                <option [ngValue]="status.id">{{ status.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="2">
+              <label cLabel for="fileExtension" class="small">Loại file</label>
+              <select cSelect formControlName="fileExtension" id="fileExtension">
+                <option [ngValue]="null">Tất cả</option>
+                @for (ext of dashboard()?.filterOptions?.fileExtensions; track ext.id) {
+                <option [ngValue]="ext.name">{{ ext.name }}</option>
+                }
+              </select>
+            </c-col>
+
+            <c-col md="2">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="g-4 mb-4">
+      @for (card of [
+      {
+      label: 'Tổng tài liệu',
+      format: 'number',
+      value: dashboard()?.overview?.totalDocuments
+      },
+      {
+      label: 'Đã phê duyệt',
+      format: 'number',
+      value: dashboard()?.overview?.approvedDocuments
+      },
+      {
+      label: 'Chờ duyệt',
+      format: 'number',
+      value: dashboard()?.overview?.pendingDocuments
+      },
+      {
+      label: 'Tỷ lệ phủ',
+      format: 'percent',
+      value: dashboard()?.overview?.documentCoverageRate * 100
+      }
+      ]; track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'danger'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.value == null) {
+            --
+            } @else if (card.format === 'percent') {
+            {{ card.value | number:'1.1-1' }}%
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Documents', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', pointHoverBorderColor: '#5856d6', data: [65, 69, 73, 78, 84, 91, 96] }] }
+                : i === 1
+                  ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Approved', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [42, 46, 49, 54, 58, 64, 68] }] }
+                  : i === 2
+                    ? { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Pending', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#f9b115', pointHoverBorderColor: '#f9b115', data: [28, 24, 22, 20, 18, 17, 15], fill: true }] }
+                    : { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'], datasets: [{ label: 'Coverage', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [58, 61, 64, 67, 71, 74, 77, 80], barPercentage: 0.7 }] }"
+              [options]="i === 0
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 40, max: 110, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0.4 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                : i === 1
+                  ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 30, max: 80, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                  : i === 2
+                    ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }
+                    : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }"
+              [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="mb-3">
+      @for (item of summaryCards(); track item.label) {
+      <c-col md="3">
+        <c-card class="metric-mini-card mb-3">
+          <c-card-body>
+            <div class="metric-mini-label">{{ item.label }}</div>
+            <div class="metric-mini-value">{{ item.value | number:'1.0-0' }}{{ item.suffix }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Trạng thái tài liệu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="documentStatusChartData()" [options]="documentStatusOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Loại file</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="pie" [data]="fileTypeChartData()" [options]="fileTypeOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="12" xl="4">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Trạng thái và tỷ trọng</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ kết hợp</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="coverageTrendChartData()" [options]="coverageTrendOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Sản phẩm có nhiều tài liệu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topProductsChartData()" [options]="topProductsOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Người quản lý tài liệu</strong>
+            <small class="text-body-secondary ms-2">Biểu đồ xếp hạng</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="documentOwnersChartData()" [options]="documentOwnersOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Sửa đổi gần đây</strong>
+            <small class="text-body-secondary ms-2">10 mới nhất</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Tiêu đề</th>
+                    <th>Phiên bản</th>
+                    <th>Người sửa</th>
+                    <th>Ngày</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of dashboard()?.recentRevisions; track item.documentNode) {
+                  <tr>
+                    <td>{{ item.title }}</td>
+                    <td><span class="badge bg-info">{{ item.revision }}</span></td>
+                    <td>{{ item.ownerName }}</td>
+                    <td>{{ formatDate(item.modifiedDate) }}</td>
+                  </tr>
+                  }
+                  @empty {
+                  <tr>
+                    <td colspan="4" class="text-center text-body-secondary">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Chờ phê duyệt</strong>
+            <small class="text-body-secondary ms-2">Cần xử lý</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Tên file</th>
+                    <th>Phiên bản</th>
+                    <th>Người gửi</th>
+                    <th>Ngày</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of dashboard()?.pendingApprovals; track item.documentNode) {
+                  <tr>
+                    <td>{{ item.fileName }}</td>
+                    <td><span class="badge bg-warning text-dark">{{ item.revision }}</span></td>
+                    <td>{{ item.ownerName }}</td>
+                    <td>{{ formatDate(item.modifiedDate) }}</td>
+                  </tr>
+                  }
+                  @empty {
+                  <tr>
+                    <td colspan="4" class="text-center text-body-secondary">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col xs="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Sản phẩm thiếu tài liệu</strong>
+            <small class="text-body-secondary ms-2">Cần bổ sung</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Mã sản phẩm</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Số hiệu</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of dashboard()?.productsWithoutDocuments; track item.productId) {
+                  <tr>
+                    <td>{{ item.productId }}</td>
+                    <td>{{ item.productName }}</td>
+                    <td>{{ item.productNumber }}</td>
+                    <td><span class="badge bg-danger">Thiếu tài liệu</span></td>
+                  </tr>
+                  }
+                  @empty {
+                  <tr>
+                    <td colspan="4" class="text-center text-body-secondary">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+    }
+  </div>
+</div>

@@ -1,17 +1,289 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="sales-app shipping-app">
+  <div class="sales-content shipping-content">
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-info mb-3" name="cil-truck"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Shipping & Receiving Dashboard - Logistics and warehouse</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+          <c-row class="align-items-end g-3">
+            <c-col md="4">
+              <label cLabel for="flowType" class="small">Luồng logistics</label>
+              <select cSelect formControlName="flowType" id="flowType">
+                <option value="All">Tất cả luồng</option>
+                <option value="Inbound">Inbound</option>
+                <option value="Outbound">Outbound</option>
+              </select>
+            </c-col>
+
+            <c-col md="4">
+              <label cLabel for="shipMethod" class="small">Phương thức giao hàng</label>
+              <select cSelect formControlName="shipMethod" id="shipMethod">
+                <option value="All">Tất cả ShipMethod</option>
+                <option value="Express Air">Express Air</option>
+                <option value="Standard Ground">Standard Ground</option>
+                <option value="Cargo Freight">Cargo Freight</option>
+              </select>
+            </c-col>
+
+            <c-col md="4">
+              <label cLabel for="shipmentStatus" class="small">Trạng thái xử lý</label>
+              <select cSelect formControlName="shipmentStatus" id="shipmentStatus">
+                <option value="All">Tất cả trạng thái</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Rejected Items">Rejected Items</option>
+                <option value="Review">Review</option>
+                <option value="Pending">Pending</option>
+                <option value="Shipped">Shipped</option>
+              </select>
+            </c-col>
+
+            <c-col md="12">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng bộ lọc Shipping & Receiving
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="g-4 mb-4">
+      @for (card of kpiCards(); track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'danger' : i === 1 ? 'primary' : i === 2 ? 'warning' : 'success'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.format === 'percent') {
+            {{ card.value | number:'1.1-1' }}%
+            } @else if (card.format === 'decimal') {
+            {{ card.value | number:'1.1-1' }} ngày
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Theo dõi inbound QC, outbound fulfillment và freight cost</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'QC Reject', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#e55353', data: [4.3, 1.8, 5.5, 1.2, 3.6, 2.1] }] }
+                : i === 1
+                  ? { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Lead Time', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', data: [2.8, 2.6, 2.9, 2.4, 2.3, 2.2] }] }
+                  : i === 2
+                    ? { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Pending Orders', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [9, 11, 8, 10, 7, 6], fill: true }] }
+                    : { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Freight', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [1960, 2120, 2050, 2240, 2375, 2450], fill: true }] }"
+              [options]="{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1.5, tension: 0.35 }, point: { radius: 3, hitRadius: 10, hoverRadius: 3 } } }"
+              class="mt-2 mx-3" height="70" type="line"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="mb-3">
+      @for (item of logisticsCards(); track item.label) {
+      <c-col md="3">
+        <c-card class="metric-mini-card mb-3">
+          <c-card-body>
+            <div class="metric-mini-label">{{ item.label }}</div>
+            <div class="metric-mini-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Received Qty vs Rejected Qty</strong>
+            <small class="text-body-secondary ms-2">Inbound & QC</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="inboundQcChartData()" [options]="inboundQcOptions" [height]="280"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Tỷ trọng đơn theo ShipMethod</strong>
+            <small class="text-body-secondary ms-2">Outbound & fulfillment</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="pie" [data]="shipMethodPieChartData()" [options]="shipMethodPieOptions" [height]="280"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Biến động số đơn đã xuất kho</strong>
+            <small class="text-body-secondary ms-2">Shipped orders by day</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="outboundTrendChartData()" [options]="outboundTrendOptions" [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân bổ freight theo ShipMethod</strong>
+            <small class="text-body-secondary ms-2">Freight & logistics cost</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="freightStackedChartData()" [options]="freightStackedOptions" [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>PO có hàng lỗi / cần đền bù</strong>
+            <small class="text-body-secondary ms-2">Receiving exception list</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Purchase Order</th>
+                    <th>Vendor</th>
+                    <th>Received</th>
+                    <th>Rejected</th>
+                    <th>Stocked</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of rejectedInboundRows(); track item.purchaseOrderId) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">#{{ item.purchaseOrderId }}</div>
+                      <div class="text-body-secondary small">{{ item.dock }}</div>
+                    </td>
+                    <td>{{ item.vendor }}</td>
+                    <td>{{ item.receivedQty | number:'1.0-0' }}</td>
+                    <td>{{ item.rejectedQty | number:'1.0-0' }}</td>
+                    <td>{{ item.stockedQty | number:'1.0-0' }}</td>
+                    <td>
+                      <span class="badge" [class.bg-danger]="item.status === 'Rejected Items'" [class.bg-warning]="item.status === 'Review'" [class.bg-success]="item.status === 'Accepted'">
+                        {{ item.status }}
+                      </span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Đơn outbound đang xử lý</strong>
+            <small class="text-body-secondary ms-2">Pending shipment & routing</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Sales Order</th>
+                    <th>ShipMethod</th>
+                    <th>Route</th>
+                    <th>Lead Time</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of filteredOutboundOrders(); track item.salesOrderId) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">#{{ item.salesOrderId }}</div>
+                      <div class="text-body-secondary small">{{ item.orderDate }}</div>
+                    </td>
+                    <td>{{ item.shipMethod }}</td>
+                    <td>{{ item.city }}, {{ item.state }}</td>
+                    <td>{{ item.leadTime | number:'1.0-0' }} ngày</td>
+                    <td>
+                      <span class="badge" [class.bg-warning]="item.status === 'Pending'" [class.bg-success]="item.status === 'Shipped'">
+                        {{ item.status }}
+                      </span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Chi phí logistics theo khu vực giao hàng</strong>
+            <small class="text-body-secondary ms-2">Freight hotspot by state / city</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="region-grid">
+              @for (item of freightRegionRows(); track item.state + item.city) {
+              <div class="region-tile" [style.flex]="item.freight">
+                <div class="region-label">{{ item.state }}</div>
+                <div class="region-subtitle">{{ item.city }}</div>
+                <div class="region-meta">Freight: {{ item.freight | number:'1.0-0' }}</div>
+                <div class="region-meta">Volume: {{ item.volume | number:'1.0-0' }} đơn</div>
+              </div>
+              }
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+  </div>
+</div>

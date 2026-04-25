@@ -1,17 +1,322 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="sales-app facilities-app">
+  <div class="sales-content facilities-content">
+    <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-warning mb-3" name="cil-building"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Facilities Dashboard - Building and maintenance management</p>
-        </div>
+        <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+          <c-row class="align-items-end g-3">
+            <c-col md="4">
+              <label cLabel for="facilityType" class="small">Loại khu vực</label>
+              <select cSelect formControlName="facilityType" id="facilityType">
+                <option value="All">Tất cả khu vực</option>
+                <option value="Production Line">Production Line</option>
+                <option value="Warehouse">Warehouse</option>
+                <option value="Machine Station">Machine Station</option>
+              </select>
+            </c-col>
+
+            <c-col md="4">
+              <label cLabel for="maintenancePriority" class="small">Ưu tiên bảo trì</label>
+              <select cSelect formControlName="maintenancePriority" id="maintenancePriority">
+                <option value="All">Tất cả mức ưu tiên</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </c-col>
+
+            <c-col md="4">
+              <label cLabel for="storageZone" class="small">Vùng lưu trữ</label>
+              <select cSelect formControlName="storageZone" id="storageZone">
+                <option value="All">Tất cả vùng</option>
+                <option value="Warehouse">Warehouse</option>
+                <option value="Production Line">Production Line</option>
+                <option value="Machine Station">Machine Station</option>
+              </select>
+            </c-col>
+
+            <c-col md="12">
+              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng bộ lọc Facilities & Maintenance
+              </button>
+            </c-col>
+          </c-row>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="g-4 mb-4">
+      @for (card of kpiCards(); track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'danger' : i === 2 ? 'warning' : 'success'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.format === 'percent') {
+            {{ card.value | number:'1.1-1' }}%
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Theo dõi availability, cost variance và tải vận hành thiết bị</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Utilization', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', data: [72, 75, 77, 79, 82, 84] }] }
+                : i === 1
+                  ? { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Variance', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#e55353', data: [210, 320, 410, 505, 610, 690] }] }
+                  : i === 2
+                    ? { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Operating Cost', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [24600, 25500, 26300, 27400, 28100, 29170], fill: true }] }
+                    : { labels: ['Apr','May','Jun','Jul','Aug','Sep'], datasets: [{ label: 'Tracked Areas', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [4, 4, 5, 5, 5, 5], fill: true }] }"
+              [options]="{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1.5, tension: 0.35 }, point: { radius: 3, hitRadius: 10, hoverRadius: 3 } } }"
+              class="mt-2 mx-3" height="70" type="line"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="mb-3">
+      @for (item of maintenanceCards(); track item.label) {
+      <c-col md="3">
+        <c-card class="metric-mini-card mb-3">
+          <c-card-body>
+            <div class="metric-mini-label">{{ item.label }}</div>
+            <div class="metric-mini-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="6" xl="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Planned vs Actual Cost theo Location</strong>
+            <small class="text-body-secondary ms-2">Equipment utilization & health</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="costVarianceChartData()" [options]="costVarianceOptions" [height]="280"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6" xl="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Biến động giờ chạy máy theo tháng</strong>
+            <small class="text-body-secondary ms-2">Maintenance planning</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="runtimeTrendChartData()" [options]="runtimeTrendOptions" [height]="280"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Phân bổ tồn kho theo khu vực</strong>
+            <small class="text-body-secondary ms-2">Facility space capacity</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="inventoryDonutChartData()" [options]="inventoryDonutOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Heatmap sức chứa kho / xưởng</strong>
+            <small class="text-body-secondary ms-2">Treemap mô phỏng fill rate</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="capacity-grid">
+              @for (item of capacityHeatmapRows(); track item.zone) {
+              <div class="capacity-tile" [style.flex]="item.fillRate * 10">
+                <div class="capacity-label">{{ item.zone }}</div>
+                <div class="capacity-meta">{{ item.quantity | number:'1.0-0' }} units</div>
+                <div class="capacity-fill">Fill rate: {{ item.fillRate * 100 | number:'1.0-0' }}%</div>
+              </div>
+              }
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Lũy kế chi phí vận hành facility</strong>
+            <small class="text-body-secondary ms-2">Stacked operation cost</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="operatingCostChartData()" [options]="operatingCostOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="7">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Tình trạng sử dụng location</strong>
+            <small class="text-body-secondary ms-2">Availability / variance / maintenance priority</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Location</th>
+                    <th>Type</th>
+                    <th>Availability</th>
+                    <th>Actual Hrs</th>
+                    <th>Utilization</th>
+                    <th>Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of utilizationRows(); track item.locationId) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">{{ item.name }}</div>
+                      <div class="text-body-secondary small">Priority: {{ item.priority }}</div>
+                    </td>
+                    <td><span class="badge bg-primary">{{ item.facilityType }}</span></td>
+                    <td>{{ item.availability | number:'1.0-0' }}</td>
+                    <td>{{ item.actualHours | number:'1.0-0' }}</td>
+                    <td>{{ item.utilizationRate * 100 | number:'1.0-0' }}%</td>
+                    <td>
+                      <span class="badge" [class.bg-danger]="item.variance > 1000" [class.bg-warning]="item.variance <= 1000 && item.variance > 400" [class.bg-success]="item.variance <= 400">
+                        {{ item.variance | number:'1.0-0' }}
+                      </span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="5">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Lịch bảo trì tham chiếu WorkOrder</strong>
+            <small class="text-body-secondary ms-2">Maintenance scheduling</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>WorkOrder</th>
+                    <th>Location</th>
+                    <th>Scrap Reason</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of maintenanceSchedule(); track item.workOrderId) {
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">#{{ item.workOrderId }}</div>
+                      <div class="text-body-secondary small">Qty: {{ item.orderQty | number:'1.0-0' }}</div>
+                    </td>
+                    <td>{{ item.location }}</td>
+                    <td class="facilities-notes-cell">{{ item.scrapReason }}</td>
+                    <td>
+                      <span class="badge" [class.bg-danger]="item.status === 'Urgent'" [class.bg-warning]="item.status === 'Planned'" [class.bg-info]="item.status === 'Monitor'">
+                        {{ item.status }}
+                      </span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="12">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Chi tiết sức chứa khu vực lưu trữ</strong>
+            <small class="text-body-secondary ms-2">Shelf / Bin utilization</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive sales-table-responsive">
+              <table cTable [hover]="true" [striped]="true" class="small sales-data-table">
+                <thead>
+                  <tr>
+                    <th>Zone</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Shelves Used</th>
+                    <th>Bins Used</th>
+                    <th>Fill Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of filteredInventoryCapacity(); track item.zone) {
+                  <tr>
+                    <td>{{ item.zone }}</td>
+                    <td><span class="badge bg-info">{{ item.areaType }}</span></td>
+                    <td>{{ item.quantity | number:'1.0-0' }}</td>
+                    <td>{{ item.shelvesUsed | number:'1.0-0' }}</td>
+                    <td>{{ item.binsUsed | number:'1.0-0' }}</td>
+                    <td>{{ item.fillRate * 100 | number:'1.0-0' }}%</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+  </div>
+</div>
