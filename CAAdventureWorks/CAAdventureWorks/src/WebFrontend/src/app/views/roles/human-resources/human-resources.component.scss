@@ -1,0 +1,61 @@
+@import '../sales/sales.component.scss';
+
+.hr-app {
+  @extend .sales-app;
+}
+
+.hr-content {
+  @extend .sales-content;
+}
+
+.metric-mini-card {
+  border: 1px solid rgba(124, 92, 255, 0.08);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%);
+  box-shadow: 0 10px 24px rgba(76, 81, 191, 0.08);
+
+  c-card-body {
+    padding: 14px 16px;
+  }
+}
+
+.metric-mini-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.metric-mini-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1.1;
+}
+
+c-form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding-top: 8px;
+
+  input[cFormCheckInput] {
+    margin-top: 0;
+  }
+
+  label {
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-mini-value {
+    font-size: 1.2rem;
+  }
+
+  c-form-check {
+    padding-top: 0;
+  }
+}

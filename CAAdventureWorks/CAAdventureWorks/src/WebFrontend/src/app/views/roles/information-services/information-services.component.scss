@@ -1,0 +1,443 @@
+// ============================================
+// Information Services Dashboard - Card-based Design
+// Matching Sales Dashboard Component Style
+// ============================================
+
+:host {
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    .legend {
+        small {
+            font-size: x-small;
+        }
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+// ============================================
+// Main App Container
+// ============================================
+
+.is-app {
+    width: 100%;
+    min-height: 100vh;
+}
+
+// ============================================
+// Main Content Area
+// ============================================
+
+.is-content {
+    flex: 1;
+    padding: 24px 24px 40px 24px;
+    position: relative;
+}
+
+
+.sales-action-buttons {
+    flex-wrap: wrap;
+
+    .action-btn {
+        min-height: 40px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        line-height: 1;
+        box-shadow: none;
+        background: var(--cui-body-bg, #ffffff);
+        border: 1px solid var(--cui-border-color, #d8e0ea);
+        color: var(--cui-body-color, #1f2937);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+        svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: currentColor;
+            fill: currentColor;
+        }
+    }
+
+    .light-btn {
+        background: var(--cui-body-bg, #ffffff);
+        border-color: var(--cui-border-color, #d8e0ea);
+        color: var(--cui-secondary-color, #718096);
+
+        &:hover,
+        &:focus,
+        &:active {
+            background: var(--cui-tertiary-bg, #f8fafc);
+            border-color: var(--cui-border-color, #cbd5e1);
+            color: var(--cui-body-color, #4a5568);
+            box-shadow: 0 0 0 0.15rem rgba(124, 92, 255, 0.12);
+        }
+    }
+
+    .secondary-btn svg {
+        color: currentColor;
+        fill: currentColor;
+    }
+
+    .success-btn svg {
+        color: currentColor;
+        fill: currentColor;
+    }
+
+    .warning-btn svg {
+        color: currentColor;
+        fill: currentColor;
+        opacity: 1;
+    }
+
+    .warning-btn {
+        color: var(--cui-secondary-color, #718096) !important;
+
+        .button-icon {
+            color: currentColor !important;
+            font-size: 14px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        svg,
+        [cIcon],
+        .icon {
+            color: currentColor !important;
+            fill: currentColor !important;
+            stroke: currentColor !important;
+            opacity: 1 !important;
+        }
+    }
+
+    .export-btn {
+        background: linear-gradient(135deg, #ff5a1f 0%, #ff3d00 100%);
+        border-color: #ff4b12;
+        color: #fff;
+        box-shadow: 0 6px 14px rgba(255, 90, 31, 0.28);
+
+        svg {
+            color: #ffffff;
+            fill: #ffffff;
+        }
+
+        &:hover,
+        &:focus,
+        &:active {
+            background: linear-gradient(135deg, #ff6a33 0%, #ff4d1a 100%);
+            border-color: #ff5a1f;
+            color: #fff;
+        }
+    }
+}
+
+// ============================================
+// Loading & Error States
+// ============================================
+
+.loading-overlay,
+.error-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 100;
+    gap: 16px;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #7c5cff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error-icon {
+    width: 64px;
+    height: 64px;
+    color: #ef4444;
+}
+
+.btn-retry {
+    padding: 10px 24px;
+    border: 1px solid #7c5cff;
+    background: #7c5cff;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: #6d28d9;
+        border-color: #6d28d9;
+    }
+}
+
+// ============================================
+// Card Customizations
+// ============================================
+
+c-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+
+    c-card-header {
+        background-color: var(--cui-card-cap-bg, #fff);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 12px 16px;
+
+        strong {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        small {
+            font-size: 11px;
+        }
+    }
+
+    c-card-body {
+        padding: 16px;
+    }
+}
+
+// ============================================
+// Chart Containers
+// ============================================
+
+c-chart {
+    display: block;
+    min-height: 250px;
+
+    canvas {
+        max-height: 300px;
+    }
+}
+
+
+// ============================================
+// Widget Stats Customization
+// ============================================
+
+c-widget-stat-a {
+    ::ng-deep {
+        .card {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            min-height: 80px;
+        }
+
+        .card-body>div:first-child {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .fs-4,
+        .fw-semibold {
+            margin-bottom: 0;
+            line-height: 1.15;
+            font-size: 1.15rem !important;
+        }
+
+        .card-body {
+            padding: 0.75rem 0.85rem 0.35rem !important;
+        }
+
+        .chart-wrapper,
+        c-chart {
+            height: 80px !important;
+            min-height: 80px !important;
+        }
+
+        canvas {
+            max-height: 80px !important;
+        }
+
+        .chartjs-tooltip {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        .sales-widget-action {
+            pointer-events: none;
+        }
+
+        .sales-widget-action:focus,
+        .sales-widget-action:hover {
+            box-shadow: none !important;
+        }
+    }
+}
+
+.sales-widget-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sales-widget-label {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.sales-widget-note {
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.15;
+    opacity: 0.92;
+}
+
+// ============================================
+// Form Controls in Filter Card
+// ============================================
+
+.small {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+input[cFormControl],
+select[cSelect] {
+    font-size: 13px;
+}
+
+input[cFormControl]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(100);
+    opacity: 1;
+    cursor: pointer;
+}
+
+input[cFormControl] {
+    color-scheme: dark;
+
+    &::-webkit-calendar-picker-indicator {
+        background-color: transparent;
+
+    }
+}
+
+select[cSelect] {
+    width: 100%;
+    min-width: 0;
+}
+
+.apply-btn {
+    min-height: 40px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #5b5bd6 0%, #4c51bf 100%);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 8px 18px rgba(91, 91, 214, 0.22);
+    transition: all 0.2s ease;
+
+    svg,
+    [cIcon],
+    .button-icon {
+        color: #ffffff;
+        fill: #ffffff;
+    }
+
+    .button-icon {
+        font-size: 14px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    &:hover,
+    &:focus,
+    &:active {
+        background: linear-gradient(135deg, #6868e0 0%, #555fd1 100%);
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(91, 91, 214, 0.26);
+    }
+}
+
+// ============================================
+// Responsive Design
+// ============================================
+
+@media (max-width: 768px) {
+    .is-content {
+        padding: 16px;
+    }
+
+    .sales-action-buttons {
+        justify-content: flex-start !important;
+
+        .action-btn {
+            min-height: 36px;
+            padding: 7px 12px;
+            font-size: 12px;
+        }
+    }
+
+    c-chart {
+        min-height: 200px;
+
+        canvas {
+            max-height: 250px;
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    .is-content {
+        padding: 12px;
+    }
+
+    c-card {
+        c-card-header {
+            padding: 10px 12px;
+
+            strong {
+                font-size: 13px;
+            }
+
+            small {
+                display: block;
+                margin-top: 2px;
+            }
+        }
+
+        c-card-body {
+            padding: 12px;
+        }
+    }
+}

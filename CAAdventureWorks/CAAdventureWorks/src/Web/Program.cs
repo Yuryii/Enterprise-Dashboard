@@ -31,7 +31,11 @@ app.UseCors(static builder =>
         .AllowAnyHeader()
         .AllowAnyOrigin());
 
-app.UseHttpsRedirection();
+// Disable HTTPS redirection in development to allow HTTP API calls
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

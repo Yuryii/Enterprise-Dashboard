@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  useMockAuth: false, // Disabled - Require Keycloak authentication
+  useMockAuth: true, // Enabled for development without Keycloak
   keycloak: {
     authority: 'http://localhost:8080/realms/AdventureWorks',
     clientId: 'adventureworks-web',
@@ -13,5 +13,5 @@ export const environment = {
     secure: false,
     showDebugInformation: true,
   },
-  apiUrl: 'http://localhost:5001',
+  apiUrl: 'http://localhost:5285',
 };

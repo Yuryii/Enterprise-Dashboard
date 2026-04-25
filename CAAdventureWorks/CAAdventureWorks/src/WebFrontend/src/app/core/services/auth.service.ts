@@ -1,29 +1,57 @@
 import { inject, Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private oidcSecurityService = inject(OidcSecurityService);
+  private router = inject(Router);
+  private useMockAuth = !environment.production && (environment as any).useMockAuth;
 
-  isAuthenticated$ = this.oidcSecurityService.isAuthenticated$.pipe(
-    map((result) => result.isAuthenticated),
-  );
+  isAuthenticated$ = this.useMockAuth
+    ? of(true)
+    : this.oidcSecurityService.isAuthenticated$.pipe(
+        map((result) => result.isAuthenticated),
+      );
 
-  userData$ = this.oidcSecurityService.userData$.pipe(
-    map((result) => result.userData as any),
-  );
+  userData$ = this.useMockAuth
+    ? of({ name: 'Mock User', email: 'mock@example.com', preferred_username: 'mockuser' })
+    : this.oidcSecurityService.userData$.pipe(
+        map((result) => result.userData as any),
+      );
 
-  accessToken$: Observable<string> = this.oidcSecurityService.getAccessToken();
-  idToken$: Observable<string> = this.oidcSecurityService.getIdToken();
+  accessToken$: Observable<string> = this.useMockAuth
+    ? of('mock-access-token')
+    : this.oidcSecurityService.getAccessToken();
+    
+  idToken$: Observable<string> = this.useMockAuth
+    ? of('mock-id-token')
+    : this.oidcSecurityService.getIdToken();
 
   login(): void {
+    if (this.useMockAuth) {
+      console.log('[AuthService] Mock authentication - login bypassed');
+      return;
+    }
     this.oidcSecurityService.authorize();
   }
 
   logout(): void {
-    this.oidcSecurityService.logoff();
+    if (this.useMockAuth) {
+      console.log('[AuthService] Mock authentication - performing logout');
+      // Clear any stored data
+      localStorage.clear();
+      sessionStorage.clear();
+      // Redirect to login or home page
+      window.location.href = '/';
+      return;
+    }
+    this.oidcSecurityService.logoff().subscribe(() => {
+      console.log('[AuthService] Logged out successfully');
+    });
   }
 
   /**
@@ -31,6 +59,16 @@ export class AuthService {
    * Policy names are derived by expanding which policies the user's Keycloak roles grant access to.
    */
   async getRoles(): Promise<string[]> {
+    // Mock roles for development
+    // Change this array to test different roles:
+    // - For Sales: ['Sales']
+    // - For HR: ['HumanResources']
+    // - For Purchasing: ['Purchasing']
+    // - For Executive (all access): ['Executive']
+    if (this.useMockAuth) {
+      return ['Sales']; // Currently set to Sales role only
+    }
+
     const token = await firstValueFrom(
       this.oidcSecurityService.getAccessToken(),
     );
@@ -39,44 +77,10 @@ export class AuthService {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const keycloakRoles: string[] = payload?.realm_access?.roles ?? [];
 
-    // Policy names that a given Keycloak role grants access to
-    const policyAccessMap: Record<string, string[]> = {
-      Executive: ['Executive'],
-      'Information-Services': [
-        'Information-Services',
-        'Executive-General-And-Administration-Manager',
-      ],
-      Finance: ['Finance', 'Executive-General-And-Administration-Manager'],
-      HumanResources: [
-        'Human-Resources',
-        'Executive-General-And-Administration-Manager',
-      ],
-      'Facilities-And-Maintenance': [
-        'Facilities-And-Maintenance',
-        'Executive-General-And-Administration-Manager',
-      ],
-      'Quality-Assurance': ['Quality-Assurance', 'Quality-Assurance-Manager'],
-      'Document-Control': ['Document-Control', 'Quality-Assurance-Manager'],
-      Engineering: ['Engineering', 'Research-and-Development'],
-      'Tool-Design': ['Tool-Design', 'Research-and-Development'],
-      Production: ['Production', 'Manufacturing'],
-      'Production-Control': ['Production-Control', 'Manufacturing'],
-      Sales: ['Sales', 'Sales-and-Marketing'],
-      Marketing: ['Marketing', 'Sales-and-Marketing'],
-      Purchasing: ['Inventory-Management'],
-      'Shipping-and-Receiving': ['Shipping-and-Receiving'],
-    };
-
-    const policies = new Set<string>();
-    for (const role of keycloakRoles) {
-      policies.add(role);
-      const accessiblePolicies = policyAccessMap[role];
-      if (accessiblePolicies) {
-        accessiblePolicies.forEach((p) => policies.add(p));
-      }
-    }
-
-    return Array.from(policies);
+    // Simply return the roles from Keycloak without expansion
+    // This ensures each department only sees their own dashboard
+    console.log('[AuthService] Keycloak roles:', keycloakRoles);
+    return keycloakRoles;
   }
 
   hasRole(role: string): boolean {
@@ -109,6 +113,10 @@ export class AuthService {
   }
 
   async getUserName(): Promise<string> {
+    if (this.useMockAuth) {
+      return 'Mock User (Development)';
+    }
+    
     const userData = await firstValueFrom(
       this.oidcSecurityService.getUserData(),
     );
@@ -119,6 +127,10 @@ export class AuthService {
   }
 
   async getUserEmail(): Promise<string> {
+    if (this.useMockAuth) {
+      return 'mock@example.com';
+    }
+    
     const userData = await firstValueFrom(
       this.oidcSecurityService.getUserData(),
     );
