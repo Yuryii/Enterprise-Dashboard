@@ -1,0 +1,639 @@
+:host {
+    display: block
+}
+
+.purchasing-app {
+    width: 100%;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)
+}
+
+.purchasing-content {
+    padding: 24px 24px 40px;
+    position: relative
+}
+
+.production-control-shell {
+    display: block
+}
+
+.error-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, .95);
+    z-index: 100;
+    gap: 16px
+}
+
+.error-icon {
+    width: 64px;
+    height: 64px;
+    color: #ef4444
+}
+
+.btn-retry {
+    padding: 10px 24px;
+    border: 1px solid #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700
+}
+
+c-card {
+    box-shadow: 0 12px 30px rgba(15, 23, 42, .06);
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 20px;
+    overflow: hidden
+}
+
+c-card c-card-header {
+    background-color: rgba(255, 255, 255, .92);
+    border-bottom: 1px solid rgba(226, 232, 240, .85);
+    padding: 16px 18px
+}
+
+c-card c-card-header strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a
+}
+
+c-card c-card-header small {
+    font-size: 12px
+}
+
+c-card c-card-body {
+    padding: 18px
+}
+
+.sales-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px
+}
+
+.sales-action-buttons .action-btn {
+    min-height: 40px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+    box-shadow: none;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid rgba(255, 255, 255, .7);
+    color: #0f172a;
+    transition: all .2s ease
+}
+
+.sales-action-buttons .action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, .12)
+}
+
+.sales-action-buttons .action-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: currentColor;
+    fill: currentColor
+}
+
+.sales-action-buttons .light-btn {
+    background: rgba(255, 255, 255, .92);
+    color: #1e293b
+}
+
+.sales-action-buttons .warning-btn {
+    color: #1e293b !important
+}
+
+.sales-action-buttons .warning-btn .button-icon {
+    color: currentColor !important;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center
+}
+
+.sales-action-buttons .export-btn {
+    background: linear-gradient(135deg, #ff5a1f 0%, #ff3d00 100%);
+    border-color: #ff4b12;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(255, 90, 31, .25)
+}
+
+.sales-action-buttons .export-btn svg {
+    color: #fff;
+    fill: #fff
+}
+
+.production-hero-card {
+    background: linear-gradient(135deg, #0f172a 0%, #172554 50%, #1d4ed8 100%);
+    color: #fff
+}
+
+.hero-panel {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px
+}
+
+.hero-eyebrow {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .7)
+}
+
+.hero-title {
+    margin: 0;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.1
+}
+
+.hero-subtitle {
+    margin: 12px 0 0;
+    max-width: 760px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, .82)
+}
+
+.hero-summary {
+    min-width: 220px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .18)
+}
+
+.hero-summary__value {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1
+}
+
+.hero-summary__label {
+    margin-top: 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, .82)
+}
+
+.filter-shell-card c-card-body {
+    padding: 14px 16px 12px
+}
+
+.filter-grid-compact {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) minmax(170px, 1fr) minmax(170px, 1fr) minmax(170px, 1fr) auto;
+    gap: 8px 12px;
+    align-items: end
+}
+
+.filter-item,
+.filter-check-item,
+.filter-action-item {
+    min-width: 0
+}
+
+.filter-item-wide {
+    grid-column: span 2
+}
+
+.filter-check-item {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding-inline: 4px
+}
+
+.filter-check-item c-form-check {
+    margin-bottom: 0;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 6px
+}
+
+.filter-check-item label[cLabel] {
+    margin-bottom: 0;
+    white-space: nowrap;
+    font-size: 11px
+}
+
+.filter-action-item {
+    display: flex;
+    align-items: end;
+    justify-content: flex-end
+}
+
+.small {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #334155
+}
+
+input[cFormControl],
+select[cSelect] {
+    font-size: 13px;
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+    min-height: 42px;
+    border-radius: 10px;
+    border-color: #dbe3ee
+}
+
+.apply-btn {
+    min-width: 120px;
+    min-height: 42px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 10px
+}
+
+c-widget-stat-a {
+    display: block;
+    height: 100%
+}
+
+c-widget-stat-a ::ng-deep .card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, .08);
+    border: 1px solid rgba(148, 163, 184, .15);
+    min-height: 100px;
+    border-radius: 20px;
+    overflow: hidden
+}
+
+c-widget-stat-a ::ng-deep .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    padding: .75rem .75rem 0 !important
+}
+
+c-widget-stat-a ::ng-deep .chart-wrapper,
+c-widget-stat-a ::ng-deep c-chart {
+    height: 36px !important;
+    min-height: 36px !important
+}
+
+c-widget-stat-a ::ng-deep canvas {
+    max-height: 36px !important
+}
+
+.sales-widget-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px
+}
+
+.sales-widget-label {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2
+}
+
+.sales-widget-note {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    opacity: .9
+}
+
+.sales-widget-action {
+    border: 0;
+    box-shadow: none
+}
+
+.summary-band {
+    height: 64px;
+    border-radius: 14px 14px 0 0;
+    margin: 0 6px
+}
+
+.summary-band--primary {
+    background: linear-gradient(90deg, rgba(59, 130, 246, .16), rgba(37, 99, 235, .45))
+}
+
+.summary-band--danger {
+    background: linear-gradient(90deg, rgba(248, 113, 113, .15), rgba(220, 38, 38, .5))
+}
+
+.summary-band--warning {
+    background: linear-gradient(90deg, rgba(251, 191, 36, .15), rgba(245, 158, 11, .5))
+}
+
+.summary-band--info {
+    background: linear-gradient(90deg, rgba(34, 211, 238, .15), rgba(8, 145, 178, .5))
+}
+
+.health-metric-card {
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .05)
+}
+
+.health-metric-value {
+    font-size: 1.5rem;
+    line-height: 1.1;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px
+}
+
+.health-metric-label {
+    font-size: .82rem;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px
+}
+
+.health-metric-progress {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden
+}
+
+.health-metric-progress-bar {
+    height: 100%;
+    border-radius: 999px
+}
+
+.progress-primary {
+    background: linear-gradient(90deg, #2563eb, #1d4ed8)
+}
+
+.progress-danger {
+    background: linear-gradient(90deg, #ef4444, #dc2626)
+}
+
+.progress-warning {
+    background: linear-gradient(90deg, #f59e0b, #d97706)
+}
+
+.progress-info {
+    background: linear-gradient(90deg, #06b6d4, #0891b2)
+}
+
+.priority-grid,
+.exception-list,
+.stock-alert-list,
+.scrap-grid,
+.ops-focus-list {
+    display: grid;
+    gap: 14px
+}
+
+.priority-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+}
+
+.priority-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+    border: 1px solid #dce6f2
+}
+
+.priority-card__topline,
+.exception-item__header,
+.stock-alert-item__top,
+.scrap-card__header,
+.ops-focus-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px
+}
+
+.priority-card__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569
+}
+
+.priority-card__value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a
+}
+
+.priority-card__note {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #475569
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent
+}
+
+.status-chip--danger {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-color: #fecaca
+}
+
+.status-chip--warning {
+    color: #b45309;
+    background: #fef3c7;
+    border-color: #fde68a
+}
+
+.status-chip--info {
+    color: #0f766e;
+    background: #ccfbf1;
+    border-color: #99f6e4
+}
+
+.status-chip--success {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #bbf7d0
+}
+
+.ops-focus-item {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0
+}
+
+.ops-focus-item__label {
+    font-size: 12px;
+    color: #64748b
+}
+
+.exception-item,
+.stock-alert-item {
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6)
+}
+
+.exception-item--alert {
+    border-color: #fecaca;
+    background: linear-gradient(180deg, #fff 0%, #fff7f7 100%)
+}
+
+.exception-item__header,
+.stock-alert-item__top,
+.scrap-card__header {
+    margin-bottom: 12px
+}
+
+.exception-item__title,
+.stock-alert-item__title,
+.scrap-card__title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a
+}
+
+.exception-item__subtitle,
+.stock-alert-item__subtitle,
+.scrap-card__subtitle {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #64748b
+}
+
+.exception-item__meta-grid,
+.stock-alert-item__metrics,
+.scrap-card__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px
+}
+
+.label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #94a3b8
+}
+
+.scrap-card {
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid #f5d59f;
+    background: linear-gradient(180deg, #fffef9 0%, #fff 100%)
+}
+
+.empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    text-align: center;
+    border-radius: 16px;
+    border: 1px dashed #cbd5e1;
+    color: #64748b;
+    background: #f8fafc;
+    font-size: 14px
+}
+
+@media (max-width:1400px) {
+    .production-control-filter-grid {
+        grid-template-columns: repeat(4, minmax(150px, 1fr))
+    }
+
+    .filter-item-wide {
+        grid-column: span 2
+    }
+
+    .priority-grid {
+        grid-template-columns: 1fr
+    }
+}
+
+@media (max-width:992px) {
+    .purchasing-content {
+        padding: 18px 16px 32px
+    }
+
+    .hero-panel {
+        flex-direction: column
+    }
+
+    .hero-summary {
+        min-width: 0;
+        width: 100%
+    }
+
+    .production-control-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .filter-item-wide,
+    .filter-check-item,
+    .filter-action-item {
+        grid-column: span 2
+    }
+
+    .filter-action-item .apply-btn {
+        width: 100%
+    }
+}
+
+@media (max-width:576px) {
+    .sales-action-buttons>* {
+        width: 100%
+    }
+
+    .hero-title {
+        font-size: 28px
+    }
+
+    .production-control-filter-grid,
+    .exception-item__meta-grid,
+    .stock-alert-item__metrics,
+    .scrap-card__stats {
+        grid-template-columns: 1fr
+    }
+
+    .filter-item-wide,
+    .filter-check-item,
+    .filter-action-item {
+        grid-column: span 1
+    }
+}

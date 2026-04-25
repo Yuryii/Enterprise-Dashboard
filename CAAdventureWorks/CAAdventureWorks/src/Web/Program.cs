@@ -19,28 +19,28 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var initialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
     await initialiser.InitialiseAsync();
+
+    var chatbotInitialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContext2Initialiser>();
+    await chatbotInitialiser.InitialiseAsync();
 }
 else
 {
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
-}
-
-app.UseCors(static builder =>
-    builder.AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowAnyOrigin());
-
-// Disable HTTPS redirection in development to allow HTTP API calls
-if (!app.Environment.IsDevelopment())
-{
     app.UseHttpsRedirection();
 }
+
+app.UseCors(static policy =>
+    policy.AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials()
+        .SetIsOriginAllowed(_ => true));
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseFileServer();
+
+app.MapFallbackToFile("index.html");
 
 app.MapOpenApi();
 app.MapScalarApiReference();
@@ -56,5 +56,6 @@ app.MapGet("/", () => Results.Redirect("/scalar"))
 app.MapDefaultEndpoints();
 app.MapEndpoints(typeof(Program).Assembly);
 
+app.MapHub<CAAdventureWorks.Web.Hubs.ChatBotHub>("/hubs/chatbot");
 
 app.Run();

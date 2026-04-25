@@ -1,0 +1,331 @@
+ :host {
+     display: block;
+     width: 100%;
+     height: 100%;
+ }
+
+ * {
+     box-sizing: border-box;
+ }
+
+ .purchasing-app {
+     width: 100%;
+     min-height: 100vh;
+ }
+
+ .purchasing-content {
+     flex: 1;
+     padding: 24px 24px 40px 24px;
+     position: relative;
+ }
+
+ .sales-action-buttons {
+     flex-wrap: wrap;
+ }
+
+ .sales-action-buttons .action-btn {
+     min-height: 40px;
+     padding: 8px 16px;
+     border-radius: 8px;
+     font-size: 13px;
+     font-weight: 600;
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     gap: 6px;
+     line-height: 1;
+     box-shadow: none;
+     background: var(--cui-body-bg, #ffffff);
+     border: 1px solid var(--cui-border-color, #d8e0ea);
+     color: var(--cui-body-color, #1f2937);
+ }
+
+ .sales-action-buttons .action-btn svg {
+     width: 14px;
+     height: 14px;
+     flex-shrink: 0;
+     color: currentColor;
+     fill: currentColor;
+ }
+
+ .sales-action-buttons .light-btn {
+     background: var(--cui-body-bg, #ffffff);
+     border-color: var(--cui-border-color, #d8e0ea);
+     color: var(--cui-secondary-color, #718096);
+ }
+
+ .sales-action-buttons .warning-btn {
+     color: var(--cui-secondary-color, #718096) !important;
+ }
+
+ .sales-action-buttons .warning-btn .button-icon {
+     color: currentColor !important;
+     font-size: 14px;
+     line-height: 1;
+     display: inline-flex;
+     align-items: center;
+ }
+
+ .sales-action-buttons .export-btn {
+     background: linear-gradient(135deg, #ff5a1f 0%, #ff3d00 100%);
+     border-color: #ff4b12;
+     color: #fff;
+     box-shadow: 0 6px 14px rgba(255, 90, 31, 0.28);
+ }
+
+ .error-overlay {
+     position: absolute;
+     inset: 0;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     justify-content: center;
+     background: rgba(255, 255, 255, 0.95);
+     z-index: 100;
+     gap: 16px;
+ }
+
+ .error-icon {
+     width: 64px;
+     height: 64px;
+     color: #ef4444;
+ }
+
+ .btn-retry {
+     padding: 10px 24px;
+     border: 1px solid #7c5cff;
+     background: #7c5cff;
+     color: #fff;
+     border-radius: 6px;
+     font-size: 14px;
+     font-weight: 600;
+     cursor: pointer;
+ }
+
+ c-card {
+     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+     border: 1px solid rgba(0, 0, 0, 0.08);
+ }
+
+ c-card c-card-header {
+     background-color: var(--cui-card-cap-bg, #fff);
+     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+     padding: 12px 16px;
+ }
+
+ c-card c-card-header strong {
+     font-size: 14px;
+     font-weight: 600;
+ }
+
+ c-card c-card-header small {
+     font-size: 11px;
+ }
+
+ c-card c-card-body {
+     padding: 16px;
+ }
+
+ .filter-shell-card {
+     border-radius: 12px;
+ }
+
+ .filter-shell-card c-card-body {
+     padding: 12px 14px 10px;
+ }
+
+ .filter-grid-compact {
+     display: grid;
+     grid-template-columns: repeat(6, minmax(140px, 1fr));
+     gap: 8px 12px;
+     align-items: end;
+ }
+
+ .filter-item,
+ .filter-check-item,
+ .filter-action-item {
+     min-width: 0;
+ }
+
+ .filter-item-wide {
+     min-width: 0;
+     grid-column: span 2;
+ }
+
+ .filter-check-item {
+     display: flex;
+     align-items: center;
+     min-height: 40px;
+ }
+
+ .filter-action-item {
+     display: flex;
+     align-items: end;
+     justify-content: flex-end;
+ }
+
+ .small {
+     font-size: 12px;
+     font-weight: 700;
+     margin-bottom: 4px;
+     color: #334155;
+ }
+
+ input[cFormControl],
+ select[cSelect] {
+     font-size: 13px;
+     padding-top: 0.5rem;
+     padding-bottom: 0.5rem;
+     min-height: 42px;
+     border-radius: 10px;
+     border-color: #dbe3ee;
+ }
+
+ .apply-btn {
+     min-width: 120px;
+     min-height: 42px;
+     font-size: 13px;
+     font-weight: 700;
+     border-radius: 10px;
+ }
+
+ .sales-widget-title-block {
+     display: flex;
+     flex-direction: column;
+     gap: 2px;
+ }
+
+ .sales-widget-label {
+     font-size: 18px;
+     font-weight: 700;
+     line-height: 1.2;
+ }
+
+ .sales-widget-note {
+     font-size: 12px;
+     font-weight: 500;
+     line-height: 1.35;
+     opacity: 0.9;
+ }
+
+ .sales-widget-action {
+     border: 0;
+     box-shadow: none;
+ }
+
+ c-widget-stat-a {
+     display: block;
+     height: 100%;
+ }
+
+ c-widget-stat-a ::ng-deep .card {
+     display: flex;
+     flex-direction: column;
+     justify-content: space-between;
+     height: 100%;
+     min-height: 105px;
+ }
+
+ c-widget-stat-a ::ng-deep .card-body {
+     display: flex;
+     flex-direction: column;
+     justify-content: space-between;
+     flex: 1 1 auto;
+     padding: .65rem .8rem 0 !important;
+ }
+
+ c-widget-stat-a ::ng-deep .chart-wrapper,
+ c-widget-stat-a ::ng-deep c-chart {
+     height: 32px !important;
+     min-height: 32px !important;
+ }
+
+ c-widget-stat-a ::ng-deep canvas {
+     max-height: 32px !important;
+ }
+
+ .sales-widget-label {
+     font-size: 16px;
+ }
+
+ .sales-widget-note {
+     font-size: 11px;
+     line-height: 1.2;
+ }
+
+ .health-metric-card {
+     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+ }
+
+ .health-metric-value {
+     font-size: 1.5rem;
+     line-height: 1.1;
+     font-weight: 800;
+     color: #0f172a;
+     margin-bottom: 6px;
+ }
+
+ .health-metric-label {
+     font-size: .82rem;
+     line-height: 1.25;
+     font-weight: 700;
+     color: #334155;
+     margin-bottom: 8px;
+ }
+
+ .health-metric-progress {
+     width: 100%;
+     height: 6px;
+     border-radius: 999px;
+     background: #e2e8f0;
+     overflow: hidden;
+ }
+
+ .health-metric-progress-bar {
+     height: 100%;
+     border-radius: 999px;
+ }
+
+ .progress-primary {
+     background: linear-gradient(90deg, #2563eb, #1d4ed8);
+ }
+
+ .progress-success {
+     background: linear-gradient(90deg, #16a34a, #15803d);
+ }
+
+ .progress-info {
+     background: linear-gradient(90deg, #06b6d4, #0891b2);
+ }
+
+ .progress-warning {
+     background: linear-gradient(90deg, #f59e0b, #d97706);
+ }
+
+ .chart-card-tall {
+     min-height: 420px;
+ }
+
+ .table-responsive table {
+     font-size: 13px;
+ }
+
+ @media (max-width: 1200px) {
+     .filter-grid-compact {
+         grid-template-columns: repeat(3, minmax(140px, 1fr));
+     }
+ }
+
+ @media (max-width: 768px) {
+     .purchasing-content {
+         padding: 16px 16px 32px;
+     }
+
+     .filter-grid-compact {
+         grid-template-columns: 1fr;
+     }
+
+     .filter-item-wide {
+         grid-column: span 1;
+     }
+ }

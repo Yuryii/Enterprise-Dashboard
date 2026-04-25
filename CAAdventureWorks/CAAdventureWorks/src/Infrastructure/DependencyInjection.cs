@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CAAdventureWorks.Application.Common.Interfaces;
+using CAAdventureWorks.Infrastructure.ChatBot;
 using CAAdventureWorks.Infrastructure.Data;
 using CAAdventureWorks.Infrastructure.Data.Interceptors;
 using CAAdventureWorks.Infrastructure.Identity;
@@ -33,6 +34,23 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
+        // ChatBot database (ApplicationDbContext2)
+        var chatbotConn = builder.Configuration.GetConnectionString("ChatBot");
+        Guard.Against.Null(chatbotConn, message: "Connection string 'ChatBot' not found.");
+
+        builder.Services.AddDbContext<ApplicationDbContext2>(options =>
+        {
+            options.UseSqlServer(chatbotConn);
+            options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+        });
+
+        builder.Services.AddScoped<IChatBotDbContext>(sp => sp.GetRequiredService<ApplicationDbContext2>());
+        builder.Services.AddScoped<ApplicationDbContext2Initialiser>();
+
+        // Semantic Kernel services
+        builder.Services.AddHttpClient("ChatBot");
+        builder.Services.AddScoped<CAAdventureWorks.Application.ChatBot.Services.ISemanticKernelService, DepartmentKernelService>();
+
         var keycloakAuthority = builder.Configuration["Keycloak:Authority"];
         var keycloakAudience = builder.Configuration["Keycloak:Audience"];
         var requireHttpsMetadata = !builder.Environment.IsDevelopment();
@@ -51,11 +69,27 @@ public static class DependencyInjection
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidateAudience = true,
+                ValidateAudience = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 RoleClaimType = ClaimTypes.Role,
                 NameClaimType = ClaimTypes.Name,
+            };
+
+            // SignalR sends the JWT as a query-string parameter, not an Authorization header.
+            // This handler extracts the token from the URL for SignalR hub connections.
+            options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    {
+                        context.Token = accessToken;
+                    }
+                    return Task.CompletedTask;
+                },
             };
         });
 

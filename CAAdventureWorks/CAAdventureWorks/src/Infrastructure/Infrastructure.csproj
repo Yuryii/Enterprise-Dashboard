@@ -4,6 +4,7 @@
     <RootNamespace>CAAdventureWorks.Infrastructure</RootNamespace>
     <AssemblyName>CAAdventureWorks.Infrastructure</AssemblyName>
     <OutputType>Library</OutputType>
+    <NoWarn>$(NoWarn);SKEXP0010</NoWarn>
   </PropertyGroup>
 
     <ItemGroup>
@@ -11,6 +12,8 @@
         <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.SemanticKernel" />
+        <PackageReference Include="Microsoft.SemanticKernel.Plugins.OpenApi" />
     </ItemGroup>
 
   <ItemGroup>

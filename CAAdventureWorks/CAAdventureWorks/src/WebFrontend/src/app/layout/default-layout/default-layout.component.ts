@@ -18,6 +18,7 @@ import {
 
 import { DefaultFooterComponent, DefaultHeaderComponent } from './';
 import { NavService } from '../../core/services/nav.service';
+import { ChatbotComponent } from '../../shared/components/chatbot/chatbot.component';
 
 function isOverflown(element: HTMLElement) {
   return (
@@ -45,7 +46,8 @@ function isOverflown(element: HTMLElement) {
     NgScrollbar,
     RouterOutlet,
     RouterLink,
-    ShadowOnScrollDirective
+    ShadowOnScrollDirective,
+    ChatbotComponent
   ]
 })
 export class DefaultLayoutComponent implements OnInit {

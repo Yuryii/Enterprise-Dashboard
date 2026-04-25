@@ -1,17 +1,237 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
-      <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-primary mb-3" name="cil-settings"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Production Control Dashboard - Scheduling and work orders</p>
-        </div>
-      </c-card-body>
-    </c-card>
-  </c-col>
-</c-row>
+<div class="purchasing-app">
+  <div class="purchasing-content">
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard(true)">Tải lại</button>
+    </div>
+    }
+
+    @if (!errorMessage() && controlDashboard()) {
+    <div class="production-control-shell">
+      <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+        <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+          <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+          Xuất PDF
+        </button>
+        <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+          (click)="customizeLayout()">
+          <svg cIcon name="cilSettings" class="me-1"></svg>
+          Tùy chỉnh bố cục
+        </button>
+        <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+          (click)="saveFilter()">
+          <svg cIcon name="cilSave" class="me-1"></svg>
+          Lưu bộ lọc
+        </button>
+        <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+          (click)="resetFilters()">
+          <span class="button-icon me-1" aria-hidden="true">↻</span>
+          Đặt lại
+        </button>
+      </div>
+
+
+
+      <c-card class="mb-3 filter-shell-card">
+        <c-card-body>
+          <form [formGroup]="filterForm" (ngSubmit)="loadDashboard(true)">
+            <div class="filter-grid-compact production-control-filter-grid">
+              <div class="filter-item filter-item-date">
+                <label cLabel for="startDate" class="small">Từ ngày</label>
+                <input cFormControl type="date" formControlName="startDate" id="startDate" />
+              </div>
+
+              <div class="filter-item filter-item-date">
+                <label cLabel for="endDate" class="small">Đến ngày</label>
+                <input cFormControl type="date" formControlName="endDate" id="endDate" />
+              </div>
+
+              <div class="filter-item filter-item-wide">
+                <label cLabel for="productId" class="small">Sản phẩm</label>
+                <select cSelect formControlName="productId" id="productId">
+                  <option [ngValue]="null">Tất cả sản phẩm</option>
+                  @for (product of controlDashboard()?.filterOptions?.products; track product.id) {
+                  <option [ngValue]="product.id">{{ product.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-check-item">
+                <c-form-check>
+                  <input cFormCheckInput type="checkbox" formControlName="finishedGoodsOnly" id="finishedGoodsOnly" />
+                  <label cLabel for="finishedGoodsOnly" class="small">Chỉ thành phẩm</label>
+                </c-form-check>
+              </div>
+
+              <div class="filter-action-item">
+                <button cButton type="submit" color="primary" class="apply-btn">
+                  <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                  Áp dụng
+                </button>
+              </div>
+
+              <div class="filter-item filter-item-wide">
+                <label cLabel for="productCategoryId" class="small">Ngành hàng</label>
+                <select cSelect formControlName="productCategoryId" id="productCategoryId">
+                  <option [ngValue]="null">Tất cả ngành hàng</option>
+                  @for (category of controlDashboard()?.filterOptions?.productCategories; track category.id) {
+                  <option [ngValue]="category.id">{{ category.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-item filter-item-wide">
+                <label cLabel for="locationId" class="small">Khu vực sản xuất</label>
+                <select cSelect formControlName="locationId" id="locationId">
+                  <option [ngValue]="null">Tất cả vị trí</option>
+                  @for (location of controlDashboard()?.filterOptions?.locations; track location.id) {
+                  <option [ngValue]="location.id">{{ location.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-item filter-item-wide">
+                <label cLabel for="scrapReasonId" class="small">Nguyên nhân phế phẩm</label>
+                <select cSelect formControlName="scrapReasonId" id="scrapReasonId">
+                  <option [ngValue]="null">Tất cả nguyên nhân</option>
+                  @for (reason of controlDashboard()?.filterOptions?.scrapReasons; track reason.id) {
+                  <option [ngValue]="reason.id">{{ reason.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-check-item">
+                <c-form-check>
+                  <input cFormCheckInput type="checkbox" formControlName="makeOnly" id="makeOnly" />
+                  <label cLabel for="makeOnly" class="small">Chỉ tự sản xuất</label>
+                </c-form-check>
+              </div>
+
+              <div class="filter-check-item">
+                <c-form-check>
+                  <input cFormCheckInput type="checkbox" formControlName="openOnly" id="openOnly" />
+                  <label cLabel for="openOnly" class="small">Chỉ lệnh mở</label>
+                </c-form-check>
+              </div>
+
+              <div class="filter-check-item">
+                <c-form-check>
+                  <input cFormCheckInput type="checkbox" formControlName="delayedOnly" id="delayedOnly" />
+                  <label cLabel for="delayedOnly" class="small">Chỉ lệnh trễ hạn</label>
+                </c-form-check>
+              </div>
+
+              <div class="filter-check-item">
+                <c-form-check>
+                  <input cFormCheckInput type="checkbox" formControlName="safetyStockOnly" id="safetyStockOnly" />
+                  <label cLabel for="safetyStockOnly" class="small">Chỉ safety stock</label>
+                </c-form-check>
+              </div>
+            </div>
+          </form>
+        </c-card-body>
+      </c-card>
+
+      <c-row class="g-4 mb-4">
+        @for (card of summaryCards(); track card.key) {
+        <c-col sm="6" xl="3">
+          <c-widget-stat-a [color]="card.color">
+            <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+              {{ card.value | number:'1.0-0' }}
+            </ng-template>
+            <ng-template cTemplateId="widgetTitleTemplate">
+              <div class="sales-widget-title-block">
+                <div class="sales-widget-label">{{ card.label }}</div>
+                <div class="sales-widget-note">{{ card.note }}</div>
+              </div>
+            </ng-template>
+            <ng-template cTemplateId="widgetActionTemplate">
+              <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+                aria-hidden="true">
+                <svg cIcon name="cilOptions"></svg>
+              </button>
+            </ng-template>
+            <ng-template cTemplateId="widgetChartTemplate">
+              <c-chart [data]="card.chartData" [options]="card.chartOptions" [type]="card.chartType" class="mt-2 mx-2"
+                height="70"></c-chart>
+            </ng-template>
+          </c-widget-stat-a>
+        </c-col>
+        }
+      </c-row>
+
+      <c-row class="g-4 mb-4">
+        <c-col lg="8">
+          <c-card class="mb-0 chart-card-tall">
+            <c-card-header>
+              <strong>Xu hướng lệnh trễ hạn</strong>
+              <small class="text-body-secondary ms-2">Theo tháng trong phạm vi lọc hiện tại</small>
+            </c-card-header>
+            <c-card-body>
+              <c-chart type="bar" [data]="delayedTrendChartData()" [options]="delayedTrendOptions"
+                [height]="320"></c-chart>
+            </c-card-body>
+          </c-card>
+        </c-col>
+
+        <c-col lg="4">
+          <c-card class="mb-0 chart-card-tall">
+            <c-card-header>
+              <strong>Cơ cấu ngoại lệ</strong>
+              <small class="text-body-secondary ms-2">Tỷ trọng các nhóm cảnh báo chính</small>
+            </c-card-header>
+            <c-card-body>
+              <c-chart type="doughnut" [data]="exceptionMixChartData()" [options]="exceptionMixOptions"
+                [height]="320"></c-chart>
+            </c-card-body>
+          </c-card>
+        </c-col>
+      </c-row>
+
+      <c-row class="g-4 mb-4">
+        <c-col md="6">
+          <c-card class="mb-0 chart-card-tall">
+            <c-card-header>
+              <strong>Top sản phẩm scrap cao</strong>
+              <small class="text-body-secondary ms-2">Ưu tiên xử lý lỗi nổi bật</small>
+            </c-card-header>
+            <c-card-body>
+              <c-chart type="bar" [data]="topScrapChartData()" [options]="topScrapOptions" [height]="300"></c-chart>
+            </c-card-body>
+          </c-card>
+        </c-col>
+
+        <c-col md="6">
+          <c-card class="mb-0 chart-card-tall">
+            <c-card-header>
+              <strong>Phân bổ lệnh mở theo khu vực</strong>
+              <small class="text-body-secondary ms-2">Điểm nóng vận hành cần theo dõi</small>
+            </c-card-header>
+            <c-card-body>
+              <c-chart type="bar" [data]="locationLoadChartData()" [options]="locationLoadOptions"
+                [height]="300"></c-chart>
+            </c-card-body>
+          </c-card>
+        </c-col>
+      </c-row>
+
+      <c-row class="g-4">
+        <c-col xs="12">
+          <c-card class="mb-0 chart-card-tall">
+            <c-card-header>
+              <strong>Thiếu hụt safety stock theo ngành hàng</strong>
+              <small class="text-body-secondary ms-2">Tập trung nhóm sản phẩm cần bổ sung nhanh</small>
+            </c-card-header>
+            <c-card-body>
+              <c-chart type="bar" [data]="shortageByCategoryChartData()" [options]="shortageByCategoryOptions"
+                [height]="300"></c-chart>
+            </c-card-body>
+          </c-card>
+        </c-col>
+      </c-row>
+    </div>
+    }
+  </div>
+</div>

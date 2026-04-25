@@ -1,17 +1,338 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
-      <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-warning mb-3" name="cil-construction"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Tool Design Dashboard - CAD and manufacturing specs</p>
+<div class="purchasing-app">
+    <div class="purchasing-content">
+        @if (errorMessage()) {
+        <div class="error-overlay">
+            <svg cIcon name="cilWarning" class="error-icon"></svg>
+            <h3>{{ errorMessage() }}</h3>
+            <button class="btn-retry" (click)="loadDashboard(true)">Tải lại</button>
         </div>
-      </c-card-body>
-    </c-card>
-  </c-col>
-</c-row>
+        }
+
+        @if (!errorMessage() && dashboard()) {
+        <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
+            <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+                <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+                Xuất PDF
+            </button>
+            <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+                (click)="customizeLayout()">
+                <svg cIcon name="cilSettings" class="me-1"></svg>
+                Tùy chỉnh bố cục
+            </button>
+            <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+                (click)="saveFilter()">
+                <svg cIcon name="cilSave" class="me-1"></svg>
+                Lưu bộ lọc
+            </button>
+            <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+                (click)="resetFilters()">
+                <span class="button-icon me-1" aria-hidden="true">↻</span>
+                Đặt lại
+            </button>
+        </div>
+
+        <c-card class="mb-3 filter-shell-card">
+            <c-card-body>
+                <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+                    <div class="filter-grid-compact tool-design-filter-grid">
+                        <div class="filter-item filter-item-wide">
+                            <label cLabel for="productModelId" class="small">Mẫu thiết kế</label>
+                            <select cSelect formControlName="productModelId" id="productModelId">
+                                <option [ngValue]="null">Tất cả model</option>
+                                @for (model of dashboard()?.filterOptions?.productModels; track model.id) {
+                                <option [ngValue]="model.id">{{ model.name }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="filter-item filter-item-wide">
+                            <label cLabel for="productId" class="small">Sản phẩm</label>
+                            <select cSelect formControlName="productId" id="productId">
+                                <option [ngValue]="null">Tất cả sản phẩm</option>
+                                @for (product of dashboard()?.filterOptions?.products; track product.id) {
+                                <option [ngValue]="product.id">{{ product.name }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="filter-item filter-item-wide">
+                            <label cLabel for="productCategoryId" class="small">Ngành hàng</label>
+                            <select cSelect formControlName="productCategoryId" id="productCategoryId">
+                                <option [ngValue]="null">Tất cả ngành hàng</option>
+                                @for (category of dashboard()?.filterOptions?.productCategories; track category.id) {
+                                <option [ngValue]="category.id">{{ category.name }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="filter-item filter-item-wide">
+                            <label cLabel for="locationId" class="small">Trung tâm làm việc</label>
+                            <select cSelect formControlName="locationId" id="locationId">
+                                <option [ngValue]="null">Tất cả khu vực</option>
+                                @for (location of dashboard()?.filterOptions?.locations; track location.id) {
+                                <option [ngValue]="location.id">{{ location.name }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="filter-item filter-item-wide">
+                            <label cLabel for="vendorId" class="small">Nhà cung cấp</label>
+                            <select cSelect formControlName="vendorId" id="vendorId">
+                                <option [ngValue]="null">Tất cả nhà cung cấp</option>
+                                @for (vendor of dashboard()?.filterOptions?.vendors; track vendor.id) {
+                                <option [ngValue]="vendor.id">{{ vendor.name }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="filter-item">
+                            <label cLabel for="minDaysToManufacture" class="small">Số ngày tối thiểu</label>
+                            <input cFormControl type="number" formControlName="minDaysToManufacture"
+                                id="minDaysToManufacture" />
+                        </div>
+
+                        <div class="filter-item">
+                            <label cLabel for="minStandardCost" class="small">Chi phí tối thiểu</label>
+                            <input cFormControl type="number" formControlName="minStandardCost" id="minStandardCost" />
+                        </div>
+
+                        <div class="filter-check-item">
+                            <c-form-check>
+                                <input cFormCheckInput type="checkbox" formControlName="makeOnly" id="makeOnly" />
+                                <label cLabel for="makeOnly" class="small">Chỉ sản xuất nội bộ</label>
+                            </c-form-check>
+                        </div>
+
+                        <div class="filter-check-item">
+                            <c-form-check>
+                                <input cFormCheckInput type="checkbox" formControlName="finishedGoodsOnly"
+                                    id="finishedGoodsOnly" />
+                                <label cLabel for="finishedGoodsOnly" class="small">Chỉ thành phẩm</label>
+                            </c-form-check>
+                        </div>
+
+                        <div class="filter-action-item">
+                            <button cButton type="submit" color="primary" class="apply-btn">
+                                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                                Áp dụng
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </c-card-body>
+        </c-card>
+
+        <c-row class="g-4 mb-4">
+            @for (card of kpiCards(); track card.label; let i = $index) {
+            <c-col sm="6" xl="3">
+                <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'danger'">
+                    <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+                        @if (card.format === 'percent') {
+                        {{ card.value | percent:'1.0-1' }}
+                        } @else {
+                        {{ card.value | number:'1.0-0' }}
+                        }
+                    </ng-template>
+                    <ng-template cTemplateId="widgetTitleTemplate">
+                        <div class="sales-widget-title-block">
+                            <div class="sales-widget-label">{{ card.label }}</div>
+                            <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
+                        </div>
+                    </ng-template>
+                    <ng-template cTemplateId="widgetActionTemplate">
+                        <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button"
+                            tabindex="-1" aria-hidden="true">
+                            <svg cIcon name="cilOptions"></svg>
+                        </button>
+                    </ng-template>
+                    <ng-template cTemplateId="widgetChartTemplate">
+                        <c-chart
+                            [data]="i === 0
+                ? { labels: ['','','','','',''], datasets: [{ label: '', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', pointHoverBorderColor: '#5856d6', data: [2, 4, 5, 6, 7, 8] }] }
+                : i === 1
+                  ? { labels: ['','','','','',''], datasets: [{ label: '', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [1, 2, 4, 5, 6, 7] }] }
+                  : i === 2
+                    ? { labels: ['','','','','',''], datasets: [{ label: '', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#f9b115', pointHoverBorderColor: '#f9b115', data: [35, 42, 48, 55, 58, 62], fill: true }] }
+                    : { labels: ['','','','','',''], datasets: [{ label: '', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [4, 6, 8, 9, 11, 13], barPercentage: 0.7 }] }"
+                            [options]="i === 3
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false, border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }
+                : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false, border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }"
+                            [class]="i === 3 ? 'mt-2 mx-3' : 'mt-2 mx-3'" height="70"
+                            [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+                    </ng-template>
+                </c-widget-stat-a>
+            </c-col>
+            }
+        </c-row>
+
+        <c-row class="mb-3 g-4">
+            @for (item of healthCards(); track item.label; let i = $index) {
+            <c-col xl="3" md="6" sm="6">
+                <c-card class="health-metric-card mb-0">
+                    <c-card-body>
+                        <div class="health-metric-value">
+                            {{ item.value | number:'1.0-0' }}
+                        </div>
+                        <div class="health-metric-label">{{ item.label }}</div>
+                        <div class="health-metric-progress">
+                            <div class="health-metric-progress-bar" [class.progress-success]="i === 0"
+                                [class.progress-info]="i === 1" [class.progress-warning]="i === 2"
+                                [class.progress-primary]="i === 3" [style.width.%]="item.progress">
+                            </div>
+                        </div>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+            }
+        </c-row>
+
+        <c-row>
+            <c-col md="8">
+                <c-card class="mb-3 chart-card-tall">
+                    <c-card-header>
+                        <strong>Số sản phẩm theo mẫu thiết kế</strong>
+                        <small class="text-body-secondary ms-2">Quy mô mẫu thiết kế đang quản lý</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="modelsByProductChartData()" [options]="modelsByProductOptions"
+                            [height]="300"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+            <c-col md="4">
+                <c-card class="mb-3 chart-card-tall">
+                    <c-card-header>
+                        <strong>Độ phủ hướng dẫn kỹ thuật</strong>
+                        <small class="text-body-secondary ms-2">Sẵn sàng tài liệu kỹ thuật</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="doughnut" [data]="instructionCoverageChartData()"
+                            [options]="instructionCoverageOptions" [height]="300"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+        </c-row>
+
+        <c-row>
+            <c-col md="6">
+                <c-card class="mb-3">
+                    <c-card-header>
+                        <strong>Top mẫu thiết kế phức tạp cao</strong>
+                        <small class="text-body-secondary ms-2">Theo số ngày sản xuất</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="complexityChartData()" [options]="complexityOptions"
+                            [height]="320"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+            <c-col md="6">
+                <c-card class="mb-3">
+                    <c-card-header>
+                        <strong>Top mẫu thiết kế chi phí cao</strong>
+                        <small class="text-body-secondary ms-2">Theo standard cost trung bình</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="costChartData()" [options]="costOptions" [height]="320"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+        </c-row>
+
+        <c-row>
+            <c-col md="7">
+                <c-card class="mb-3">
+                    <c-card-header>
+                        <strong>Phân bổ routing theo trung tâm làm việc</strong>
+                        <small class="text-body-secondary ms-2">Điểm triển khai chính của thiết kế</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="locationLoadChartData()" [options]="locationLoadOptions"
+                            [height]="320"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+            <c-col md="5">
+                <c-card class="mb-3">
+                    <c-card-header>
+                        <strong>Thời gian cung ứng nhà cung cấp</strong>
+                        <small class="text-body-secondary ms-2">Ảnh hưởng tới khả năng triển khai</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="vendorLeadTimeChartData()" [options]="vendorLeadTimeOptions"
+                            [height]="320"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+        </c-row>
+
+        <c-row>
+            <c-col xs="12">
+                <c-card class="mb-3">
+                    <c-card-header>
+                        <strong>Độ phức tạp BOM</strong>
+                        <small class="text-body-secondary ms-2">Cụm lắp ráp có nhiều thành phần nhất</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Cụm lắp ráp</th>
+                                        <th class="text-end">Số thành phần</th>
+                                        <th class="text-end">Định mức mỗi cụm</th>
+                                        <th class="text-end">Cấp BOM cao nhất</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of bomComplexities(); track item.productAssemblyId) {
+                                    <tr>
+                                        <td>{{ item.assemblyName }}</td>
+                                        <td class="text-end">{{ item.components | number:'1.0-0' }}</td>
+                                        <td class="text-end">{{ item.totalPerAssemblyQty | number:'1.0-2' }}</td>
+                                        <td class="text-end">{{ item.maxBomLevel | number:'1.0-0' }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+        </c-row>
+
+        <c-row>
+            <c-col xs="12">
+                <c-card class="mb-3">
+                    <c-card-header>
+                        <strong>Tồn kho hỗ trợ triển khai</strong>
+                        <small class="text-body-secondary ms-2">Độ sẵn sàng vật tư theo location</small>
+                    </c-card-header>
+                    <c-card-body>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th class="text-end">Inventory qty</th>
+                                        <th class="text-end">Distinct products</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (item of inventorySupport(); track item.locationId) {
+                                    <tr>
+                                        <td>{{ item.locationName }}</td>
+                                        <td class="text-end">{{ item.inventoryQty | number:'1.0-0' }}</td>
+                                        <td class="text-end">{{ item.distinctProducts | number:'1.0-0' }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </c-card-body>
+                </c-card>
+            </c-col>
+        </c-row>
+        }
+    </div>
+</div>

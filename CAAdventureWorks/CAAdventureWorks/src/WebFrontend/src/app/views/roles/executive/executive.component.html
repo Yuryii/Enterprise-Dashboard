@@ -1,45 +1,344 @@
-<c-row>
-  <c-col xs>
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>{{ title }}</strong>
-        <span class="float-end text-body-secondary fs-6">{{ subtitle }}</span>
-      </c-card-header>
+<div class="executive-app">
+  <div class="executive-content">
+    @if (errorMessage()) {
+    <div class="error-overlay">
+      <svg cIcon name="cilWarning" class="error-icon"></svg>
+      <h3>{{ errorMessage() }}</h3>
+      <button class="btn-retry" (click)="loadDashboard()">Tải lại</button>
+    </div>
+    }
+
+    @if (!errorMessage() && dashboard()) {
+    <div class="mb-3 d-flex gap-2 justify-content-end executive-action-buttons">
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+        <svg cIcon name="cilCloudDownload" class="me-1"></svg>
+        Xuất PDF
+      </button>
+      <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+        (click)="customizeLayout()">
+        <svg cIcon name="cilSettings" class="me-1"></svg>
+        Tùy chỉnh bố cục
+      </button>
+      <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+        (click)="saveFilter()">
+        <svg cIcon name="cilSave" class="me-1"></svg>
+        Lưu bộ lọc
+      </button>
+      <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+        (click)="resetFilters()">
+        <span class="button-icon me-1" aria-hidden="true">↻</span>
+        Đặt lại
+      </button>
+    </div>
+
+    <c-card class="mb-3 filter-shell-card">
       <c-card-body>
-        <div class="text-center py-5">
-          <svg cIcon class="icon icon-xl text-primary mb-3" name="cil-chart-line"></svg>
-          <h3>{{ title }}</h3>
-          <p class="text-body-secondary">Executive Dashboard - Full access to all data and reports</p>
-          <div class="mt-4">
-            <c-row>
-              <c-col xs="12" md="4">
-                <c-card class="border-primary">
-                  <c-card-body>
-                    <h5>Revenue Overview</h5>
-                    <p class="text-body-secondary">Company-wide financial metrics</p>
-                  </c-card-body>
-                </c-card>
-              </c-col>
-              <c-col xs="12" md="4">
-                <c-card class="border-info">
-                  <c-card-body>
-                    <h5>Employee Metrics</h5>
-                    <p class="text-body-secondary">HR statistics and workforce data</p>
-                  </c-card-body>
-                </c-card>
-              </c-col>
-              <c-col xs="12" md="4">
-                <c-card class="border-success">
-                  <c-card-body>
-                    <h5>Production Status</h5>
-                    <p class="text-body-secondary">Manufacturing KPIs and targets</p>
-                  </c-card-body>
-                </c-card>
-              </c-col>
-            </c-row>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
+          <div class="filter-grid-compact executive-filter-grid">
+            <div class="filter-item filter-item-date filter-item-date-start">
+              <label cLabel for="startDate" class="small">Từ ngày</label>
+              <input cFormControl type="date" formControlName="startDate" id="startDate" />
+            </div>
+
+            <div class="filter-item filter-item-date filter-item-date-end">
+              <label cLabel for="endDate" class="small">Đến ngày</label>
+              <input cFormControl type="date" formControlName="endDate" id="endDate" />
+            </div>
+
+            <div class="filter-item filter-item-wide filter-item-territory-top">
+              <label cLabel for="territoryId" class="small">Khu vực bán hàng</label>
+              <select cSelect formControlName="territoryId" id="territoryId">
+                <option [ngValue]="null">Tất cả khu vực</option>
+                @for (territory of dashboard()?.filterOptions?.territories; track territory.id) {
+                <option [ngValue]="territory.id">{{ territory.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="filter-check-item filter-check-item-top">
+              <c-form-check>
+                <input cFormCheckInput type="checkbox" formControlName="currentEmployeesOnly"
+                  id="currentEmployeesOnly" />
+                <label cLabel for="currentEmployeesOnly" class="small">Chỉ nhân sự hiện hành</label>
+              </c-form-check>
+            </div>
+
+            <div class="filter-action-item filter-action-item-top">
+              <button cButton type="submit" color="primary" class="apply-btn">
+                <span class="button-icon me-1" aria-hidden="true">⌕</span>
+                Áp dụng
+              </button>
+            </div>
+
+            <div class="filter-second-row">
+              <div class="filter-item filter-item-wide filter-item-second-row">
+                <label cLabel for="salesPersonId" class="small">Nhân viên kinh doanh</label>
+                <select cSelect formControlName="salesPersonId" id="salesPersonId">
+                  <option [ngValue]="null">Tất cả nhân viên</option>
+                  @for (person of dashboard()?.filterOptions?.salesPeople; track person.id) {
+                  <option [ngValue]="person.id">{{ person.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-item filter-item-wide filter-item-second-row">
+                <label cLabel for="vendorId" class="small">Nhà cung cấp</label>
+                <select cSelect formControlName="vendorId" id="vendorId">
+                  <option [ngValue]="null">Tất cả nhà cung cấp</option>
+                  @for (vendor of dashboard()?.filterOptions?.vendors; track vendor.id) {
+                  <option [ngValue]="vendor.id">{{ vendor.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-item filter-item-wide filter-item-second-row">
+                <label cLabel for="departmentId" class="small">Phòng ban</label>
+                <select cSelect formControlName="departmentId" id="departmentId">
+                  <option [ngValue]="null">Tất cả phòng ban</option>
+                  @for (department of dashboard()?.filterOptions?.departments; track department.id) {
+                  <option [ngValue]="department.id">{{ department.name }} - {{ department.groupName }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-item filter-item-wide filter-item-second-row">
+                <label cLabel for="productCategoryId" class="small">Ngành hàng sản xuất</label>
+                <select cSelect formControlName="productCategoryId" id="productCategoryId">
+                  <option [ngValue]="null">Tất cả ngành hàng</option>
+                  @for (category of dashboard()?.filterOptions?.productCategories; track category.id) {
+                  <option [ngValue]="category.id">{{ category.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
           </div>
-        </div>
+        </form>
       </c-card-body>
     </c-card>
-  </c-col>
-</c-row>
+
+    <c-row class="g-4 mb-4">
+      @for (card of [
+      {
+      label: 'Tổng doanh thu',
+      format: 'currency',
+      value: dashboard()?.overview?.totalRevenue
+      },
+      {
+      label: 'Tổng chi mua',
+      format: 'currency',
+      value: dashboard()?.overview?.totalSpend
+      },
+      {
+      label: 'Biên vận hành',
+      format: 'currency',
+      value: dashboard()?.overview?.operatingGap
+      },
+      {
+      label: 'Nhân sự hoạt động',
+      format: 'number',
+      value: dashboard()?.overview?.activeEmployees
+      }
+      ]; track card.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-widget-stat-a [color]="i === 0 ? 'primary' : i === 1 ? 'info' : i === 2 ? 'warning' : 'danger'">
+          <ng-template cTemplateId="widgetValueTemplate" ngPreserveWhitespaces>
+            @if (card.value == null) {
+            --
+            } @else if (card.format === 'currency') {
+            {{ card.value | currency:'USD':'symbol':'1.0-0' }}
+            } @else {
+            {{ card.value | number:'1.0-0' }}
+            }
+          </ng-template>
+          <ng-template cTemplateId="widgetTitleTemplate">
+            <div class="sales-widget-title-block">
+              <div class="sales-widget-label">{{ card.label }}</div>
+              <div class="sales-widget-note">Cập nhật theo bộ lọc hiện tại</div>
+            </div>
+          </ng-template>
+          <ng-template cTemplateId="widgetActionTemplate">
+            <button cButton class="p-0 text-white sales-widget-action" color="transparent" type="button" tabindex="-1"
+              aria-hidden="true">
+              <svg cIcon name="cilOptions"></svg>
+            </button>
+          </ng-template>
+          <ng-template cTemplateId="widgetChartTemplate">
+            <c-chart
+              [data]="i === 0
+                ? { labels: ['January','February','March','April','May','June','July'], datasets: [{ label: 'My First dataset', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#5856d6', pointHoverBorderColor: '#5856d6', data: [65, 59, 84, 84, 51, 55, 40] }] }
+                : i === 1
+                  ? { labels: ['January','February','March','April','May','June','July'], datasets: [{ label: 'My Second dataset', backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#39f', pointHoverBorderColor: '#39f', data: [1, 18, 9, 17, 34, 22, 11] }] }
+                  : i === 2
+                    ? { labels: ['January','February','March','April','May','June','July'], datasets: [{ label: 'My Third dataset', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', pointBackgroundColor: '#f9b115', pointHoverBorderColor: '#f9b115', data: [78, 81, 80, 45, 34, 12, 40], fill: true }] }
+                    : { labels: ['January','February','March','April','May','June','July','August','September','October','November','December','January','February','March','April'], datasets: [{ label: 'My Fourth dataset', backgroundColor: 'rgba(255,255,255,.2)', borderColor: 'rgba(255,255,255,.55)', data: [78, 81, 80, 45, 34, 12, 40, 85, 65, 23, 12, 98, 34, 84, 67, 82], barPercentage: 0.7 }] }"
+              [options]="i === 0
+                ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: 30, max: 89, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0.4 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                : i === 1
+                  ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false }, ticks: { display: false } }, y: { min: -9, max: 39, display: false, grid: { display: false }, ticks: { display: false } } }, elements: { line: { borderWidth: 1, tension: 0 }, point: { radius: 4, hitRadius: 10, hoverRadius: 4 } } }
+                  : i === 2
+                    ? { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderWidth: 2, tension: 0.4 }, point: { radius: 0, hitRadius: 10, hoverRadius: 4 } } }
+                    : { plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false, scales: { x: { border: { display: false }, grid: { display: false, drawTicks: false }, ticks: { display: false } }, y: { display: false, grid: { display: false }, ticks: { display: false } } }, elements: {} }"
+              [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
+          </ng-template>
+        </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row class="g-4 mb-4 executive-mini-widget-row">
+      @for (item of healthCards(); track item.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-card class="health-metric-card mb-0">
+          <c-card-body>
+            <div class="health-metric-value">
+              @if (item.type === 'number') {
+              {{ item.value | number:'1.0-0' }}
+              } @else {
+              {{ item.value | percent:'1.0-1' }}
+              }
+            </div>
+            <div class="health-metric-label">{{ item.label }}</div>
+            <div class="health-metric-progress">
+              <div class="health-metric-progress-bar" [class.progress-success]="i === 0" [class.progress-info]="i === 1"
+                [class.progress-warning]="i === 2" [class.progress-primary]="i === 3"
+                [style.width.%]="progressWidth(item)"></div>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      }
+    </c-row>
+
+    <c-row>
+      <c-col md="8">
+        <c-card class="mb-3 chart-card-tall">
+          <c-card-header>
+            <strong>Doanh thu, chi mua và biên vận hành</strong>
+            <small class="text-body-secondary ms-2">Tổng quan điều hành theo tháng</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="revenueVsSpendChartData()" [options]="revenueVsSpendOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="4">
+        <c-card class="mb-3 chart-card-tall">
+          <c-card-header>
+            <strong>Nhân sự theo phòng ban</strong>
+            <small class="text-body-secondary ms-2">Phân bổ nhân sự</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="departmentChartData()" [options]="departmentChartOptions"
+              [height]="300"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Doanh thu theo khu vực</strong>
+            <small class="text-body-secondary ms-2">Ưu tiên thị trường điều hành</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="territoryChartData()" [options]="territoryOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top nhân viên kinh doanh</strong>
+            <small class="text-body-secondary ms-2">Hiệu suất nhân viên kinh doanh nổi bật</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="salesPeopleChartData()" [options]="salesPeopleOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Cơ cấu nhân sự theo nhóm</strong>
+            <small class="text-body-secondary ms-2">Tỷ trọng nhân sự theo từng nhóm phòng ban</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="groupChartData()" [options]="departmentChartOptions"
+              [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Top nhà cung cấp theo chi mua</strong>
+            <small class="text-body-secondary ms-2">Mức độ phụ thuộc nhà cung cấp</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="vendorChartData()" [options]="vendorOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Tỷ lệ nhận hàng theo nhà cung cấp</strong>
+            <small class="text-body-secondary ms-2">So sánh mức độ nhận đủ hàng từ từng nhà cung cấp</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="vendorReceivingRateChartData()" [options]="vendorReceivingRateOptions"
+              [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Hiệu suất sản xuất theo ngành hàng</strong>
+            <small class="text-body-secondary ms-2">Tỷ lệ hoàn thành và phế phẩm</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="productionChartData()" [options]="productionOptions" [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <c-row>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Trạng thái đơn bán</strong>
+            <small class="text-body-secondary ms-2">Phân bố số lượng đơn bán theo trạng thái</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="salesStatusChartData()" [options]="orderStatusOptions"
+              [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Trạng thái đơn mua</strong>
+            <small class="text-body-secondary ms-2">Phân bố số lượng đơn mua theo trạng thái</small>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="doughnut" [data]="purchaseStatusChartData()" [options]="orderStatusOptions"
+              [height]="320"></c-chart>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+    }
+  </div>
+</div>
