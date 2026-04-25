@@ -52,7 +52,6 @@ import {
         IconDirective,
         TemplateIdDirective,
         WidgetStatAComponent,
-        CurrencyPipe,
         DecimalPipe,
         PercentPipe
     ]

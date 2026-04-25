@@ -51,8 +51,7 @@ import {
     IconDirective,
     TemplateIdDirective,
     WidgetStatAComponent,
-    DecimalPipe,
-    PercentPipe
+    DecimalPipe
   ]
 })
 export class ProductionControlComponent implements OnInit {

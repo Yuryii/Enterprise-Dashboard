@@ -32,8 +32,6 @@ import { PurchasingDashboardService } from './purchasing-dashboard.service';
     IconDirective,
     TemplateIdDirective,
     WidgetStatAComponent,
-    WidgetStatBComponent,
-    ProgressComponent,
     CurrencyPipe,
     DecimalPipe,
     PercentPipe
