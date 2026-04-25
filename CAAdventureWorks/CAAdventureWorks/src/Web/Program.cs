@@ -40,6 +40,8 @@ app.UseAuthorization();
 
 app.UseFileServer();
 
+app.MapFallbackToFile("index.html");
+
 app.MapOpenApi();
 app.MapScalarApiReference();
 

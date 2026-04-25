@@ -24,6 +24,7 @@
           "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist/smartdash",
+            "baseHref": "/",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
