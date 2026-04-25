@@ -204,19 +204,93 @@ export interface ProductionDashboardResponseDto {
     filterOptions: ProductionDashboardFilterOptionsDto;
 }
 
+export interface ProductionControlExceptionFilterDto {
+    startDate?: string | null;
+    endDate?: string | null;
+    productId?: number | null;
+    productCategoryId?: number | null;
+    locationId?: number | null;
+    scrapReasonId?: number | null;
+    makeOnly?: boolean | null;
+    finishedGoodsOnly?: boolean | null;
+    openOnly?: boolean | null;
+    delayedOnly?: boolean | null;
+    safetyStockOnly?: boolean | null;
+}
+
+export interface ProductionControlExceptionSummaryDto {
+    openWorkOrders: number;
+    delayedWorkOrders: number;
+    highScrapWorkOrders: number;
+    safetyStockAlerts: number;
+}
+
+export interface ProductionControlWorkOrderExceptionItemDto {
+    workOrderId: number;
+    productId: number;
+    productName: string;
+    productCategoryName: string;
+    startDate: string;
+    dueDate: string;
+    endDate?: string | null;
+    orderQty: number;
+    stockedQty: number;
+    scrappedQty: number;
+    completionRate: number;
+    scrapRate: number;
+    isOpen: boolean;
+    isDelayed: boolean;
+    locationNames: string;
+    latestScheduledEndDate?: string | null;
+    delayDays: number;
+    scrapReasonName?: string | null;
+    totalPlannedCost: number;
+    totalActualCost: number;
+    costVariance: number;
+}
+
+export interface ProductionControlSafetyStockExceptionItemDto {
+    productId: number;
+    productName: string;
+    productCategoryId: number;
+    productCategoryName: string;
+    inventoryQty: number;
+    safetyStockLevel: number;
+    reorderPoint: number;
+    shortageQty: number;
+}
+
+export interface ProductionControlExceptionsResponseDto {
+    filters: ProductionControlExceptionFilterDto;
+    summary: ProductionControlExceptionSummaryDto;
+    filterOptions: ProductionDashboardFilterOptionsDto;
+    openWorkOrders: ProductionControlWorkOrderExceptionItemDto[];
+    delayedWorkOrders: ProductionControlWorkOrderExceptionItemDto[];
+    highScrapWorkOrders: ProductionControlWorkOrderExceptionItemDto[];
+    safetyStockAlerts: ProductionControlSafetyStockExceptionItemDto[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProductionDashboardService {
     private readonly http = inject(HttpClient);
     private readonly apiUrl = `${environment.apiUrl}/api/productiondashboard`;
+    private readonly productionControlApiUrl = `${environment.apiUrl}/api/productiondashboard/exceptions`;
     private readonly dashboardCache = new Map<string, ProductionDashboardResponseDto>();
+    private readonly productionControlCache = new Map<string, ProductionControlExceptionsResponseDto>();
     private readonly sessionStorageKey = 'production-dashboard-cache';
+    private readonly productionControlSessionStorageKey = 'production-control-dashboard-cache';
 
     constructor() {
-        this.restoreCacheFromSessionStorage();
+        this.restoreDashboardCacheFromSessionStorage();
+        this.restoreProductionControlCacheFromSessionStorage();
     }
 
     getCachedDashboard(filter: ProductionDashboardFilter): ProductionDashboardResponseDto | null {
         return this.dashboardCache.get(this.buildCacheKey(filter)) ?? null;
+    }
+
+    getCachedProductionControlExceptions(filter: ProductionDashboardFilter): ProductionControlExceptionsResponseDto | null {
+        return this.productionControlCache.get(this.buildCacheKey(filter)) ?? null;
     }
 
     getDashboard(filter: ProductionDashboardFilter, forceRefresh = false): Observable<ProductionDashboardResponseDto> {
@@ -227,29 +301,35 @@ export class ProductionDashboardService {
             return of(cached);
         }
 
-        let params = new HttpParams();
-
-        if (filter.startDate) params = params.set('startDate', filter.startDate);
-        if (filter.endDate) params = params.set('endDate', filter.endDate);
-        if (filter.productId != null) params = params.set('productId', filter.productId);
-        if (filter.productCategoryId != null) params = params.set('productCategoryId', filter.productCategoryId);
-        if (filter.locationId != null) params = params.set('locationId', filter.locationId);
-        if (filter.scrapReasonId != null) params = params.set('scrapReasonId', filter.scrapReasonId);
-        if (filter.makeOnly != null) params = params.set('makeOnly', filter.makeOnly);
-        if (filter.finishedGoodsOnly != null) params = params.set('finishedGoodsOnly', filter.finishedGoodsOnly);
-        if (filter.openOnly != null) params = params.set('openOnly', filter.openOnly);
-        if (filter.delayedOnly != null) params = params.set('delayedOnly', filter.delayedOnly);
-        if (filter.safetyStockOnly != null) params = params.set('safetyStockOnly', filter.safetyStockOnly);
+        const params = this.buildQueryParams(filter);
 
         return this.http.get<ProductionDashboardResponseDto>(this.apiUrl, { params }).pipe(
             tap((response) => {
                 this.dashboardCache.set(cacheKey, response);
-                this.persistCacheToSessionStorage();
+                this.persistDashboardCacheToSessionStorage();
             })
         );
     }
 
-    private restoreCacheFromSessionStorage(): void {
+    getProductionControlExceptions(filter: ProductionDashboardFilter, forceRefresh = false): Observable<ProductionControlExceptionsResponseDto> {
+        const cacheKey = this.buildCacheKey(filter);
+        const cached = this.productionControlCache.get(cacheKey);
+
+        if (!forceRefresh && cached) {
+            return of(cached);
+        }
+
+        const params = this.buildQueryParams(filter);
+
+        return this.http.get<ProductionControlExceptionsResponseDto>(this.productionControlApiUrl, { params }).pipe(
+            tap((response) => {
+                this.productionControlCache.set(cacheKey, response);
+                this.persistProductionControlCacheToSessionStorage();
+            })
+        );
+    }
+
+    private restoreDashboardCacheFromSessionStorage(): void {
         const rawCache = sessionStorage.getItem(this.sessionStorageKey);
         if (!rawCache) {
             return;
@@ -268,8 +348,49 @@ export class ProductionDashboardService {
         }
     }
 
-    private persistCacheToSessionStorage(): void {
+    private restoreProductionControlCacheFromSessionStorage(): void {
+        const rawCache = sessionStorage.getItem(this.productionControlSessionStorageKey);
+        if (!rawCache) {
+            return;
+        }
+
+        try {
+            const entries = JSON.parse(rawCache) as [string, ProductionControlExceptionsResponseDto][];
+            this.productionControlCache.clear();
+
+            for (const [key, value] of entries) {
+                this.productionControlCache.set(key, value);
+            }
+        } catch {
+            sessionStorage.removeItem(this.productionControlSessionStorageKey);
+            this.productionControlCache.clear();
+        }
+    }
+
+    private persistDashboardCacheToSessionStorage(): void {
         sessionStorage.setItem(this.sessionStorageKey, JSON.stringify(Array.from(this.dashboardCache.entries())));
+    }
+
+    private persistProductionControlCacheToSessionStorage(): void {
+        sessionStorage.setItem(this.productionControlSessionStorageKey, JSON.stringify(Array.from(this.productionControlCache.entries())));
+    }
+
+    private buildQueryParams(filter: ProductionDashboardFilter): HttpParams {
+        let params = new HttpParams();
+
+        if (filter.startDate) params = params.set('startDate', filter.startDate);
+        if (filter.endDate) params = params.set('endDate', filter.endDate);
+        if (filter.productId != null) params = params.set('productId', filter.productId);
+        if (filter.productCategoryId != null) params = params.set('productCategoryId', filter.productCategoryId);
+        if (filter.locationId != null) params = params.set('locationId', filter.locationId);
+        if (filter.scrapReasonId != null) params = params.set('scrapReasonId', filter.scrapReasonId);
+        if (filter.makeOnly != null) params = params.set('makeOnly', filter.makeOnly);
+        if (filter.finishedGoodsOnly != null) params = params.set('finishedGoodsOnly', filter.finishedGoodsOnly);
+        if (filter.openOnly != null) params = params.set('openOnly', filter.openOnly);
+        if (filter.delayedOnly != null) params = params.set('delayedOnly', filter.delayedOnly);
+        if (filter.safetyStockOnly != null) params = params.set('safetyStockOnly', filter.safetyStockOnly);
+
+        return params;
     }
 
     private buildCacheKey(filter: ProductionDashboardFilter): string {
