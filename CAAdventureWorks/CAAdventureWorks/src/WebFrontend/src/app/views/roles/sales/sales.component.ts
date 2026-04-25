@@ -20,6 +20,8 @@ import {
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { SalesDashboardService } from './sales-dashboard.service';
+import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
+import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
 
 @Component({
   selector: 'app-sales',
@@ -27,6 +29,8 @@ import { SalesDashboardService } from './sales-dashboard.service';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    GridsterComponent,
+    GridsterItemComponent,
     RowComponent,
     ColComponent,
     CardComponent,
@@ -78,6 +82,41 @@ export class SalesComponent implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
+
+  private readonly gridsterStorageKey = 'sales_grid_layout';
+
+  readonly isEditMode = signal(false);
+
+  readonly gridsterOptions = signal<GridsterConfig>({
+    draggable: { enabled: false },
+    resizable: { enabled: false },
+    pushItems: true,
+    minCols: 12,
+    maxCols: 12,
+    minRows: 20,
+    fixedRowHeight: 80,
+    keepFixedHeightInMobile: false,
+    keepFixedWidthInMobile: false,
+    mobileBreakpoint: 640,
+    itemChangeCallback: (_item, _itemComponent) => this.saveLayoutToStorage()
+  });
+
+  readonly gridsterItems = signal<GridsterItemConfig[]>(
+    this.loadLayoutFromStorage() ?? this.getDefaultLayout()
+  );
+
+  private getDefaultLayout(): GridsterItemConfig[] {
+    return [
+      { id: 'customer-segment', cols: 4, rows: 5, x: 0, y: 0 },
+      { id: 'category-mix', cols: 4, rows: 5, x: 4, y: 0 },
+      { id: 'order-growth', cols: 4, rows: 5, x: 8, y: 0 },
+      { id: 'revenue-trend', cols: 8, rows: 6, x: 0, y: 5 },
+      { id: 'order-status', cols: 4, rows: 6, x: 8, y: 5 },
+      { id: 'top-products', cols: 6, rows: 5, x: 0, y: 11 },
+      { id: 'territory-sales', cols: 6, rows: 5, x: 6, y: 11 },
+      { id: 'top-customers', cols: 12, rows: 4, x: 0, y: 16 }
+    ];
+  }
 
   readonly filterForm = this.fb.group({
     startDate: ['2013-01-01'],
@@ -477,9 +516,52 @@ export class SalesComponent implements OnInit {
     alert('Chức năng xuất PDF đang được phát triển');
   }
 
+  getItem(id: string): GridsterItemConfig | undefined {
+    return this.gridsterItems().find(item => item['id'] === id);
+  }
+
+  private saveLayoutToStorage(): void {
+    const layout = this.gridsterItems().map(item => ({
+      id: item['id'],
+      cols: item.cols,
+      rows: item.rows,
+      x: item.x,
+      y: item.y
+    }));
+    localStorage.setItem(this.gridsterStorageKey, JSON.stringify(layout));
+  }
+
+  private loadLayoutFromStorage(): GridsterItemConfig[] | null {
+    const raw = localStorage.getItem(this.gridsterStorageKey);
+    if (!raw) return null;
+    try {
+      const layout = JSON.parse(raw) as Array<{ id: string; cols: number; rows: number; x: number; y: number }>;
+      const defaults = this.getDefaultLayout();
+      return defaults.map(item => {
+        const saved = layout.find(l => l.id === item['id']);
+        return saved ? { ...item, ...saved } : item;
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  toggleEditMode(): void {
+    const newMode = !this.isEditMode();
+    this.isEditMode.set(newMode);
+    const config = this.gridsterOptions();
+    config.draggable!.enabled = newMode;
+    config.resizable!.enabled = newMode;
+    this.gridsterOptions.set({ ...config });
+  }
+
+  resetLayout(): void {
+    localStorage.removeItem(this.gridsterStorageKey);
+    this.gridsterItems.set(this.getDefaultLayout());
+  }
+
   customizeLayout(): void {
-    console.log('Customizing dashboard layout...');
-    alert('Chức năng tùy chỉnh layout đang được phát triển');
+    this.toggleEditMode();
   }
 
   saveFilter(): void {
