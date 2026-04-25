@@ -36,8 +36,8 @@
             "inlineStyleLanguage": "scss",
             "preserveSymlinks": true,
             "assets": [
-              "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              "src/app/icons"
             ],
             "styles": [
               "node_modules/primeicons/primeicons.css",

@@ -10,12 +10,9 @@ import {
   CardComponent,
   CardHeaderComponent,
   ColComponent,
-  FormControlDirective,
   FormLabelDirective,
   FormSelectDirective,
   RowComponent,
-  TableActiveDirective,
-  TableColorDirective,
   TableDirective,
   TemplateIdDirective,
   WidgetStatAComponent
@@ -36,7 +33,6 @@ import { DocumentControlDashboardService } from './document-control-dashboard.se
     CardHeaderComponent,
     CardBodyComponent,
     FormLabelDirective,
-    FormControlDirective,
     FormSelectDirective,
     ButtonDirective,
     ChartjsComponent,
@@ -44,9 +40,7 @@ import { DocumentControlDashboardService } from './document-control-dashboard.se
     TemplateIdDirective,
     WidgetStatAComponent,
     DecimalPipe,
-    TableDirective,
-    TableColorDirective,
-    TableActiveDirective
+    TableDirective
   ],
   templateUrl: './document-control.component.html',
   styleUrl: './document-control.component.scss'

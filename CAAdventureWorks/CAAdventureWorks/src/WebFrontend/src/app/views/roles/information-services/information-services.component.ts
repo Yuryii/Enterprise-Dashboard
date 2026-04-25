@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -36,7 +36,6 @@ import { ISDashboardService } from './is-dashboard.service';
     CardHeaderComponent,
     CardBodyComponent,
     FormLabelDirective,
-    FormControlDirective,
     FormSelectDirective,
     ButtonDirective,
     ChartjsComponent,
@@ -45,8 +44,7 @@ import { ISDashboardService } from './is-dashboard.service';
     TemplateIdDirective,
     WidgetStatAComponent,
     DatePipe,
-    DecimalPipe,
-    PercentPipe
+    DecimalPipe
   ]
 })
 export class InformationServicesComponent implements OnInit {

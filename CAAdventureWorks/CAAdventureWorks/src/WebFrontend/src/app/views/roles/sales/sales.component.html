@@ -172,14 +172,48 @@
         Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
       </span>
       <div class="banner-actions">
-        <button cButton color="light" size="sm" variant="outline" (click)="resetLayout()">
-          <svg cIcon name="cilReload" class="me-1"></svg>
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
           Đặt lại
         </button>
         <button cButton color="primary" size="sm" (click)="toggleEditMode()">
           <svg cIcon name="cilCheck" class="me-1"></svg>
           Lưu &amp; thoát
         </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
       </div>
     </div>
     }
@@ -187,108 +221,156 @@
     <!-- Gridster Charts Grid -->
     <gridster [options]="gridsterOptions()" class="sales-gridster">
       <!-- Phân khúc khách hàng -->
+      @if (isChartVisible('customer-segment')) {
       <gridster-item [item]="getItem('customer-segment')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Phân khúc khách hàng</strong>
-            <small class="text-body-secondary ms-2">Cơ cấu doanh thu theo nhóm khách hàng</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân khúc khách hàng</strong>
+                <small class="text-body-secondary ms-2">Cơ cấu doanh thu theo nhóm khách hàng</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="pie" [data]="customerSegmentChartData()" [options]="customerSegmentOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Phân loại sản phẩm -->
+      @if (isChartVisible('category-mix')) {
       <gridster-item [item]="getItem('category-mix')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Phân loại sản phẩm</strong>
-            <small class="text-body-secondary ms-2">Cơ cấu doanh thu theo ngành hàng</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân loại sản phẩm</strong>
+                <small class="text-body-secondary ms-2">Cơ cấu doanh thu theo ngành hàng</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="categoryMixChartData()" [options]="categoryMixOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Đơn hàng và tăng trưởng -->
+      @if (isChartVisible('order-growth')) {
       <gridster-item [item]="getItem('order-growth')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Đơn hàng và tăng trưởng</strong>
-            <small class="text-body-secondary ms-2">Theo dõi quy mô và đà tăng trưởng</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Đơn hàng và tăng trưởng</strong>
+                <small class="text-body-secondary ms-2">Theo dõi quy mô và đà tăng trưởng</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="orderGrowthChartData()" [options]="orderGrowthOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Xu hướng doanh thu -->
+      @if (isChartVisible('revenue-trend')) {
       <gridster-item [item]="getItem('revenue-trend')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Xu hướng doanh thu</strong>
-            <small class="text-body-secondary ms-2">Tổng quan điều hành</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng doanh thu</strong>
+                <small class="text-body-secondary ms-2">Tổng quan điều hành</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="line" [data]="revenueTrendChartData()" [options]="revenueTrendOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Trạng thái đơn hàng -->
+      @if (isChartVisible('order-status')) {
       <gridster-item [item]="getItem('order-status')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Trạng thái đơn hàng</strong>
-            <small class="text-body-secondary ms-2">Cơ cấu vận hành</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Trạng thái đơn hàng</strong>
+                <small class="text-body-secondary ms-2">Cơ cấu vận hành</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="doughnut" [data]="orderStatusChartData()" [options]="orderStatusOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Sản phẩm bán chạy -->
+      @if (isChartVisible('top-products')) {
       <gridster-item [item]="getItem('top-products')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Sản phẩm bán chạy</strong>
-            <small class="text-body-secondary ms-2">Xếp hạng theo doanh thu</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Sản phẩm bán chạy</strong>
+                <small class="text-body-secondary ms-2">Xếp hạng theo doanh thu</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="topProductsChartData()" [options]="topProductsOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Doanh số theo vùng -->
+      @if (isChartVisible('territory-sales')) {
       <gridster-item [item]="getItem('territory-sales')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Doanh số theo vùng</strong>
-            <small class="text-body-secondary ms-2">Hiệu quả kinh doanh theo khu vực</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Doanh số theo vùng</strong>
+                <small class="text-body-secondary ms-2">Hiệu quả kinh doanh theo khu vực</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="territoryChartData()" [options]="territoryOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
 
       <!-- Top khách hàng -->
+      @if (isChartVisible('top-customers')) {
       <gridster-item [item]="getItem('top-customers')!">
         <c-card class="mb-0 h-100">
-          <c-card-header>
-            <strong>Top khách hàng theo doanh thu</strong>
-            <small class="text-body-secondary ms-2">Xếp hạng khách hàng trọng điểm</small>
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top khách hàng theo doanh thu</strong>
+                <small class="text-body-secondary ms-2">Xếp hạng khách hàng trọng điểm</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="topCustomersChartData()" [options]="topCustomersOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
+      }
     </gridster>
 
     }

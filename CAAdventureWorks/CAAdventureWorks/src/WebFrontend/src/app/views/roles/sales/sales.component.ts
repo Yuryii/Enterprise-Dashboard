@@ -1,5 +1,5 @@
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
@@ -22,6 +22,11 @@ import { IconDirective } from '@coreui/icons-angular';
 import { SalesDashboardService } from './sales-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+
+export interface ChartDef {
+  id: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-sales',
@@ -84,6 +89,7 @@ export class SalesComponent implements OnInit {
   readonly dashboard = signal<any>(null);
 
   private readonly gridsterStorageKey = 'sales_grid_layout';
+  private readonly hiddenChartsStorageKey = 'sales_hidden_charts';
 
   readonly isEditMode = signal(false);
 
@@ -104,6 +110,57 @@ export class SalesComponent implements OnInit {
   readonly gridsterItems = signal<GridsterItemConfig[]>(
     this.loadLayoutFromStorage() ?? this.getDefaultLayout()
   );
+
+  readonly showChartPicker = signal(false);
+
+  readonly availableCharts: ChartDef[] = [
+    { id: 'customer-segment', label: 'Phân khúc khách hàng' },
+    { id: 'category-mix', label: 'Phân loại sản phẩm' },
+    { id: 'order-growth', label: 'Đơn hàng và tăng trưởng' },
+    { id: 'revenue-trend', label: 'Xu hướng doanh thu' },
+    { id: 'order-status', label: 'Trạng thái đơn hàng' },
+    { id: 'top-products', label: 'Sản phẩm bán chạy' },
+    { id: 'territory-sales', label: 'Doanh số theo vùng' },
+    { id: 'top-customers', label: 'Top khách hàng theo doanh thu' }
+  ];
+
+  readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
+
+  isChartChecked(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  toggleChartVisibility(chartId: string): void {
+    const hidden = new Set(this.hiddenChartIds());
+    if (hidden.has(chartId)) {
+      hidden.delete(chartId);
+    } else {
+      hidden.add(chartId);
+    }
+    this.hiddenChartIds.set(hidden);
+  }
+
+  removeChartFromGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  addChartToGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  toggleChartPicker(event?: Event): void {
+    event?.stopPropagation();
+    this.showChartPicker.update(v => !v);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showChartPicker.set(false);
+  }
+
+  onPickerClick(event: Event): void {
+    event.stopPropagation();
+  }
 
   private getDefaultLayout(): GridsterItemConfig[] {
     return [
@@ -520,6 +577,10 @@ export class SalesComponent implements OnInit {
     return this.gridsterItems().find(item => item['id'] === id);
   }
 
+  isChartVisible(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
   private saveLayoutToStorage(): void {
     const layout = this.gridsterItems().map(item => ({
       id: item['id'],
@@ -546,6 +607,22 @@ export class SalesComponent implements OnInit {
     }
   }
 
+  private loadHiddenChartsFromStorage(): Set<string> {
+    const raw = localStorage.getItem(this.hiddenChartsStorageKey);
+    if (!raw) return new Set();
+    try {
+      const arr = JSON.parse(raw) as string[];
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
+  }
+
+  private saveHiddenChartsToStorage(): void {
+    const arr = Array.from(this.hiddenChartIds());
+    localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
+  }
+
   toggleEditMode(): void {
     const newMode = !this.isEditMode();
     this.isEditMode.set(newMode);
@@ -553,11 +630,16 @@ export class SalesComponent implements OnInit {
     config.draggable!.enabled = newMode;
     config.resizable!.enabled = newMode;
     this.gridsterOptions.set({ ...config });
+    if (!newMode) {
+      this.saveHiddenChartsToStorage();
+    }
   }
 
   resetLayout(): void {
     localStorage.removeItem(this.gridsterStorageKey);
+    localStorage.removeItem(this.hiddenChartsStorageKey);
     this.gridsterItems.set(this.getDefaultLayout());
+    this.hiddenChartIds.set(new Set());
   }
 
   customizeLayout(): void {

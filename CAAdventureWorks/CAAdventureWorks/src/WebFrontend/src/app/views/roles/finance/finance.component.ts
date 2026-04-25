@@ -1,4 +1,4 @@
-import { CommonModule, CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -10,7 +10,6 @@ import {
   CardComponent,
   CardHeaderComponent,
   ColComponent,
-  FormControlDirective,
   FormLabelDirective,
   FormSelectDirective,
   RowComponent,
@@ -35,7 +34,6 @@ import { FinanceDashboardService } from './finance-dashboard.service';
     CardHeaderComponent,
     CardBodyComponent,
     FormLabelDirective,
-    FormControlDirective,
     FormSelectDirective,
     ButtonDirective,
     ChartjsComponent,
@@ -43,8 +41,7 @@ import { FinanceDashboardService } from './finance-dashboard.service';
     TemplateIdDirective,
     WidgetStatAComponent,
     CurrencyPipe,
-    DecimalPipe,
-    PercentPipe
+    DecimalPipe
   ]
 })
 export class FinanceComponent implements OnInit {

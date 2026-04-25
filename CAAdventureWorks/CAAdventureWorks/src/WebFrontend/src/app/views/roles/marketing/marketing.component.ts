@@ -1,4 +1,4 @@
-import { CommonModule, DecimalPipe, PercentPipe } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
@@ -9,7 +9,6 @@ import {
   CardComponent,
   CardHeaderComponent,
   ColComponent,
-  FormControlDirective,
   FormLabelDirective,
   FormSelectDirective,
   RowComponent,
@@ -34,7 +33,6 @@ import { IconDirective } from '@coreui/icons-angular';
     CardHeaderComponent,
     CardBodyComponent,
     FormLabelDirective,
-    FormControlDirective,
     FormSelectDirective,
     ButtonDirective,
     ChartjsComponent,
@@ -42,8 +40,7 @@ import { IconDirective } from '@coreui/icons-angular';
     TemplateIdDirective,
     WidgetStatAComponent,
     TableDirective,
-    DecimalPipe,
-    PercentPipe
+    DecimalPipe
   ]
 })
 export class MarketingComponent {

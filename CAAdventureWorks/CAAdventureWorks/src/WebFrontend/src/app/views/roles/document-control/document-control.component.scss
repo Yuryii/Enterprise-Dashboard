@@ -1,4 +1,4 @@
-@import '../sales/sales.component.scss';
+@use '../sales/sales.component.scss';
 
 .document-control-app {
   @extend .sales-app;
