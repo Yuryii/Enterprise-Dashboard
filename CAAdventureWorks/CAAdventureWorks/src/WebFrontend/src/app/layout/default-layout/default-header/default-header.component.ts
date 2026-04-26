@@ -25,6 +25,7 @@ import {
 
 import { IconDirective } from '@coreui/icons-angular';
 import { AuthService } from '../../../core/services/auth.service';
+import { AlertService, type AlertHistoryDto } from '../../../core/services/alert.service';
 
 @Component({
   selector: 'app-default-header',
@@ -41,6 +42,7 @@ export class DefaultHeaderComponent extends HeaderComponent {
 
   readonly #colorModeService = inject(ColorModeService);
   readonly #authService = inject(AuthService);
+  readonly #alertService = inject(AlertService);
   readonly colorMode = this.#colorModeService.colorMode;
 
   readonly colorModes = [
@@ -48,6 +50,9 @@ export class DefaultHeaderComponent extends HeaderComponent {
     { name: 'dark', text: 'Dark', icon: 'cilMoon' },
     { name: 'auto', text: 'Auto', icon: 'cilContrast' }
   ];
+
+  readonly unreadAlertCount = this.#alertService.unreadCount;
+  readonly unreadAlerts = this.#alertService.unreadAlerts;
 
   readonly icons = computed(() => {
     const currentMode = this.colorMode();
@@ -150,5 +155,39 @@ export class DefaultHeaderComponent extends HeaderComponent {
 
   getUserEmail(user: any): string {
     return user?.email || '';
+  }
+
+  onAlertDropdownOpen(): void {
+    this.#alertService.getUnreadAlerts(5).subscribe(alerts => {
+      this.#alertService.unreadAlerts.set(alerts);
+    });
+  }
+
+  onAlertClick(event: Event, alert: AlertHistoryDto): void {
+    event.stopPropagation();
+    this.#alertService.dismissAlert(alert.id, true).subscribe(() => {
+      const current = this.#alertService.unreadAlerts();
+      this.#alertService.unreadAlerts.set(current.filter(a => a.id !== alert.id));
+      this.#alertService.refreshUnreadCount();
+    });
+  }
+
+  onMarkAllRead(event: Event): void {
+    event.stopPropagation();
+    this.#alertService.markAllRead();
+  }
+
+  formatRelativeTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Vừa xong';
+    if (diffMin < 60) return `${diffMin} phút trước`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    return date.toLocaleDateString('vi-VN');
   }
 }

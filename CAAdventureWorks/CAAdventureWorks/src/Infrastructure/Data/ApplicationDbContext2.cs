@@ -13,6 +13,9 @@ public class ApplicationDbContext2 : DbContext, IChatBotDbContext
 
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<AlertDefinition> AlertDefinitions => Set<AlertDefinition>();
+    public DbSet<AlertConfiguration> AlertConfigurations => Set<AlertConfiguration>();
+    public DbSet<AlertHistory> AlertHistories => Set<AlertHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +34,41 @@ public class ApplicationDbContext2 : DbContext, IChatBotDbContext
             entity.Property(e => e.MessageId).ValueGeneratedOnAdd();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             entity.Property(e => e.Role).HasConversion<byte>();
+        });
+
+        modelBuilder.Entity<AlertDefinition>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.DepartmentCode);
+        });
+
+        modelBuilder.Entity<AlertConfiguration>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.HasIndex(e => new { e.UserId, e.AlertDefinitionId }).IsUnique();
+            entity.HasIndex(e => e.DepartmentCode);
+            entity.HasOne(e => e.AlertDefinition)
+                  .WithMany(a => a.Configurations)
+                  .HasForeignKey(e => e.AlertDefinitionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AlertHistory>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(e => new { e.AlertConfigurationId, e.TriggeredAt });
+            entity.HasIndex(e => new { e.IsRead, e.IsDismissed });
+            entity.HasOne(e => e.AlertConfiguration)
+                  .WithMany(a => a.Histories)
+                  .HasForeignKey(e => e.AlertConfigurationId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.AlertDefinition)
+                  .WithMany(a => a.Histories)
+                  .HasForeignKey(e => e.AlertDefinitionId)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

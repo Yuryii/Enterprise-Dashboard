@@ -1,5 +1,9 @@
 using System.Security.Claims;
+using System.Text.Json;
+using CAAdventureWorks.Application.Alerts.Interfaces;
 using CAAdventureWorks.Application.Common.Interfaces;
+using CAAdventureWorks.Infrastructure.Alerts;
+using CAAdventureWorks.Infrastructure.BackgroundJobs;
 using CAAdventureWorks.Infrastructure.ChatBot;
 using CAAdventureWorks.Infrastructure.Data;
 using CAAdventureWorks.Infrastructure.Data.Interceptors;
@@ -51,6 +55,11 @@ public static class DependencyInjection
         builder.Services.AddHttpClient("ChatBot");
         builder.Services.AddScoped<CAAdventureWorks.Application.ChatBot.Services.ISemanticKernelService, DepartmentKernelService>();
 
+        // Alert Evaluation services
+        builder.Services.AddScoped<IAlertEvaluationService, AlertEvaluationService>();
+        builder.Services.AddScoped<IAlertScheduler, AlertRecurringJobScheduler>();
+        builder.Services.AddScoped<AlertEvaluationJob>();
+
         var keycloakAuthority = builder.Configuration["Keycloak:Authority"];
         var keycloakAudience = builder.Configuration["Keycloak:Audience"];
         var requireHttpsMetadata = !builder.Environment.IsDevelopment();
@@ -88,6 +97,48 @@ public static class DependencyInjection
                     {
                         context.Token = accessToken;
                     }
+                    return Task.CompletedTask;
+                },
+                // Keycloak maps realm roles into a nested JSON array: "realm_access": { "roles": ["Sales", "Executive"] }
+                // ASP.NET Core authorization expects flat ClaimTypes.Role claims.
+                // This handler extracts roles from "realm_access.roles" and adds them as separate role claims.
+                OnTokenValidated = context =>
+                {
+                    var principal = context.Principal;
+                    if (principal is null) return Task.CompletedTask;
+
+                    var identity = principal.Identity as ClaimsIdentity;
+                    if (identity is null) return Task.CompletedTask;
+
+                    var realmAccessValue = identity.FindFirst("realm_access")?.Value;
+                    if (!string.IsNullOrEmpty(realmAccessValue))
+                    {
+                        try
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(realmAccessValue);
+                            if (doc.RootElement.TryGetProperty("roles", out var rolesElement) &&
+                                rolesElement.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var role in rolesElement.EnumerateArray())
+                                {
+                                    if (role.ValueKind == JsonValueKind.String)
+                                    {
+                                        var roleValue = role.GetString();
+                                        if (!string.IsNullOrEmpty(roleValue) &&
+                                            !identity.HasClaim(ClaimTypes.Role, roleValue))
+                                        {
+                                            identity.AddClaim(new Claim(ClaimTypes.Role, roleValue));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // If parsing fails, skip the transformation
+                        }
+                    }
+
                     return Task.CompletedTask;
                 },
             };
@@ -142,5 +193,7 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<IUser, CAAdventureWorks.Infrastructure.Identity.CurrentUser>();
     }
 }

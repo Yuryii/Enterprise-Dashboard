@@ -1,7 +1,14 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '../../core/guards/auth.guard';
 import { roleGuard } from '../../core/guards/role.guard';
+import { RolesHomeComponent } from './roles-home/roles-home.component';
 
 export const routes: Routes = [
+  {
+    path: '',
+    component: RolesHomeComponent,
+    canActivate: [authGuard],
+  },
   {
     path: 'executive',
     canActivate: [roleGuard(['Executive'])],
@@ -57,6 +64,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./sales/sales.component').then((m) => m.SalesComponent),
     data: { title: 'Sales' }
+  },
+  {
+    path: 'alerts',
+    canActivate: [roleGuard(['Sales', 'Executive'])],
+    loadComponent: () =>
+      import('./alerts/alerts.component').then((m) => m.AlertsComponent),
+    data: { title: 'Quản lý Cảnh báo' }
   },
   {
     path: 'marketing',

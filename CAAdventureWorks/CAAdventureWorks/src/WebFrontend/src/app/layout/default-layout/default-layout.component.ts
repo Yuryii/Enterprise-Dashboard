@@ -1,6 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { NgScrollbar } from 'ngx-scrollbar';
+import { AsyncPipe } from '@angular/common';
 
 import { IconDirective } from '@coreui/icons-angular';
 import {
@@ -47,17 +48,10 @@ function isOverflown(element: HTMLElement) {
     RouterOutlet,
     RouterLink,
     ShadowOnScrollDirective,
-    ChatbotComponent
+    ChatbotComponent,
+    AsyncPipe,
   ]
 })
-export class DefaultLayoutComponent implements OnInit {
-  private navService = inject(NavService);
-  public navItems: INavData[] = [];
-
-  async ngOnInit(): Promise<void> {
-    await this.navService.filterNavItems();
-    this.navService.filteredNavItems$.subscribe((items) => {
-      this.navItems = items;
-    });
-  }
+export class DefaultLayoutComponent {
+  readonly navItems$ = inject(NavService).filteredNavItems$;
 }

@@ -52,5 +52,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.37.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Plugins.OpenApi" Version="1.37.0" />
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.14" />
+    <PackageVersion Include="Hangfire.Core" Version="1.8.14" />
+    <PackageVersion Include="Hangfire.SqlServer" Version="1.8.14" />
   </ItemGroup>
 </Project>

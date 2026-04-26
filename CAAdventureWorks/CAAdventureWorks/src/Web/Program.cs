@@ -1,5 +1,9 @@
 using CAAdventureWorks.Infrastructure.Data;
+using CAAdventureWorks.Web;
+using Hangfire;
+using Hangfire.SqlServer;
 using Scalar.AspNetCore;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +14,20 @@ builder.AddKeyVaultIfConfigured();
 builder.AddApplicationServices();
 builder.AddInfrastructureServices();
 builder.AddWebServices();
+
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(
+        builder.Configuration.GetConnectionString("ChatBot"),
+        new SqlServerStorageOptions { CommandBatchMaxTimeout = TimeSpan.FromMinutes(5) }
+    )
+);
+
+builder.Services.AddHangfireServer();
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -38,7 +56,10 @@ app.UseCors(static policy =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseFileServer();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+});
 
 app.MapFallbackToFile("index.html");
 

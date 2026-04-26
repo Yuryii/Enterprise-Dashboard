@@ -9,11 +9,15 @@ import { ColorModeService } from '@coreui/angular';
 import { IconSetService } from '@coreui/icons-angular';
 import { iconSubset } from './icons/icon-subset';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
     selector: 'app-root',
-    template: '<router-outlet />',
-    imports: [RouterOutlet]
+    template: `
+        <p-toast position="top-right" [life]="4000" />
+        <router-outlet />
+    `,
+    imports: [RouterOutlet, ToastModule]
 })
 export class AppComponent implements OnInit {
   title = 'SmartDash';

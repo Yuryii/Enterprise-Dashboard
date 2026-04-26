@@ -12,6 +12,10 @@ export class NavService {
 
   filteredNavItems$: Observable<INavData[]> = this.filteredNavItemsSubject.asObservable();
 
+  constructor() {
+    this.filterNavItems();
+  }
+
   async filterNavItems(): Promise<void> {
     this.userRoles = await this.authService.getRoles();
     console.log('[NavService] User roles from Keycloak:', this.userRoles);
