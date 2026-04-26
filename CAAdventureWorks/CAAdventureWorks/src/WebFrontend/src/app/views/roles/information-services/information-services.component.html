@@ -144,77 +144,159 @@
       }
     </c-row>
 
-    <!-- Charts Grid -->
-    <c-row>
-      <!-- Row 1: Error Trend & Event Type Distribution -->
-      <c-col md="8">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Xu hướng lỗi hệ thống</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="is-gridster">
+
+      <!-- Xu hướng lỗi hệ thống -->
+      @if (isChartVisible('error-trend')) {
+      <gridster-item [item]="getItem('error-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng lỗi hệ thống</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="line" [data]="errorTrendChartData()" [options]="errorTrendOptions"
-              [height]="300"></c-chart>
+            <c-chart type="line" [data]="errorTrendChartData()" [options]="errorTrendOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Phân loại sự kiện DB</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+      <!-- Phân loại sự kiện DB -->
+      @if (isChartVisible('event-type-distribution')) {
+      <gridster-item [item]="getItem('event-type-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân loại sự kiện DB</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="doughnut" [data]="eventTypeChartData()" [options]="eventTypeChartOptions"
-              [height]="300"></c-chart>
+            <c-chart type="doughnut" [data]="eventTypeChartData()" [options]="eventTypeChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <!-- Row 2: Top Errors & User Accounts -->
-    <c-row>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top lỗi phổ biến</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+      <!-- Top lỗi phổ biến -->
+      @if (isChartVisible('top-errors')) {
+      <gridster-item [item]="getItem('top-errors')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top lỗi phổ biến</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="topErrorsChartData()" [options]="topErrorsChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Tài khoản theo phòng ban</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ cột nhóm</small>
+      <!-- Tài khoản theo phòng ban -->
+      @if (isChartVisible('user-accounts')) {
+      <gridster-item [item]="getItem('user-accounts')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Tài khoản theo phòng ban</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ cột nhóm</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="userAccountsChartData()" [options]="userAccountsChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <!-- Row 3: Password Age Distribution -->
-    <c-row>
-      <c-col xs="12">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Phân bố tuổi mật khẩu</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+      <!-- Phân bố tuổi mật khẩu -->
+      @if (isChartVisible('password-age-distribution')) {
+      <gridster-item [item]="getItem('password-age-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân bố tuổi mật khẩu</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="passwordAgeChartData()" [options]="passwordAgeChartOptions" [height]="280"></c-chart>
+            <c-chart type="bar" [data]="passwordAgeChartData()" [options]="passwordAgeChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
 
     <!-- Row 4: Data Tables -->
     <c-row>

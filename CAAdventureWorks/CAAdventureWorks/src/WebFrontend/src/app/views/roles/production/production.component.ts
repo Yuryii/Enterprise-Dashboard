@@ -1,5 +1,5 @@
 import { CommonModule, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
@@ -20,6 +20,8 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
+import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
+import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
 import {
   ProductionBomItemDto,
   ProductionCategoryItemDto,
@@ -38,6 +40,11 @@ import {
   ProductionTrendPointDto
 } from './production-dashboard.service';
 
+export interface ChartDef {
+  id: string;
+  label: string;
+}
+
 @Component({
   selector: 'app-production',
   standalone: true,
@@ -46,6 +53,8 @@ import {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    GridsterComponent,
+    GridsterItemComponent,
     RowComponent,
     ColComponent,
     CardComponent,
@@ -116,6 +125,103 @@ export class ProductionComponent implements OnInit {
   readonly dashboard = signal<ProductionDashboardResponseDto | null>(
     this.productionDashboardService.getCachedDashboard(this.defaultFilter)
   );
+
+  private readonly gridsterStorageKey = 'production_grid_layout';
+  private readonly hiddenChartsStorageKey = 'production_hidden_charts';
+
+  readonly isEditMode = signal(false);
+
+  readonly gridsterOptions = signal<GridsterConfig>({
+    draggable: { enabled: false },
+    resizable: { enabled: false },
+    pushItems: true,
+    minCols: 12,
+    maxCols: 12,
+    minRows: 20,
+    fixedRowHeight: 80,
+    keepFixedHeightInMobile: false,
+    keepFixedWidthInMobile: false,
+    mobileBreakpoint: 640,
+    itemChangeCallback: (_item, _itemComponent) => this.saveLayoutToStorage()
+  });
+
+  readonly gridsterItems = signal<GridsterItemConfig[]>(
+    this.loadLayoutFromStorage() ?? this.getDefaultLayout()
+  );
+
+  readonly showChartPicker = signal(false);
+
+  readonly availableCharts: ChartDef[] = [
+    { id: 'work-order-trend', label: 'Xu hướng lệnh sản xuất' },
+    { id: 'output-trend', label: 'Sản lượng kế hoạch và nhập kho' },
+    { id: 'top-products', label: 'Top sản phẩm sản xuất' },
+    { id: 'top-scrap-products', label: 'Top sản phẩm phế phẩm' },
+    { id: 'category-analysis', label: 'Hiệu suất theo ngành hàng' },
+    { id: 'location-cost', label: 'Chi phí theo khu vực' },
+    { id: 'operation-variance', label: 'Biến động chi phí' },
+    { id: 'location-hours', label: 'Giờ nguồn lực theo khu vực' },
+    { id: 'delayed-orders', label: 'Cơ cấu lệnh trễ hạn' },
+    { id: 'inventory-by-location', label: 'Tồn kho theo khu vực' },
+    { id: 'safety-stock', label: 'Cảnh báo safety stock' },
+    { id: 'cost-history', label: 'Lịch sử standard cost' },
+    { id: 'transaction-trend', label: 'Xu hướng transaction sản xuất' }
+  ];
+
+  readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
+
+  isChartChecked(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  toggleChartVisibility(chartId: string): void {
+    const hidden = new Set(this.hiddenChartIds());
+    if (hidden.has(chartId)) {
+      hidden.delete(chartId);
+    } else {
+      hidden.add(chartId);
+    }
+    this.hiddenChartIds.set(hidden);
+  }
+
+  removeChartFromGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  addChartToGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  toggleChartPicker(event?: Event): void {
+    event?.stopPropagation();
+    this.showChartPicker.update(v => !v);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showChartPicker.set(false);
+  }
+
+  onPickerClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private getDefaultLayout(): GridsterItemConfig[] {
+    return [
+      { id: 'work-order-trend', cols: 8, rows: 5, x: 0, y: 0 },
+      { id: 'delayed-orders', cols: 4, rows: 5, x: 8, y: 0 },
+      { id: 'output-trend', cols: 6, rows: 5, x: 0, y: 5 },
+      { id: 'top-products', cols: 6, rows: 5, x: 6, y: 5 },
+      { id: 'category-analysis', cols: 7, rows: 5, x: 0, y: 10 },
+      { id: 'top-scrap-products', cols: 5, rows: 5, x: 7, y: 10 },
+      { id: 'location-cost', cols: 7, rows: 5, x: 0, y: 15 },
+      { id: 'operation-variance', cols: 5, rows: 5, x: 7, y: 15 },
+      { id: 'location-hours', cols: 6, rows: 5, x: 0, y: 20 },
+      { id: 'inventory-by-location', cols: 6, rows: 5, x: 6, y: 20 },
+      { id: 'safety-stock', cols: 6, rows: 5, x: 0, y: 25 },
+      { id: 'cost-history', cols: 6, rows: 5, x: 6, y: 25 },
+      { id: 'transaction-trend', cols: 12, rows: 4, x: 0, y: 30 }
+    ];
+  }
 
   readonly filterForm = this.fb.group({
     startDate: [this.defaultFilter.startDate],
@@ -611,7 +717,76 @@ export class ProductionComponent implements OnInit {
   }
 
   customizeLayout(): void {
-    console.log('Tùy chỉnh bố cục sản xuất');
+    this.toggleEditMode();
+  }
+
+  getItem(id: string): GridsterItemConfig | undefined {
+    return this.gridsterItems().find(item => item['id'] === id);
+  }
+
+  isChartVisible(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  private saveLayoutToStorage(): void {
+    const layout = this.gridsterItems().map(item => ({
+      id: item['id'],
+      cols: item.cols,
+      rows: item.rows,
+      x: item.x,
+      y: item.y
+    }));
+    localStorage.setItem(this.gridsterStorageKey, JSON.stringify(layout));
+  }
+
+  private loadLayoutFromStorage(): GridsterItemConfig[] | null {
+    const raw = localStorage.getItem(this.gridsterStorageKey);
+    if (!raw) return null;
+    try {
+      const layout = JSON.parse(raw) as Array<{ id: string; cols: number; rows: number; x: number; y: number }>;
+      const defaults = this.getDefaultLayout();
+      return defaults.map(item => {
+        const saved = layout.find(l => l.id === item['id']);
+        return saved ? { ...item, ...saved } : item;
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private loadHiddenChartsFromStorage(): Set<string> {
+    const raw = localStorage.getItem(this.hiddenChartsStorageKey);
+    if (!raw) return new Set();
+    try {
+      const arr = JSON.parse(raw) as string[];
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
+  }
+
+  private saveHiddenChartsToStorage(): void {
+    const arr = Array.from(this.hiddenChartIds());
+    localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
+  }
+
+  toggleEditMode(): void {
+    const newMode = !this.isEditMode();
+    this.isEditMode.set(newMode);
+    const config = this.gridsterOptions();
+    config.draggable!.enabled = newMode;
+    config.resizable!.enabled = newMode;
+    this.gridsterOptions.set({ ...config });
+    if (!newMode) {
+      this.saveHiddenChartsToStorage();
+    }
+  }
+
+  resetLayout(): void {
+    localStorage.removeItem(this.gridsterStorageKey);
+    localStorage.removeItem(this.hiddenChartsStorageKey);
+    this.gridsterItems.set(this.getDefaultLayout());
+    this.hiddenChartIds.set(new Set());
   }
 
   saveFilter(): void {

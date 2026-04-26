@@ -148,106 +148,197 @@
       }
     </c-row>
 
-    <!-- Charts Grid -->
-    <c-row>
-      <!-- Row 1: Revenue & Expense Trends -->
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Xu hướng doanh thu</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="finance-gridster">
+
+      <!-- Xu hướng doanh thu -->
+      @if (isChartVisible('revenue-trend')) {
+      <gridster-item [item]="getItem('revenue-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng doanh thu</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="line" [data]="revenueTrendChartData()" [options]="lineChartOptions"
-              [height]="300"></c-chart>
+            <c-chart type="line" [data]="revenueTrendChartData()" [options]="lineChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Xu hướng chi phí</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+      <!-- Xu hướng chi phí -->
+      @if (isChartVisible('expense-trend')) {
+      <gridster-item [item]="getItem('expense-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng chi phí</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="line" [data]="expenseTrendChartData()" [options]="lineChartOptions"
-              [height]="300"></c-chart>
+            <c-chart type="line" [data]="expenseTrendChartData()" [options]="lineChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <!-- Row 2: Profit Trend & Cash Flow -->
-    <c-row>
-      <c-col md="8">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Xu hướng lợi nhuận</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+      <!-- Xu hướng lợi nhuận -->
+      @if (isChartVisible('profit-trend')) {
+      <gridster-item [item]="getItem('profit-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng lợi nhuận</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="line" [data]="profitTrendChartData()" [options]="lineChartOptions"
-              [height]="300"></c-chart>
+            <c-chart type="line" [data]="profitTrendChartData()" [options]="lineChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Doanh thu theo tiền tệ</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+      <!-- Doanh thu theo tiền tệ -->
+      @if (isChartVisible('revenue-by-currency')) {
+      <gridster-item [item]="getItem('revenue-by-currency')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Doanh thu theo tiền tệ</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="doughnut" [data]="currencyChartData()" [options]="pieChartOptions"
-              [height]="300"></c-chart>
+            <c-chart type="doughnut" [data]="currencyChartData()" [options]="pieChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <!-- Row 3: Cash Flow & Payment Methods -->
-    <c-row>
-      <c-col md="8">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Dòng tiền (Cash Flow)</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ cột nhóm</small>
+      <!-- Dòng tiền (Cash Flow) -->
+      @if (isChartVisible('cash-flow')) {
+      <gridster-item [item]="getItem('cash-flow')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Dòng tiền (Cash Flow)</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ cột nhóm</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="cashFlowChartData()" [options]="barChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Phương thức thanh toán</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+      <!-- Phương thức thanh toán -->
+      @if (isChartVisible('payment-methods')) {
+      <gridster-item [item]="getItem('payment-methods')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phương thức thanh toán</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="pie" [data]="paymentChartData()" [options]="pieChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <!-- Row 4: Tax by Region -->
-    <c-row>
-      <c-col xs="12">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Thuế theo vùng (Top 10)</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+      <!-- Thuế theo vùng -->
+      @if (isChartVisible('tax-by-region')) {
+      <gridster-item [item]="getItem('tax-by-region')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Thuế theo vùng (Top 10)</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="taxChartData()" [options]="barChartOptions" [height]="300"></c-chart>
+            <c-chart type="bar" [data]="taxChartData()" [options]="barChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
 
     <!-- Row 5: Financial Summary Cards -->
     <c-row>

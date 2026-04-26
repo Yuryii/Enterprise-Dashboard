@@ -637,3 +637,245 @@ c-widget-stat-a ::ng-deep canvas {
         grid-column: span 1
     }
 }
+
+// ============================================
+// Gridster Styles
+// ============================================
+
+.prod-control-gridster {
+    background: transparent;
+    min-height: 1000px;
+
+    gridster {
+        background: transparent;
+    }
+}
+
+.production-control-shell-grid {
+    display: block;
+}
+
+gridster-item {
+    overflow: hidden;
+    border-radius: 12px;
+
+    &:hover {
+        .item-handle {
+            opacity: 1;
+        }
+    }
+
+    .item-handle {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    c-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .06);
+        border: 1px solid rgba(148, 163, 184, .18);
+        border-radius: 16px;
+        overflow: hidden;
+
+        c-card-header {
+            background-color: rgba(255, 255, 255, .92);
+            border-bottom: 1px solid rgba(226, 232, 240, .85);
+            padding: 14px 16px;
+            flex-shrink: 0;
+
+            strong {
+                font-size: 14px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            small {
+                font-size: 11px;
+                color: #64748b;
+            }
+        }
+
+        c-card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            min-height: 0;
+
+            c-chart {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                align-items: stretch;
+
+                canvas {
+                    max-height: 100%;
+                    width: 100% !important;
+                }
+            }
+        }
+    }
+}
+
+// ============================================
+// Chart Card Header
+// ============================================
+
+.chart-card-header {
+    .chart-header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+    }
+}
+
+// ============================================
+// Edit Mode Banner
+// ============================================
+
+.gridster-edit-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+
+    .banner-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+
+        .banner-icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+    }
+
+    .banner-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .reset-btn {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+
+            &:hover,
+            &:focus {
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #fff;
+                color: #fff;
+            }
+
+            .button-icon {
+                font-size: 14px;
+                line-height: 1;
+                display: inline-flex;
+                align-items: center;
+            }
+        }
+    }
+}
+
+// ============================================
+// Chart Picker Dropdown
+// ============================================
+
+.chart-picker-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.chart-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1050;
+    min-width: 280px;
+    max-width: 340px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    padding: 8px 0;
+
+    .picker-section-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #9ca3af;
+        padding: 6px 12px 8px;
+        margin: 0;
+
+        &.mt-2 {
+            margin-top: 4px;
+        }
+    }
+
+    .picker-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #374151;
+        transition: background-color 0.15s;
+
+        &:hover {
+            background-color: #f3f4f6;
+        }
+
+        input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: #8b5cf6;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .picker-label {
+            flex: 1;
+            line-height: 1.3;
+        }
+
+        &.hidden-chart-item {
+            background-color: #f9fafb;
+            border: 1px dashed #d1d5db;
+            border-radius: 6px;
+            margin: 2px 8px;
+            padding: 8px;
+
+            .add-chart-btn {
+                flex-shrink: 0;
+                font-size: 11px;
+                padding: 4px 10px;
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                border-radius: 6px;
+
+                svg {
+                    width: 12px;
+                    height: 12px;
+                }
+            }
+        }
+    }
+}

@@ -174,97 +174,201 @@
       }
     </c-row>
 
-    <c-row class="g-4 mb-3">
-      <c-col md="8">
-        <c-card class="mb-3 chart-card-tall">
-          <c-card-header>
-            <strong>Xu hướng phế phẩm theo tháng</strong>
-            <small class="text-body-secondary ms-2">Sản lượng lỗi và tỷ lệ phế phẩm</small>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="qa-gridster">
+
+      <!-- Xu hướng phế phẩm -->
+      @if (isChartVisible('defect-trend')) {
+      <gridster-item [item]="getItem('defect-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng phế phẩm theo tháng</strong>
+                <small class="text-body-secondary ms-2">Sản lượng lỗi và tỷ lệ phế phẩm</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="defectTrendChartData()" [options]="defectTrendOptions" [height]="300"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="4">
-        <c-card class="mb-3 chart-card-tall">
-          <c-card-header>
-            <strong>Nhân sự kiểm soát chất lượng</strong>
-            <small class="text-body-secondary ms-2">Cơ cấu nhân sự</small>
+      </gridster-item>
+      }
+
+      <!-- Nhân sự kiểm soát chất lượng -->
+      @if (isChartVisible('inspector-headcount')) {
+      <gridster-item [item]="getItem('inspector-headcount')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Nhân sự kiểm soát chất lượng</strong>
+                <small class="text-body-secondary ms-2">Cơ cấu nhân sự</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="pie" [data]="inspectorHeadcountChartData()" [options]="inspectorHeadcountOptions"
               [height]="300"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top nguyên nhân lỗi</strong>
-            <small class="text-body-secondary ms-2">Xếp hạng scrap reason</small>
+      <!-- Top nguyên nhân lỗi -->
+      @if (isChartVisible('scrap-reasons')) {
+      <gridster-item [item]="getItem('scrap-reasons')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top nguyên nhân lỗi</strong>
+                <small class="text-body-secondary ms-2">Xếp hạng scrap reason</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="scrapReasonChartData()" [options]="scrapReasonOptions" [height]="320"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top sản phẩm lỗi</strong>
-            <small class="text-body-secondary ms-2">Sản phẩm có phế phẩm cao</small>
+      </gridster-item>
+      }
+
+      <!-- Top sản phẩm lỗi -->
+      @if (isChartVisible('top-defect-products')) {
+      <gridster-item [item]="getItem('top-defect-products')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top sản phẩm lỗi</strong>
+                <small class="text-body-secondary ms-2">Sản phẩm có phế phẩm cao</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="topDefectProductsChartData()" [options]="topDefectProductsOptions"
               [height]="320"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="7">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Tỷ lệ phế phẩm theo ngành hàng</strong>
-            <small class="text-body-secondary ms-2">So sánh danh mục sản phẩm</small>
+      <!-- Tỷ lệ phế phẩm theo ngành hàng -->
+      @if (isChartVisible('category-analysis')) {
+      <gridster-item [item]="getItem('category-analysis')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Tỷ lệ phế phẩm theo ngành hàng</strong>
+                <small class="text-body-secondary ms-2">So sánh danh mục sản phẩm</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="categoryChartData()" [options]="categoryOptions()" [height]="320"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="5">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Tỷ lệ reject theo nhà cung cấp</strong>
-            <small class="text-body-secondary ms-2">Chất lượng đầu vào</small>
+      </gridster-item>
+      }
+
+      <!-- Tỷ lệ reject theo nhà cung cấp -->
+      @if (isChartVisible('vendor-reject')) {
+      <gridster-item [item]="getItem('vendor-reject')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Tỷ lệ reject theo nhà cung cấp</strong>
+                <small class="text-body-secondary ms-2">Chất lượng đầu vào</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="vendorRejectChartData()" [options]="vendorRejectOptions"
               [height]="320"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4">
-      <c-col xs="12">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Chi phí sản xuất theo địa điểm</strong>
-            <small class="text-body-secondary ms-2">Chi phí kế hoạch so với chi phí thực tế</small>
+      <!-- Chi phí sản xuất theo địa điểm -->
+      @if (isChartVisible('location-cost')) {
+      <gridster-item [item]="getItem('location-cost')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Chi phí sản xuất theo địa điểm</strong>
+                <small class="text-body-secondary ms-2">Chi phí kế hoạch so với chi phí thực tế</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="locationChartData()" [options]="locationOptions" [height]="340"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
     }
+
   </div>
 </div>

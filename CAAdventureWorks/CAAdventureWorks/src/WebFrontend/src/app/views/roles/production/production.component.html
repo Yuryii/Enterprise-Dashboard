@@ -202,178 +202,311 @@
       }
     </c-row>
 
-    <c-row class="g-4 mb-3">
-      <c-col md="8">
-        <c-card class="mb-3 chart-card-tall">
-          <c-card-header>
-            <strong>Xu hướng lệnh sản xuất</strong>
-            <small class="text-body-secondary ms-2">Số lệnh và lượng đơn trễ hạn theo tháng</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="workOrderTrendChartData()" [options]="workOrderTrendOptions"
-              [height]="300"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="4">
-        <c-card class="mb-3 chart-card-tall">
-          <c-card-header>
-            <strong>Cơ cấu lệnh trễ hạn</strong>
-            <small class="text-body-secondary ms-2">Theo sản phẩm và khu vực</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="pie" [data]="delayedWorkOrdersChartData()" [options]="delayedWorkOrdersOptions"
-              [height]="300"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Sản lượng kế hoạch và nhập kho</strong>
-            <small class="text-body-secondary ms-2">Theo dõi đầu ra theo tháng</small>
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="production-gridster">
+      <!-- Xu hướng lệnh sản xuất -->
+      @if (isChartVisible('work-order-trend')) {
+      <gridster-item [item]="getItem('work-order-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng lệnh sản xuất</strong>
+                <small class="text-body-secondary ms-2">Số lệnh và lượng đơn trễ hạn theo tháng</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="outputTrendChartData()" [options]="outputTrendOptions" [height]="320"></c-chart>
+            <c-chart type="bar" [data]="workOrderTrendChartData()" [options]="workOrderTrendOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top sản phẩm sản xuất</strong>
-            <small class="text-body-secondary ms-2">Sản phẩm có sản lượng cao nhất</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="topProductsChartData()" [options]="topProductsOptions" [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="7">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Hiệu suất theo ngành hàng</strong>
-            <small class="text-body-secondary ms-2">Sản lượng kế hoạch và tỷ lệ phế phẩm</small>
+      <!-- Cơ cấu lệnh trễ hạn -->
+      @if (isChartVisible('delayed-orders')) {
+      <gridster-item [item]="getItem('delayed-orders')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Cơ cấu lệnh trễ hạn</strong>
+                <small class="text-body-secondary ms-2">Theo sản phẩm và khu vực</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="categoryChartData()" [options]="categoryOptions" [height]="320"></c-chart>
+            <c-chart type="pie" [data]="delayedWorkOrdersChartData()" [options]="delayedWorkOrdersOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="5">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top sản phẩm phế phẩm</strong>
-            <small class="text-body-secondary ms-2">Tập trung xử lý lỗi sản xuất</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="topScrapProductsChartData()" [options]="topScrapProductsOptions"
-              [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="7">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Chi phí theo khu vực sản xuất</strong>
-            <small class="text-body-secondary ms-2">So sánh chi phí kế hoạch và thực tế</small>
+      <!-- Sản lượng kế hoạch và nhập kho -->
+      @if (isChartVisible('output-trend')) {
+      <gridster-item [item]="getItem('output-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Sản lượng kế hoạch và nhập kho</strong>
+                <small class="text-body-secondary ms-2">Theo dõi đầu ra theo tháng</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="locationCostChartData()" [options]="locationCostOptions"
-              [height]="320"></c-chart>
+            <c-chart type="bar" [data]="outputTrendChartData()" [options]="outputTrendOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="5">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Biến động chi phí theo công đoạn</strong>
-            <small class="text-body-secondary ms-2">Ưu tiên kiểm soát operation variance</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="operationVarianceChartData()" [options]="operationVarianceOptions"
-              [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Giờ nguồn lực theo khu vực</strong>
-            <small class="text-body-secondary ms-2">Phân bổ công suất vận hành</small>
+      <!-- Top sản phẩm sản xuất -->
+      @if (isChartVisible('top-products')) {
+      <gridster-item [item]="getItem('top-products')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top sản phẩm sản xuất</strong>
+                <small class="text-body-secondary ms-2">Sản phẩm có sản lượng cao nhất</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="locationHoursChartData()" [options]="locationHoursOptions"
-              [height]="320"></c-chart>
+            <c-chart type="bar" [data]="topProductsChartData()" [options]="topProductsOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Tồn kho theo khu vực</strong>
-            <small class="text-body-secondary ms-2">Theo dõi lượng tồn thực tế</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="inventoryChartData()" [options]="inventoryOptions" [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Cảnh báo safety stock</strong>
-            <small class="text-body-secondary ms-2">Sản phẩm thiếu hụt cần bổ sung</small>
+      <!-- Hiệu suất theo ngành hàng -->
+      @if (isChartVisible('category-analysis')) {
+      <gridster-item [item]="getItem('category-analysis')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Hiệu suất theo ngành hàng</strong>
+                <small class="text-body-secondary ms-2">Sản lượng kế hoạch và tỷ lệ phế phẩm</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="safetyStockChartData()" [options]="safetyStockOptions" [height]="320"></c-chart>
+            <c-chart type="bar" [data]="categoryChartData()" [options]="categoryOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Lịch sử standard cost</strong>
-            <small class="text-body-secondary ms-2">Biến động cost theo mốc hiệu lực</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="line" [data]="costHistoryChartData()" [options]="costHistoryOptions"
-              [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row class="g-4 mb-3">
-      <c-col xs="12">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Xu hướng transaction sản xuất</strong>
-            <small class="text-body-secondary ms-2">Số giao dịch và chi phí thực tế theo tháng</small>
+      <!-- Top sản phẩm phế phẩm -->
+      @if (isChartVisible('top-scrap-products')) {
+      <gridster-item [item]="getItem('top-scrap-products')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top sản phẩm phế phẩm</strong>
+                <small class="text-body-secondary ms-2">Tập trung xử lý lỗi sản xuất</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="transactionTrendChartData()" [options]="transactionTrendOptions"
-              [height]="320"></c-chart>
+            <c-chart type="bar" [data]="topScrapProductsChartData()" [options]="topScrapProductsOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
+      <!-- Chi phí theo khu vực sản xuất -->
+      @if (isChartVisible('location-cost')) {
+      <gridster-item [item]="getItem('location-cost')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Chi phí theo khu vực sản xuất</strong>
+                <small class="text-body-secondary ms-2">So sánh chi phí kế hoạch và thực tế</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="locationCostChartData()" [options]="locationCostOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Biến động chi phí theo công đoạn -->
+      @if (isChartVisible('operation-variance')) {
+      <gridster-item [item]="getItem('operation-variance')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Biến động chi phí theo công đoạn</strong>
+                <small class="text-body-secondary ms-2">Ưu tiên kiểm soát operation variance</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="operationVarianceChartData()" [options]="operationVarianceOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Giờ nguồn lực theo khu vực -->
+      @if (isChartVisible('location-hours')) {
+      <gridster-item [item]="getItem('location-hours')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Giờ nguồn lực theo khu vực</strong>
+                <small class="text-body-secondary ms-2">Phân bổ công suất vận hành</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="locationHoursChartData()" [options]="locationHoursOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Tồn kho theo khu vực -->
+      @if (isChartVisible('inventory-by-location')) {
+      <gridster-item [item]="getItem('inventory-by-location')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Tồn kho theo khu vực</strong>
+                <small class="text-body-secondary ms-2">Theo dõi lượng tồn thực tế</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="inventoryChartData()" [options]="inventoryOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Cảnh báo safety stock -->
+      @if (isChartVisible('safety-stock')) {
+      <gridster-item [item]="getItem('safety-stock')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Cảnh báo safety stock</strong>
+                <small class="text-body-secondary ms-2">Sản phẩm thiếu hụt cần bổ sung</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="safetyStockChartData()" [options]="safetyStockOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Lịch sử standard cost -->
+      @if (isChartVisible('cost-history')) {
+      <gridster-item [item]="getItem('cost-history')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Lịch sử standard cost</strong>
+                <small class="text-body-secondary ms-2">Biến động cost theo mốc hiệu lực</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="costHistoryChartData()" [options]="costHistoryOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Xu hướng transaction sản xuất -->
+      @if (isChartVisible('transaction-trend')) {
+      <gridster-item [item]="getItem('transaction-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng transaction sản xuất</strong>
+                <small class="text-body-secondary ms-2">Số giao dịch và chi phí thực tế theo tháng</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="transactionTrendChartData()" [options]="transactionTrendOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+    </gridster>
+
+    <!-- BOM Section (outside gridster) -->
     <c-row class="g-4">
       <c-col xs="12">
         <c-card class="mb-3">

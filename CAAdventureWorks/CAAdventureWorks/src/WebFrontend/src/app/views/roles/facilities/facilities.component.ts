@@ -1,5 +1,5 @@
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, HostListener, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
 import { getStyle } from '@coreui/utils';
@@ -18,6 +18,13 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
+import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
+import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+
+export interface ChartDef {
+  id: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-facilities',
@@ -27,6 +34,8 @@ import { IconDirective } from '@coreui/icons-angular';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    GridsterComponent,
+    GridsterItemComponent,
     RowComponent,
     ColComponent,
     CardComponent,
@@ -309,6 +318,153 @@ export class FacilitiesComponent {
 
   readonly capacityHeatmapRows = computed(() => [...this.filteredInventoryCapacity()].sort((a, b) => b.fillRate - a.fillRate));
 
+  readonly gridsterStorageKey = 'facilities_grid_layout';
+  readonly hiddenChartsStorageKey = 'facilities_hidden_charts';
+
+  readonly isEditMode = signal(false);
+  readonly showChartPicker = signal(false);
+
+  readonly gridsterOptions = signal<GridsterConfig>({
+    draggable: { enabled: false },
+    resizable: { enabled: false },
+    pushItems: true,
+    minCols: 12,
+    maxCols: 12,
+    minRows: 20,
+    fixedRowHeight: 80,
+    keepFixedHeightInMobile: false,
+    keepFixedWidthInMobile: false,
+    mobileBreakpoint: 640,
+    itemChangeCallback: () => this.saveLayoutToStorage()
+  });
+
+  readonly gridsterItems = signal<GridsterItemConfig[]>(
+    this.loadLayoutFromStorage() ?? this.getDefaultLayout()
+  );
+
+  readonly availableCharts: ChartDef[] = [
+    { id: 'cost-variance', label: 'Planned vs Actual Cost' },
+    { id: 'runtime-trend', label: 'Biến động giờ chạy máy' },
+    { id: 'inventory-capacity', label: 'Phân bổ tồn kho' },
+    { id: 'operating-cost', label: 'Chi phí vận hành' }
+  ];
+
+  readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
+
+  isChartChecked(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  toggleChartVisibility(chartId: string): void {
+    const hidden = new Set(this.hiddenChartIds());
+    if (hidden.has(chartId)) {
+      hidden.delete(chartId);
+    } else {
+      hidden.add(chartId);
+    }
+    this.hiddenChartIds.set(hidden);
+  }
+
+  removeChartFromGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  addChartToGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  toggleChartPicker(event?: Event): void {
+    event?.stopPropagation();
+    this.showChartPicker.update(v => !v);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showChartPicker.set(false);
+  }
+
+  onPickerClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private getDefaultLayout(): GridsterItemConfig[] {
+    return [
+      { id: 'cost-variance', cols: 6, rows: 6, x: 0, y: 0 },
+      { id: 'runtime-trend', cols: 6, rows: 6, x: 6, y: 0 },
+      { id: 'inventory-capacity', cols: 5, rows: 6, x: 0, y: 6 },
+      { id: 'operating-cost', cols: 12, rows: 6, x: 0, y: 12 }
+    ];
+  }
+
+  private saveLayoutToStorage(): void {
+    const layout = this.gridsterItems().map(item => ({
+      id: item['id'],
+      cols: item.cols,
+      rows: item.rows,
+      x: item.x,
+      y: item.y
+    }));
+    localStorage.setItem(this.gridsterStorageKey, JSON.stringify(layout));
+  }
+
+  private loadLayoutFromStorage(): GridsterItemConfig[] | null {
+    const raw = localStorage.getItem(this.gridsterStorageKey);
+    if (!raw) return null;
+    try {
+      const layout = JSON.parse(raw) as Array<{ id: string; cols: number; rows: number; x: number; y: number }>;
+      const defaults = this.getDefaultLayout();
+      return defaults.map(item => {
+        const saved = layout.find(l => l.id === item['id']);
+        return saved ? { ...item, ...saved } : item;
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private loadHiddenChartsFromStorage(): Set<string> {
+    const raw = localStorage.getItem(this.hiddenChartsStorageKey);
+    if (!raw) return new Set();
+    try {
+      const arr = JSON.parse(raw) as string[];
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
+  }
+
+  private saveHiddenChartsToStorage(): void {
+    const arr = Array.from(this.hiddenChartIds());
+    localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
+  }
+
+  toggleEditMode(): void {
+    const newMode = !this.isEditMode();
+    this.isEditMode.set(newMode);
+    const config = this.gridsterOptions();
+    config.draggable!.enabled = newMode;
+    config.resizable!.enabled = newMode;
+    this.gridsterOptions.set({ ...config });
+    if (!newMode) {
+      this.saveHiddenChartsToStorage();
+    }
+  }
+
+  resetLayout(): void {
+    localStorage.removeItem(this.gridsterStorageKey);
+    localStorage.removeItem(this.hiddenChartsStorageKey);
+    this.gridsterItems.set(this.getDefaultLayout());
+    this.hiddenChartIds.set(new Set());
+  }
+
+  getItem(id: string): GridsterItemConfig | undefined {
+    return this.gridsterItems().find(item => item['id'] === id);
+  }
+
+  isChartVisible(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
   applyFilters(): void {
     this.appliedFilters.set({
       facilityType: this.filterForm.get('facilityType')?.value ?? 'All',
@@ -330,9 +486,7 @@ export class FacilitiesComponent {
     alert('Chức năng xuất PDF cho dashboard Facilities & Maintenance đang được phát triển');
   }
 
-  customizeLayout(): void {
-    alert('Chức năng tùy chỉnh bố cục Facilities & Maintenance đang được phát triển');
-  }
+  customizeLayout(): void { this.toggleEditMode(); }
 
   saveFilter(): void {
     alert('Chức năng lưu bộ lọc Facilities & Maintenance đang được phát triển');

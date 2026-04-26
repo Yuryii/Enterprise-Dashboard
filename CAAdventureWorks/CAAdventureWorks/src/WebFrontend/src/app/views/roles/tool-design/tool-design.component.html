@@ -186,85 +186,176 @@
             }
         </c-row>
 
-        <c-row>
-            <c-col md="8">
-                <c-card class="mb-3 chart-card-tall">
-                    <c-card-header>
-                        <strong>Số sản phẩm theo mẫu thiết kế</strong>
-                        <small class="text-body-secondary ms-2">Quy mô mẫu thiết kế đang quản lý</small>
-                    </c-card-header>
-                    <c-card-body>
-                        <c-chart type="bar" [data]="modelsByProductChartData()" [options]="modelsByProductOptions"
-                            [height]="300"></c-chart>
-                    </c-card-body>
-                </c-card>
-            </c-col>
-            <c-col md="4">
-                <c-card class="mb-3 chart-card-tall">
-                    <c-card-header>
-                        <strong>Độ phủ hướng dẫn kỹ thuật</strong>
-                        <small class="text-body-secondary ms-2">Sẵn sàng tài liệu kỹ thuật</small>
-                    </c-card-header>
-                    <c-card-body>
-                        <c-chart type="doughnut" [data]="instructionCoverageChartData()"
-                            [options]="instructionCoverageOptions" [height]="300"></c-chart>
-                    </c-card-body>
-                </c-card>
-            </c-col>
-        </c-row>
+        <!-- Edit Mode Banner -->
+        @if (isEditMode()) {
+        <div class="gridster-edit-banner">
+            <span class="banner-text">
+                <svg cIcon name="cilOptions" class="banner-icon"></svg>
+                Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+            </span>
+            <div class="banner-actions">
+                <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+                    <span class="button-icon me-1">↻</span>
+                    Đặt lại
+                </button>
+                <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+                    <svg cIcon name="cilCheck" class="me-1"></svg>
+                    Lưu &amp; thoát
+                </button>
+                <div class="chart-picker-wrapper">
+                    <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+                        <svg cIcon name="cilChartBar" class="me-1"></svg>
+                        Chọn biểu đồ để hiển thị
+                    </button>
+                    @if (showChartPicker()) {
+                    <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+                        <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+                        @for (chart of availableCharts; track chart.id) {
+                        @if (isChartVisible(chart.id)) {
+                        <label class="picker-item">
+                            <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+                            <span class="picker-label">{{ chart.label }}</span>
+                        </label>
+                        }
+                        }
+                        @if (hiddenChartIds().size > 0) {
+                        <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+                        @for (chart of availableCharts; track chart.id) {
+                        @if (!isChartVisible(chart.id)) {
+                        <label class="picker-item hidden-chart-item">
+                            <span class="picker-label">{{ chart.label }}</span>
+                            <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                                (click)="addChartToGrid(chart.id)">
+                                <svg cIcon name="cilPlus"></svg>
+                                Thêm
+                            </button>
+                        </label>
+                        }
+                        }
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+        }
 
-        <c-row>
-            <c-col md="6">
-                <c-card class="mb-3">
-                    <c-card-header>
-                        <strong>Top mẫu thiết kế phức tạp cao</strong>
-                        <small class="text-body-secondary ms-2">Theo số ngày sản xuất</small>
+        <!-- Gridster Charts Grid -->
+        <gridster [options]="gridsterOptions()" class="tool-design-gridster">
+            <!-- Models by product -->
+            @if (isChartVisible('models-by-product')) {
+            <gridster-item [item]="getItem('models-by-product')!">
+                <c-card class="mb-0 h-100">
+                    <c-card-header class="chart-card-header">
+                        <div class="chart-header-content">
+                            <div>
+                                <strong>Số sản phẩm theo mẫu thiết kế</strong>
+                                <small class="text-body-secondary ms-2">Quy mô mẫu thiết kế đang quản lý</small>
+                            </div>
+                        </div>
                     </c-card-header>
                     <c-card-body>
-                        <c-chart type="bar" [data]="complexityChartData()" [options]="complexityOptions"
-                            [height]="320"></c-chart>
+                        <c-chart type="bar" [data]="modelsByProductChartData()" [options]="modelsByProductOptions"></c-chart>
                     </c-card-body>
                 </c-card>
-            </c-col>
-            <c-col md="6">
-                <c-card class="mb-3">
-                    <c-card-header>
-                        <strong>Top mẫu thiết kế chi phí cao</strong>
-                        <small class="text-body-secondary ms-2">Theo standard cost trung bình</small>
-                    </c-card-header>
-                    <c-card-body>
-                        <c-chart type="bar" [data]="costChartData()" [options]="costOptions" [height]="320"></c-chart>
-                    </c-card-body>
-                </c-card>
-            </c-col>
-        </c-row>
+            </gridster-item>
+            }
 
-        <c-row>
-            <c-col md="7">
-                <c-card class="mb-3">
-                    <c-card-header>
-                        <strong>Phân bổ routing theo trung tâm làm việc</strong>
-                        <small class="text-body-secondary ms-2">Điểm triển khai chính của thiết kế</small>
+            <!-- Instruction coverage -->
+            @if (isChartVisible('instruction-coverage')) {
+            <gridster-item [item]="getItem('instruction-coverage')!">
+                <c-card class="mb-0 h-100">
+                    <c-card-header class="chart-card-header">
+                        <div class="chart-header-content">
+                            <div>
+                                <strong>Độ phủ hướng dẫn kỹ thuật</strong>
+                                <small class="text-body-secondary ms-2">Sẵn sàng tài liệu kỹ thuật</small>
+                            </div>
+                        </div>
                     </c-card-header>
                     <c-card-body>
-                        <c-chart type="bar" [data]="locationLoadChartData()" [options]="locationLoadOptions"
-                            [height]="320"></c-chart>
+                        <c-chart type="doughnut" [data]="instructionCoverageChartData()" [options]="instructionCoverageOptions"></c-chart>
                     </c-card-body>
                 </c-card>
-            </c-col>
-            <c-col md="5">
-                <c-card class="mb-3">
-                    <c-card-header>
-                        <strong>Thời gian cung ứng nhà cung cấp</strong>
-                        <small class="text-body-secondary ms-2">Ảnh hưởng tới khả năng triển khai</small>
+            </gridster-item>
+            }
+
+            <!-- Complexity -->
+            @if (isChartVisible('complexity')) {
+            <gridster-item [item]="getItem('complexity')!">
+                <c-card class="mb-0 h-100">
+                    <c-card-header class="chart-card-header">
+                        <div class="chart-header-content">
+                            <div>
+                                <strong>Top mẫu thiết kế phức tạp cao</strong>
+                                <small class="text-body-secondary ms-2">Theo số ngày sản xuất</small>
+                            </div>
+                        </div>
                     </c-card-header>
                     <c-card-body>
-                        <c-chart type="bar" [data]="vendorLeadTimeChartData()" [options]="vendorLeadTimeOptions"
-                            [height]="320"></c-chart>
+                        <c-chart type="bar" [data]="complexityChartData()" [options]="complexityOptions"></c-chart>
                     </c-card-body>
                 </c-card>
-            </c-col>
-        </c-row>
+            </gridster-item>
+            }
+
+            <!-- Cost -->
+            @if (isChartVisible('cost')) {
+            <gridster-item [item]="getItem('cost')!">
+                <c-card class="mb-0 h-100">
+                    <c-card-header class="chart-card-header">
+                        <div class="chart-header-content">
+                            <div>
+                                <strong>Top mẫu thiết kế chi phí cao</strong>
+                                <small class="text-body-secondary ms-2">Theo standard cost trung bình</small>
+                            </div>
+                        </div>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="costChartData()" [options]="costOptions"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </gridster-item>
+            }
+
+            <!-- Location load -->
+            @if (isChartVisible('location-load')) {
+            <gridster-item [item]="getItem('location-load')!">
+                <c-card class="mb-0 h-100">
+                    <c-card-header class="chart-card-header">
+                        <div class="chart-header-content">
+                            <div>
+                                <strong>Phân bổ routing theo trung tâm làm việc</strong>
+                                <small class="text-body-secondary ms-2">Điểm triển khai chính của thiết kế</small>
+                            </div>
+                        </div>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="locationLoadChartData()" [options]="locationLoadOptions"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </gridster-item>
+            }
+
+            <!-- Vendor lead time -->
+            @if (isChartVisible('vendor-lead-time')) {
+            <gridster-item [item]="getItem('vendor-lead-time')!">
+                <c-card class="mb-0 h-100">
+                    <c-card-header class="chart-card-header">
+                        <div class="chart-header-content">
+                            <div>
+                                <strong>Thời gian cung ứng nhà cung cấp</strong>
+                                <small class="text-body-secondary ms-2">Ảnh hưởng tới khả năng triển khai</small>
+                            </div>
+                        </div>
+                    </c-card-header>
+                    <c-card-body>
+                        <c-chart type="bar" [data]="vendorLeadTimeChartData()" [options]="vendorLeadTimeOptions"></c-chart>
+                    </c-card-body>
+                </c-card>
+            </gridster-item>
+            }
+        </gridster>
 
         <c-row>
             <c-col xs="12">

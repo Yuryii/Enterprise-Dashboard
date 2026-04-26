@@ -1,8 +1,10 @@
 import { CommonModule, CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
+import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
+import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
 import {
     ButtonDirective,
     CardBodyComponent,
@@ -29,6 +31,11 @@ import {
     ToolDesignLocationLoadItemDto
 } from './tool-design-dashboard.service';
 
+export interface ChartDef {
+    id: string;
+    label: string;
+}
+
 @Component({
     selector: 'app-tool-design',
     standalone: true,
@@ -37,6 +44,8 @@ import {
     imports: [
         CommonModule,
         ReactiveFormsModule,
+        GridsterComponent,
+        GridsterItemComponent,
         RowComponent,
         ColComponent,
         CardComponent,
@@ -93,6 +102,42 @@ export class ToolDesignComponent implements OnInit {
     readonly dashboard = signal<ToolDesignDashboardResponseDto | null>(
         this.toolDesignDashboardService.getCachedDashboard(this.defaultFilter)
     );
+
+    private readonly gridsterStorageKey = 'tool_design_grid_layout';
+    private readonly hiddenChartsStorageKey = 'tool_design_hidden_charts';
+
+    readonly isEditMode = signal(false);
+
+    readonly gridsterOptions = signal<GridsterConfig>({
+        draggable: { enabled: false },
+        resizable: { enabled: false },
+        pushItems: true,
+        minCols: 12,
+        maxCols: 12,
+        minRows: 20,
+        fixedRowHeight: 80,
+        keepFixedHeightInMobile: false,
+        keepFixedWidthInMobile: false,
+        mobileBreakpoint: 640,
+        itemChangeCallback: (_item, _itemComponent) => this.saveLayoutToStorage()
+    });
+
+    readonly gridsterItems = signal<GridsterItemConfig[]>(
+        this.loadLayoutFromStorage() ?? this.getDefaultLayout()
+    );
+
+    readonly showChartPicker = signal(false);
+
+    readonly availableCharts: ChartDef[] = [
+        { id: 'models-by-product', label: 'Models by product' },
+        { id: 'instruction-coverage', label: 'Instruction coverage' },
+        { id: 'complexity', label: 'Complexity' },
+        { id: 'cost', label: 'Cost' },
+        { id: 'location-load', label: 'Location load' },
+        { id: 'vendor-lead-time', label: 'Vendor lead time' }
+    ];
+
+    readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
 
     readonly kpiCards = computed(() => {
         const overview = this.dashboard()?.overview;
@@ -283,8 +328,124 @@ export class ToolDesignComponent implements OnInit {
         alert('Chức năng xuất PDF đang được phát triển');
     }
 
+    isChartChecked(chartId: string): boolean {
+        return !this.hiddenChartIds().has(chartId);
+    }
+
+    toggleChartVisibility(chartId: string): void {
+        const hidden = new Set(this.hiddenChartIds());
+        if (hidden.has(chartId)) {
+            hidden.delete(chartId);
+        } else {
+            hidden.add(chartId);
+        }
+        this.hiddenChartIds.set(hidden);
+    }
+
+    removeChartFromGrid(chartId: string): void {
+        this.toggleChartVisibility(chartId);
+    }
+
+    addChartToGrid(chartId: string): void {
+        this.toggleChartVisibility(chartId);
+    }
+
+    toggleChartPicker(event?: Event): void {
+        event?.stopPropagation();
+        this.showChartPicker.update(v => !v);
+    }
+
+    @HostListener('document:click')
+    onDocumentClick(): void {
+        this.showChartPicker.set(false);
+    }
+
+    onPickerClick(event: Event): void {
+        event.stopPropagation();
+    }
+
+    private getDefaultLayout(): GridsterItemConfig[] {
+        return [
+            { id: 'models-by-product', cols: 8, rows: 6, x: 0, y: 0 },
+            { id: 'instruction-coverage', cols: 4, rows: 6, x: 8, y: 0 },
+            { id: 'complexity', cols: 6, rows: 5, x: 0, y: 6 },
+            { id: 'cost', cols: 6, rows: 5, x: 6, y: 6 },
+            { id: 'location-load', cols: 7, rows: 5, x: 0, y: 11 },
+            { id: 'vendor-lead-time', cols: 5, rows: 5, x: 7, y: 11 }
+        ];
+    }
+
     customizeLayout(): void {
-        alert('Chức năng tùy chỉnh layout đang được phát triển');
+        this.toggleEditMode();
+    }
+
+    toggleEditMode(): void {
+        const newMode = !this.isEditMode();
+        this.isEditMode.set(newMode);
+        const config = this.gridsterOptions();
+        config.draggable!.enabled = newMode;
+        config.resizable!.enabled = newMode;
+        this.gridsterOptions.set({ ...config });
+        if (!newMode) {
+            this.saveHiddenChartsToStorage();
+        }
+    }
+
+    resetLayout(): void {
+        localStorage.removeItem(this.gridsterStorageKey);
+        localStorage.removeItem(this.hiddenChartsStorageKey);
+        this.gridsterItems.set(this.getDefaultLayout());
+        this.hiddenChartIds.set(new Set());
+    }
+
+    getItem(id: string): GridsterItemConfig | undefined {
+        return this.gridsterItems().find(item => item['id'] === id);
+    }
+
+    isChartVisible(chartId: string): boolean {
+        return !this.hiddenChartIds().has(chartId);
+    }
+
+    private saveLayoutToStorage(): void {
+        const layout = this.gridsterItems().map(item => ({
+            id: item['id'],
+            cols: item.cols,
+            rows: item.rows,
+            x: item.x,
+            y: item.y
+        }));
+        localStorage.setItem(this.gridsterStorageKey, JSON.stringify(layout));
+    }
+
+    private loadLayoutFromStorage(): GridsterItemConfig[] | null {
+        const raw = localStorage.getItem(this.gridsterStorageKey);
+        if (!raw) return null;
+        try {
+            const layout = JSON.parse(raw) as Array<{ id: string; cols: number; rows: number; x: number; y: number }>;
+            const defaults = this.getDefaultLayout();
+            return defaults.map(item => {
+                const saved = layout.find(l => l.id === item['id']);
+                return saved ? { ...item, ...saved } : item;
+            });
+        } catch {
+            return null;
+        }
+    }
+
+    private loadHiddenChartsFromStorage(): Set<string> {
+        const raw = localStorage.getItem(this.hiddenChartsStorageKey);
+        if (!raw) return new Set();
+        try {
+            const arr = JSON.parse(raw) as string[];
+            return new Set(arr);
+        } catch {
+            return new Set();
+        }
+    }
+
+    private saveHiddenChartsToStorage(): void {
+        const arr = Array.from(this.hiddenChartIds());
+        localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
     }
 
     saveFilter(): void {

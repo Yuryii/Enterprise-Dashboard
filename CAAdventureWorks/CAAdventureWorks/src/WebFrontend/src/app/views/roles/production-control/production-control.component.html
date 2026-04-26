@@ -162,75 +162,152 @@
         }
       </c-row>
 
-      <c-row class="g-4 mb-4">
-        <c-col lg="8">
-          <c-card class="mb-0 chart-card-tall">
-            <c-card-header>
-              <strong>Xu hướng lệnh trễ hạn</strong>
-              <small class="text-body-secondary ms-2">Theo tháng trong phạm vi lọc hiện tại</small>
-            </c-card-header>
-            <c-card-body>
-              <c-chart type="bar" [data]="delayedTrendChartData()" [options]="delayedTrendOptions"
-                [height]="320"></c-chart>
-            </c-card-body>
-          </c-card>
-        </c-col>
+      <div class="production-control-shell-grid">
+        @if (isEditMode()) {
+        <div class="gridster-edit-banner">
+          <span class="banner-text">
+            <svg cIcon name="cilOptions" class="banner-icon"></svg>
+            Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+          </span>
+          <div class="banner-actions">
+            <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+              <span class="button-icon me-1">↻</span>
+              Đặt lại
+            </button>
+            <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+              <svg cIcon name="cilCheck" class="me-1"></svg>
+              Lưu &amp; thoát
+            </button>
+            <div class="chart-picker-wrapper">
+              <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+                <svg cIcon name="cilChartBar" class="me-1"></svg>
+                Chọn biểu đồ để hiển thị
+              </button>
+              @if (showChartPicker()) {
+              <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+                <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+                @for (chart of availableCharts; track chart.id) {
+                @if (isChartVisible(chart.id)) {
+                <label class="picker-item">
+                  <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+                  <span class="picker-label">{{ chart.label }}</span>
+                </label>
+                }
+                }
+                @if (hiddenChartIds().size > 0) {
+                <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+                @for (chart of availableCharts; track chart.id) {
+                @if (!isChartVisible(chart.id)) {
+                <label class="picker-item hidden-chart-item">
+                  <span class="picker-label">{{ chart.label }}</span>
+                  <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                    (click)="addChartToGrid(chart.id)">
+                    <svg cIcon name="cilPlus"></svg>
+                    Thêm
+                  </button>
+                </label>
+                }
+                }
+                }
+              </div>
+              }
+            </div>
+          </div>
+        </div>
+        }
 
-        <c-col lg="4">
-          <c-card class="mb-0 chart-card-tall">
-            <c-card-header>
-              <strong>Cơ cấu ngoại lệ</strong>
-              <small class="text-body-secondary ms-2">Tỷ trọng các nhóm cảnh báo chính</small>
-            </c-card-header>
-            <c-card-body>
-              <c-chart type="doughnut" [data]="exceptionMixChartData()" [options]="exceptionMixOptions"
-                [height]="320"></c-chart>
-            </c-card-body>
-          </c-card>
-        </c-col>
-      </c-row>
+        <gridster [options]="gridsterOptions()" class="prod-control-gridster">
+          @if (isChartVisible('exception-summary')) {
+          <gridster-item [item]="getItem('exception-summary')!">
+            <c-card class="mb-0 h-100">
+              <c-card-header class="chart-card-header">
+                <div class="chart-header-content">
+                  <div>
+                    <strong>Xu hướng lệnh trễ hạn</strong>
+                    <small class="text-body-secondary ms-2">Theo tháng trong phạm vi lọc hiện tại</small>
+                  </div>
+                </div>
+              </c-card-header>
+              <c-card-body>
+                <c-chart type="bar" [data]="delayedTrendChartData()" [options]="delayedTrendOptions"></c-chart>
+              </c-card-body>
+            </c-card>
+          </gridster-item>
+          }
 
-      <c-row class="g-4 mb-4">
-        <c-col md="6">
-          <c-card class="mb-0 chart-card-tall">
-            <c-card-header>
-              <strong>Top sản phẩm scrap cao</strong>
-              <small class="text-body-secondary ms-2">Ưu tiên xử lý lỗi nổi bật</small>
-            </c-card-header>
-            <c-card-body>
-              <c-chart type="bar" [data]="topScrapChartData()" [options]="topScrapOptions" [height]="300"></c-chart>
-            </c-card-body>
-          </c-card>
-        </c-col>
+          @if (isChartVisible('exception-mix')) {
+          <gridster-item [item]="getItem('exception-mix')!">
+            <c-card class="mb-0 h-100">
+              <c-card-header class="chart-card-header">
+                <div class="chart-header-content">
+                  <div>
+                    <strong>Cơ cấu ngoại lệ</strong>
+                    <small class="text-body-secondary ms-2">Tỷ trọng các nhóm cảnh báo chính</small>
+                  </div>
+                </div>
+              </c-card-header>
+              <c-card-body>
+                <c-chart type="doughnut" [data]="exceptionMixChartData()" [options]="exceptionMixOptions"></c-chart>
+              </c-card-body>
+            </c-card>
+          </gridster-item>
+          }
 
-        <c-col md="6">
-          <c-card class="mb-0 chart-card-tall">
-            <c-card-header>
-              <strong>Phân bổ lệnh mở theo khu vực</strong>
-              <small class="text-body-secondary ms-2">Điểm nóng vận hành cần theo dõi</small>
-            </c-card-header>
-            <c-card-body>
-              <c-chart type="bar" [data]="locationLoadChartData()" [options]="locationLoadOptions"
-                [height]="300"></c-chart>
-            </c-card-body>
-          </c-card>
-        </c-col>
-      </c-row>
+          @if (isChartVisible('top-scrap')) {
+          <gridster-item [item]="getItem('top-scrap')!">
+            <c-card class="mb-0 h-100">
+              <c-card-header class="chart-card-header">
+                <div class="chart-header-content">
+                  <div>
+                    <strong>Top sản phẩm scrap cao</strong>
+                    <small class="text-body-secondary ms-2">Ưu tiên xử lý lỗi nổi bật</small>
+                  </div>
+                </div>
+              </c-card-header>
+              <c-card-body>
+                <c-chart type="bar" [data]="topScrapChartData()" [options]="topScrapOptions"></c-chart>
+              </c-card-body>
+            </c-card>
+          </gridster-item>
+          }
 
-      <c-row class="g-4">
-        <c-col xs="12">
-          <c-card class="mb-0 chart-card-tall">
-            <c-card-header>
-              <strong>Thiếu hụt safety stock theo ngành hàng</strong>
-              <small class="text-body-secondary ms-2">Tập trung nhóm sản phẩm cần bổ sung nhanh</small>
-            </c-card-header>
-            <c-card-body>
-              <c-chart type="bar" [data]="shortageByCategoryChartData()" [options]="shortageByCategoryOptions"
-                [height]="300"></c-chart>
-            </c-card-body>
-          </c-card>
-        </c-col>
-      </c-row>
+          @if (isChartVisible('location-load')) {
+          <gridster-item [item]="getItem('location-load')!">
+            <c-card class="mb-0 h-100">
+              <c-card-header class="chart-card-header">
+                <div class="chart-header-content">
+                  <div>
+                    <strong>Phân bổ lệnh mở theo khu vực</strong>
+                    <small class="text-body-secondary ms-2">Điểm nóng vận hành cần theo dõi</small>
+                  </div>
+                </div>
+              </c-card-header>
+              <c-card-body>
+                <c-chart type="bar" [data]="locationLoadChartData()" [options]="locationLoadOptions"></c-chart>
+              </c-card-body>
+            </c-card>
+          </gridster-item>
+          }
+
+          @if (isChartVisible('shortage-by-category')) {
+          <gridster-item [item]="getItem('shortage-by-category')!">
+            <c-card class="mb-0 h-100">
+              <c-card-header class="chart-card-header">
+                <div class="chart-header-content">
+                  <div>
+                    <strong>Thiếu hụt safety stock theo ngành hàng</strong>
+                    <small class="text-body-secondary ms-2">Tập trung nhóm sản phẩm cần bổ sung nhanh</small>
+                  </div>
+                </div>
+              </c-card-header>
+              <c-card-body>
+                <c-chart type="bar" [data]="shortageByCategoryChartData()" [options]="shortageByCategoryOptions"></c-chart>
+              </c-card-body>
+            </c-card>
+          </gridster-item>
+          }
+        </gridster>
+      </div>
     </div>
     }
   </div>

@@ -127,69 +127,157 @@
       }
     </c-row>
 
-    <c-row>
-      <c-col md="6" xl="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Make vs Buy</strong>
-            <small class="text-body-secondary ms-2">Tỷ trọng sản xuất</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="doughnut" [data]="makeVsBuyChartData()" [options]="makeVsBuyOptions"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
 
-      <c-col md="6" xl="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>SKU theo Product Model</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="skuPerModelChartData()" [options]="skuPerModelOptions"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-
-      <c-col md="12" xl="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Common Components</strong>
-            <small class="text-body-secondary ms-2">Top linh kiện dùng chung</small>
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="engineering-gridster">
+      <!-- Common Components -->
+      @if (isChartVisible('common-components')) {
+      <gridster-item [item]="getItem('common-components')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Common Components</strong>
+                <small class="text-body-secondary ms-2">Top linh kiện dùng chung</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="commonComponentsChartData()" [options]="commonComponentsOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Design Feedback từ Scrap</strong>
-            <small class="text-body-secondary ms-2">Top sản phẩm cần xem xét BOM</small>
+      <!-- Make vs Buy -->
+      @if (isChartVisible('make-vs-buy')) {
+      <gridster-item [item]="getItem('make-vs-buy')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Make vs Buy</strong>
+                <small class="text-body-secondary ms-2">Tỷ trọng sản xuất</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="scrapRateChartData()" [options]="scrapRateOptions" [height]="320"></c-chart>
+            <c-chart type="doughnut" [data]="makeVsBuyChartData()" [options]="makeVsBuyOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="5">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Phân bổ lý do scrap</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+      <!-- SKU per Model -->
+      @if (isChartVisible('sku-per-model')) {
+      <gridster-item [item]="getItem('sku-per-model')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>SKU theo Product Model</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="pie" [data]="scrapReasonChartData()" [options]="scrapReasonOptions" [height]="320"></c-chart>
+            <c-chart type="bar" [data]="skuPerModelChartData()" [options]="skuPerModelOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+      <!-- Scrap Rate -->
+      @if (isChartVisible('scrap-rate')) {
+      <gridster-item [item]="getItem('scrap-rate')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Design Feedback từ Scrap</strong>
+                <small class="text-body-secondary ms-2">Top sản phẩm cần xem xét BOM</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="scrapRateChartData()" [options]="scrapRateOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Scrap Reason Distribution -->
+      @if (isChartVisible('scrap-reason-distribution')) {
+      <gridster-item [item]="getItem('scrap-reason-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân bổ lý do scrap</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="pie" [data]="scrapReasonChartData()" [options]="scrapReasonOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+    </gridster>
 
     <c-row>
       <c-col md="7">

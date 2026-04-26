@@ -205,94 +205,195 @@
       }
     </c-row>
 
-    <c-row>
-      <c-col md="8">
-        <c-card class="mb-3 chart-card-tall">
-          <c-card-header>
-            <strong>Xu hướng chi mua theo tháng</strong>
-            <small class="text-body-secondary ms-2">Tổng quan điều hành</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="line" [data]="spendTrendChartData()" [options]="spendTrendOptions" [height]="300"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="4">
-        <c-card class="mb-3 chart-card-tall">
-          <c-card-header>
-            <strong>Trạng thái đơn mua</strong>
-            <small class="text-body-secondary ms-2">Cơ cấu vận hành</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="pie" [data]="statusChartData()" [options]="statusChartOptions" [height]="300"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
 
-    <c-row>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top nhà cung cấp theo giá trị mua</strong>
-            <small class="text-body-secondary ms-2">Xếp hạng nhà cung cấp</small>
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="purchasing-gridster">
+      <!-- Xu hướng chi mua -->
+      @if (isChartVisible('spend-trend')) {
+      <gridster-item [item]="getItem('spend-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng chi mua theo tháng</strong>
+                <small class="text-body-secondary ms-2">Tổng quan điều hành</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="topVendorChartData()" [options]="topVendorOptions" [height]="320"></c-chart>
+            <c-chart type="line" [data]="spendTrendChartData()" [options]="spendTrendOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top sản phẩm mua vào</strong>
-            <small class="text-body-secondary ms-2">Chi tiêu theo sản phẩm</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="topProductChartData()" [options]="topProductOptions" [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Tỷ lệ nhận hàng và từ chối theo nhà cung cấp</strong>
-            <small class="text-body-secondary ms-2">Chất lượng nhà cung cấp</small>
+      <!-- Trạng thái đơn mua -->
+      @if (isChartVisible('order-status')) {
+      <gridster-item [item]="getItem('order-status')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Trạng thái đơn mua</strong>
+                <small class="text-body-secondary ms-2">Cơ cấu vận hành</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="vendorRateChartData()" [options]="vendorRateOptions" [height]="320"></c-chart>
+            <c-chart type="pie" [data]="statusChartData()" [options]="statusChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-      <c-col md="5">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Thời gian chờ theo nhà cung cấp</strong>
-            <small class="text-body-secondary ms-2">Mức độ đáp ứng mua hàng</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="bar" [data]="leadTimeChartData()" [options]="leadTimeOptions" [height]="320"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col xs="12">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Nhà cung cấp theo khu vực</strong>
-            <small class="text-body-secondary ms-2">Phân bố nguồn cung</small>
+      <!-- Top nhà cung cấp -->
+      @if (isChartVisible('top-vendors')) {
+      <gridster-item [item]="getItem('top-vendors')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top nhà cung cấp theo giá trị mua</strong>
+                <small class="text-body-secondary ms-2">Xếp hạng nhà cung cấp</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="regionChartData()" [options]="regionOptions" [height]="340"></c-chart>
+            <c-chart type="bar" [data]="topVendorChartData()" [options]="topVendorOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+      <!-- Top sản phẩm -->
+      @if (isChartVisible('top-products')) {
+      <gridster-item [item]="getItem('top-products')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top sản phẩm mua vào</strong>
+                <small class="text-body-secondary ms-2">Chi tiêu theo sản phẩm</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="topProductChartData()" [options]="topProductOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Tỷ lệ giao hàng -->
+      @if (isChartVisible('vendor-delivery-rate')) {
+      <gridster-item [item]="getItem('vendor-delivery-rate')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Tỷ lệ nhận hàng và từ chối theo nhà cung cấp</strong>
+                <small class="text-body-secondary ms-2">Chất lượng nhà cung cấp</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="vendorRateChartData()" [options]="vendorRateOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Lead time -->
+      @if (isChartVisible('lead-time')) {
+      <gridster-item [item]="getItem('lead-time')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Thời gian chờ theo nhà cung cấp</strong>
+                <small class="text-body-secondary ms-2">Mức độ đáp ứng mua hàng</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="leadTimeChartData()" [options]="leadTimeOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Nhà cung cấp theo vùng -->
+      @if (isChartVisible('vendors-by-region')) {
+      <gridster-item [item]="getItem('vendors-by-region')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Nhà cung cấp theo khu vực</strong>
+                <small class="text-body-secondary ms-2">Phân bố nguồn cung</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="bar" [data]="regionChartData()" [options]="regionOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+    </gridster>
     }
   </div>
 </div>

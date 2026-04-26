@@ -1,5 +1,5 @@
 import { CommonModule, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
@@ -15,6 +15,13 @@ import {
   QualityScrapReasonItemDto,
   QualityVendorItemDto
 } from './quality-assurance-dashboard.service';
+import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
+import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+
+export interface ChartDef {
+  id: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-quality-assurance',
@@ -24,6 +31,8 @@ import {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    GridsterComponent,
+    GridsterItemComponent,
     RowComponent,
     ColComponent,
     CardComponent,
@@ -76,6 +85,159 @@ export class QualityAssuranceComponent implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
+
+  readonly gridsterStorageKey = 'qa_grid_layout';
+  readonly hiddenChartsStorageKey = 'qa_hidden_charts';
+
+  readonly isEditMode = signal(false);
+  readonly showChartPicker = signal(false);
+
+  readonly gridsterOptions = signal<GridsterConfig>({
+    draggable: { enabled: false },
+    resizable: { enabled: false },
+    pushItems: true,
+    minCols: 12,
+    maxCols: 12,
+    minRows: 20,
+    fixedRowHeight: 80,
+    keepFixedHeightInMobile: false,
+    keepFixedWidthInMobile: false,
+    mobileBreakpoint: 640,
+    itemChangeCallback: (_item, _itemComponent) => this.saveLayoutToStorage()
+  });
+
+  readonly gridsterItems = signal<GridsterItemConfig[]>(
+    this.loadLayoutFromStorage() ?? this.getDefaultLayout()
+  );
+
+  readonly availableCharts: ChartDef[] = [
+    { id: 'defect-trend', label: 'Xu hướng defect' },
+    { id: 'scrap-reasons', label: 'Lý do scrap' },
+    { id: 'top-defect-products', label: 'Top sản phẩm lỗi' },
+    { id: 'category-analysis', label: 'Phân tích theo ngành hàng' },
+    { id: 'location-cost', label: 'Chi phí theo khu vực' },
+    { id: 'vendor-reject', label: 'Tỷ lệ reject NCC' },
+    { id: 'inspector-headcount', label: 'Nhân sự QC' }
+  ];
+
+  readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
+
+  isChartChecked(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  toggleChartVisibility(chartId: string): void {
+    const hidden = new Set(this.hiddenChartIds());
+    if (hidden.has(chartId)) {
+      hidden.delete(chartId);
+    } else {
+      hidden.add(chartId);
+    }
+    this.hiddenChartIds.set(hidden);
+  }
+
+  removeChartFromGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  addChartToGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  toggleChartPicker(event?: Event): void {
+    event?.stopPropagation();
+    this.showChartPicker.update(v => !v);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showChartPicker.set(false);
+  }
+
+  onPickerClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private getDefaultLayout(): GridsterItemConfig[] {
+    return [
+      { id: 'defect-trend', cols: 8, rows: 6, x: 0, y: 0 },
+      { id: 'inspector-headcount', cols: 4, rows: 6, x: 8, y: 0 },
+      { id: 'scrap-reasons', cols: 6, rows: 5, x: 0, y: 6 },
+      { id: 'top-defect-products', cols: 6, rows: 5, x: 6, y: 6 },
+      { id: 'category-analysis', cols: 7, rows: 5, x: 0, y: 11 },
+      { id: 'vendor-reject', cols: 5, rows: 5, x: 7, y: 11 },
+      { id: 'location-cost', cols: 12, rows: 4, x: 0, y: 16 }
+    ];
+  }
+
+  getItem(id: string): GridsterItemConfig | undefined {
+    return this.gridsterItems().find(item => item['id'] === id);
+  }
+
+  isChartVisible(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  private saveLayoutToStorage(): void {
+    const layout = this.gridsterItems().map(item => ({
+      id: item['id'],
+      cols: item.cols,
+      rows: item.rows,
+      x: item.x,
+      y: item.y
+    }));
+    localStorage.setItem(this.gridsterStorageKey, JSON.stringify(layout));
+  }
+
+  private loadLayoutFromStorage(): GridsterItemConfig[] | null {
+    const raw = localStorage.getItem(this.gridsterStorageKey);
+    if (!raw) return null;
+    try {
+      const layout = JSON.parse(raw) as Array<{ id: string; cols: number; rows: number; x: number; y: number }>;
+      const defaults = this.getDefaultLayout();
+      return defaults.map(item => {
+        const saved = layout.find(l => l.id === item['id']);
+        return saved ? { ...item, ...saved } : item;
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private loadHiddenChartsFromStorage(): Set<string> {
+    const raw = localStorage.getItem(this.hiddenChartsStorageKey);
+    if (!raw) return new Set();
+    try {
+      const arr = JSON.parse(raw) as string[];
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
+  }
+
+  private saveHiddenChartsToStorage(): void {
+    const arr = Array.from(this.hiddenChartIds());
+    localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
+  }
+
+  toggleEditMode(): void {
+    const newMode = !this.isEditMode();
+    this.isEditMode.set(newMode);
+    const config = this.gridsterOptions();
+    config.draggable!.enabled = newMode;
+    config.resizable!.enabled = newMode;
+    this.gridsterOptions.set({ ...config });
+    if (!newMode) {
+      this.saveHiddenChartsToStorage();
+    }
+  }
+
+  resetLayout(): void {
+    localStorage.removeItem(this.gridsterStorageKey);
+    localStorage.removeItem(this.hiddenChartsStorageKey);
+    this.gridsterItems.set(this.getDefaultLayout());
+    this.hiddenChartIds.set(new Set());
+  }
 
   readonly filterForm = this.fb.group({
     startDate: ['2013-01-01'],
@@ -380,7 +542,7 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   customizeLayout(): void {
-    console.log('Customize quality assurance layout');
+    this.toggleEditMode();
   }
 
   saveFilter(): void {

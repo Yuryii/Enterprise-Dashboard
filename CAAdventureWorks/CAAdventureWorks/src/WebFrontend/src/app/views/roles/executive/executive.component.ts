@@ -1,5 +1,5 @@
 import { CommonModule, CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
@@ -26,6 +26,13 @@ import {
   ExecutiveDashboardService,
   ExecutiveOrderStatusItemDto
 } from './executive-dashboard.service';
+import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
+import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+
+export interface ChartDef {
+  id: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-executive',
@@ -35,6 +42,8 @@ import {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    GridsterComponent,
+    GridsterItemComponent,
     RowComponent,
     ColComponent,
     CardComponent,
@@ -83,6 +92,157 @@ export class ExecutiveComponent implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<ExecutiveDashboardResponseDto | null>(null);
+
+  readonly gridsterStorageKey = 'executive_grid_layout';
+  readonly hiddenChartsStorageKey = 'executive_hidden_charts';
+
+  readonly isEditMode = signal(false);
+  readonly showChartPicker = signal(false);
+
+  readonly gridsterOptions = signal<GridsterConfig>({
+    draggable: { enabled: false },
+    resizable: { enabled: false },
+    pushItems: true,
+    minCols: 12,
+    maxCols: 12,
+    minRows: 20,
+    fixedRowHeight: 80,
+    keepFixedHeightInMobile: false,
+    keepFixedWidthInMobile: false,
+    mobileBreakpoint: 640,
+    itemChangeCallback: () => this.saveLayoutToStorage()
+  });
+
+  readonly gridsterItems = signal<GridsterItemConfig[]>(
+    this.loadLayoutFromStorage() ?? this.getDefaultLayout()
+  );
+
+  readonly availableCharts: ChartDef[] = [
+    { id: 'revenue-vs-spend', label: 'Doanh thu vs Chi mua' },
+    { id: 'territory-sales', label: 'Doanh số theo vùng' },
+    { id: 'sales-people', label: 'Top nhân viên kinh doanh' },
+    { id: 'department-headcount', label: 'Nhân sự theo phòng ban' },
+    { id: 'group-distribution', label: 'Cơ cấu nhân sự theo nhóm' },
+    { id: 'vendor-spend', label: 'Top nhà cung cấp' },
+    { id: 'vendor-receiving-rate', label: 'Tỷ lệ nhận hàng NCC' },
+    { id: 'production-completion', label: 'Hiệu suất sản xuất' },
+    { id: 'sales-status', label: 'Trạng thái đơn bán' },
+    { id: 'purchase-status', label: 'Trạng thái đơn mua' }
+  ];
+
+  readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
+
+  isChartChecked(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
+
+  toggleChartVisibility(chartId: string): void {
+    const hidden = new Set(this.hiddenChartIds());
+    if (hidden.has(chartId)) {
+      hidden.delete(chartId);
+    } else {
+      hidden.add(chartId);
+    }
+    this.hiddenChartIds.set(hidden);
+  }
+
+  removeChartFromGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  addChartToGrid(chartId: string): void {
+    this.toggleChartVisibility(chartId);
+  }
+
+  toggleChartPicker(event?: Event): void {
+    event?.stopPropagation();
+    this.showChartPicker.update(v => !v);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showChartPicker.set(false);
+  }
+
+  onPickerClick(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private getDefaultLayout(): GridsterItemConfig[] {
+    return [
+      { id: 'revenue-vs-spend', cols: 8, rows: 6, x: 0, y: 0 },
+      { id: 'department-headcount', cols: 4, rows: 6, x: 8, y: 0 },
+      { id: 'territory-sales', cols: 6, rows: 5, x: 0, y: 6 },
+      { id: 'sales-people', cols: 6, rows: 5, x: 6, y: 6 },
+      { id: 'group-distribution', cols: 6, rows: 5, x: 0, y: 11 },
+      { id: 'vendor-spend', cols: 6, rows: 5, x: 6, y: 11 },
+      { id: 'vendor-receiving-rate', cols: 6, rows: 5, x: 0, y: 16 },
+      { id: 'production-completion', cols: 6, rows: 5, x: 6, y: 16 },
+      { id: 'sales-status', cols: 6, rows: 5, x: 0, y: 21 },
+      { id: 'purchase-status', cols: 6, rows: 5, x: 6, y: 21 }
+    ];
+  }
+
+  private saveLayoutToStorage(): void {
+    const layout = this.gridsterItems().map(item => ({
+      id: item['id'],
+      cols: item.cols,
+      rows: item.rows,
+      x: item.x,
+      y: item.y
+    }));
+    localStorage.setItem(this.gridsterStorageKey, JSON.stringify(layout));
+  }
+
+  private loadLayoutFromStorage(): GridsterItemConfig[] | null {
+    const raw = localStorage.getItem(this.gridsterStorageKey);
+    if (!raw) return null;
+    try {
+      const layout = JSON.parse(raw) as Array<{ id: string; cols: number; rows: number; x: number; y: number }>;
+      const defaults = this.getDefaultLayout();
+      return defaults.map(item => {
+        const saved = layout.find(l => l.id === item['id']);
+        return saved ? { ...item, ...saved } : item;
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private loadHiddenChartsFromStorage(): Set<string> {
+    const raw = localStorage.getItem(this.hiddenChartsStorageKey);
+    if (!raw) return new Set();
+    try {
+      const arr = JSON.parse(raw) as string[];
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
+  }
+
+  private saveHiddenChartsToStorage(): void {
+    const arr = Array.from(this.hiddenChartIds());
+    localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
+  }
+
+  toggleEditMode(): void {
+    const newMode = !this.isEditMode();
+    this.isEditMode.set(newMode);
+    const config = this.gridsterOptions();
+    config.draggable!.enabled = newMode;
+    config.resizable!.enabled = newMode;
+    this.gridsterOptions.set({ ...config });
+    if (!newMode) {
+      this.saveHiddenChartsToStorage();
+    }
+  }
+
+  resetLayout(): void {
+    localStorage.removeItem(this.gridsterStorageKey);
+    localStorage.removeItem(this.hiddenChartsStorageKey);
+    this.gridsterItems.set(this.getDefaultLayout());
+    this.hiddenChartIds.set(new Set());
+  }
 
   readonly filterForm = this.fb.group({
     startDate: ['2013-01-01'],
@@ -480,6 +640,14 @@ export class ExecutiveComponent implements OnInit {
   }
 
   exportPDF(): void { alert('Chức năng xuất PDF đang được phát triển'); }
-  customizeLayout(): void { alert('Chức năng tùy chỉnh layout đang được phát triển'); }
+  customizeLayout(): void { this.toggleEditMode(); }
   saveFilter(): void { alert('Chức năng lưu bộ lọc đang được phát triển'); }
+
+  getItem(id: string): GridsterItemConfig | undefined {
+    return this.gridsterItems().find(item => item['id'] === id);
+  }
+
+  isChartVisible(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
+  }
 }

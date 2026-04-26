@@ -165,6 +165,7 @@
       }
     </c-row>
 
+    <!-- Health Metric Cards -->
     <c-row class="mb-3">
       @for (item of healthCards(); track item.label) {
       <c-col md="3">
@@ -180,97 +181,197 @@
       }
     </c-row>
 
-    <c-row>
-      <c-col md="6" xl="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Phân bố giới tính</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+    <!-- Edit Mode Banner -->
+    @if (isEditMode()) {
+    <div class="gridster-edit-banner">
+      <span class="banner-text">
+        <svg cIcon name="cilOptions" class="banner-icon"></svg>
+        Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+      </span>
+      <div class="banner-actions">
+        <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+          <span class="button-icon me-1">↻</span>
+          Đặt lại
+        </button>
+        <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+          <svg cIcon name="cilCheck" class="me-1"></svg>
+          Lưu &amp; thoát
+        </button>
+        <div class="chart-picker-wrapper">
+          <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+            <svg cIcon name="cilChartBar" class="me-1"></svg>
+            Chọn biểu đồ để hiển thị
+          </button>
+          @if (showChartPicker()) {
+          <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+            <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (isChartVisible(chart.id)) {
+            <label class="picker-item">
+              <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+              <span class="picker-label">{{ chart.label }}</span>
+            </label>
+            }
+            }
+            @if (hiddenChartIds().size > 0) {
+            <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+            @for (chart of availableCharts; track chart.id) {
+            @if (!isChartVisible(chart.id)) {
+            <label class="picker-item hidden-chart-item">
+              <span class="picker-label">{{ chart.label }}</span>
+              <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+                (click)="addChartToGrid(chart.id)">
+                <svg cIcon name="cilPlus"></svg>
+                Thêm
+              </button>
+            </label>
+            }
+            }
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Gridster Charts Grid -->
+    <gridster [options]="gridsterOptions()" class="hr-gridster">
+
+      <!-- Xu hướng tuyển dụng -->
+      @if (isChartVisible('employee-trend')) {
+      <gridster-item [item]="getItem('employee-trend')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Xu hướng tuyển dụng</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+              </div>
+            </div>
+          </c-card-header>
+          <c-card-body>
+            <c-chart type="line" [data]="employeeTrendChartData()" [options]="employeeTrendOptions"></c-chart>
+          </c-card-body>
+        </c-card>
+      </gridster-item>
+      }
+
+      <!-- Phân bố giới tính -->
+      @if (isChartVisible('gender-distribution')) {
+      <gridster-item [item]="getItem('gender-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân bố giới tính</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="doughnut" [data]="genderChartData()" [options]="genderChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="6" xl="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Thâm niên nhân viên</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+      <!-- Thâm niên nhân viên -->
+      @if (isChartVisible('tenure-distribution')) {
+      <gridster-item [item]="getItem('tenure-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Thâm niên nhân viên</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ cột</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="tenureChartData()" [options]="tenureChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="12" xl="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Mức lương theo phòng ban</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ kết hợp</small>
+      <!-- Mức lương theo phòng ban -->
+      @if (isChartVisible('pay-rate-comparison')) {
+      <gridster-item [item]="getItem('pay-rate-comparison')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Mức lương theo phòng ban</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ kết hợp</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="payRateChartData()" [options]="payRateChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col md="8">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Xu hướng tuyển dụng</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ đường</small>
+      <!-- Phân bố ca làm việc -->
+      @if (isChartVisible('shift-distribution')) {
+      <gridster-item [item]="getItem('shift-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Phân bố ca làm việc</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="line" [data]="employeeTrendChartData()" [options]="employeeTrendOptions"
-              [height]="300"></c-chart>
+            <c-chart type="doughnut" [data]="shiftChartData()" [options]="shiftChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="4">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Phân bố ca làm việc</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ tròn</small>
-          </c-card-header>
-          <c-card-body>
-            <c-chart type="doughnut" [data]="shiftChartData()" [options]="shiftChartOptions"
-              [height]="300"></c-chart>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
-
-    <c-row>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Nhân viên theo phòng ban</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ xếp hạng</small>
+      <!-- Nhân viên theo phòng ban -->
+      @if (isChartVisible('department-distribution')) {
+      <gridster-item [item]="getItem('department-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Nhân viên theo phòng ban</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ xếp hạng</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="departmentChartData()" [options]="departmentChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Top chức danh</strong>
-            <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+      <!-- Top chức danh -->
+      @if (isChartVisible('job-title-distribution')) {
+      <gridster-item [item]="getItem('job-title-distribution')!">
+        <c-card class="mb-0 h-100">
+          <c-card-header class="chart-card-header">
+            <div class="chart-header-content">
+              <div>
+                <strong>Top chức danh</strong>
+                <small class="text-body-secondary ms-2">Biểu đồ thanh ngang</small>
+              </div>
+            </div>
           </c-card-header>
           <c-card-body>
             <c-chart type="bar" [data]="jobTitleChartData()" [options]="jobTitleChartOptions"></c-chart>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
 
     }
   </div>
