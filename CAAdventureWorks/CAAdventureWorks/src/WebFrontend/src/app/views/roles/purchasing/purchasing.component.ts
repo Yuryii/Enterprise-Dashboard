@@ -74,6 +74,8 @@ export class PurchasingComponent implements OnInit {
   readonly subtitle = 'Hiệu suất nhà cung cấp, đơn mua và vận hành nhập hàng';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
@@ -464,6 +466,10 @@ export class PurchasingComponent implements OnInit {
     this.loadDashboard();
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard() as PurchasingDashboardResponseDto | null;
     if (!currentDashboard) {
@@ -473,6 +479,7 @@ export class PurchasingComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'purchasing', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'PurchasingDashboard',

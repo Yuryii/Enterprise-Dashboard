@@ -72,6 +72,8 @@ export class FinanceComponent implements OnInit {
   readonly subtitle = 'Dashboard';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
@@ -496,6 +498,10 @@ export class FinanceComponent implements OnInit {
     }).format(value);
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard() as FinanceDashboardResponseDto | null;
     if (!currentDashboard) {
@@ -505,6 +511,7 @@ export class FinanceComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'finance', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: 'Tài chính',
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'FinanceDashboard',

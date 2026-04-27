@@ -73,6 +73,10 @@ export class ShippingReceivingComponent {
   readonly title = 'Shipping & Receiving';
   readonly subtitle = 'Dashboard';
 
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
+
+
   readonly appliedFilters = signal({
     flowType: 'All',
     shipMethod: 'All',
@@ -478,9 +482,24 @@ export class ShippingReceivingComponent {
     this.applyFilters();
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.logisticsCards(),
+      filters: this.filterForm.getRawValue(),
+      inboundOrders: this.filteredInboundOrders(),
+      outboundOrders: this.filteredOutboundOrders(),
+      shipMethodMix: this.shipMethodMix(),
+      freightByRegion: this.freightByRegion()
+    };
+
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'shipping-receiving', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'ShippingReceivingDashboard',

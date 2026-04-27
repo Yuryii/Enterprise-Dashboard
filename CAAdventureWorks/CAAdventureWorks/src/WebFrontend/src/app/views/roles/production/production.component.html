@@ -11,9 +11,17 @@
 
     @if (!errorMessage() && dashboard()) {
     <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
-      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+      <div class="ai-pdf-toggle" [class.ai-pdf-toggle-active]="includeAiAssessment()">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch" [checked]="includeAiAssessment()"
+            [disabled]="aiAssessmentLoading()" (change)="toggleAiAssessment($any($event.target).checked)" />
+          <label class="form-check-label">Đánh giá AI</label>
+        </div>
+      </div>
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()"
+        [disabled]="aiAssessmentLoading()">
         <svg cIcon name="cilCloudDownload" class="me-1"></svg>
-        Xuất PDF
+        {{ aiAssessmentLoading() ? 'AI đang xử lý...' : 'Xuất PDF' }}
       </button>
       <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
         (click)="customizeLayout()">

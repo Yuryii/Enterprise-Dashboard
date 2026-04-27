@@ -1,3 +1,5 @@
+import { environment } from '../../../../environments/environment';
+
 export interface DashboardPdfMetric {
     label?: string;
     title?: string;
@@ -16,6 +18,14 @@ export interface DashboardPdfSection {
     widths?: unknown[];
 }
 
+export interface DashboardPdfAiAssessmentOptions {
+    enabled: boolean;
+    departmentId: string;
+    dashboard?: unknown;
+    filters?: unknown;
+    setLoading?: (loading: boolean) => void;
+}
+
 export interface DashboardPdfOptions {
     title: string;
     subtitle?: string;
@@ -24,6 +34,7 @@ export interface DashboardPdfOptions {
     secondaryMetrics?: DashboardPdfMetric[];
     filters?: string[];
     sections?: DashboardPdfSection[];
+    aiAssessment?: DashboardPdfAiAssessmentOptions;
 }
 
 export async function exportDashboardPdf(options: DashboardPdfOptions): Promise<void> {
@@ -31,6 +42,8 @@ export async function exportDashboardPdf(options: DashboardPdfOptions): Promise<
         dateStyle: 'medium',
         timeStyle: 'short'
     }).format(new Date());
+
+    const aiAssessment = await loadDashboardAiAssessment(options, generatedAt);
 
     const [pdfMakeModule, pdfFontsModule] = await Promise.all([
         import('pdfmake/build/pdfmake' as string),
@@ -47,11 +60,54 @@ export async function exportDashboardPdf(options: DashboardPdfOptions): Promise<
     }
 
     pdfMake
-        .createPdf(buildDashboardPdfDefinition(options, generatedAt))
+        .createPdf(buildDashboardPdfDefinition(options, generatedAt, aiAssessment))
         .download(`${options.filePrefix ?? normalizeFilePrefix(options.title)}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`);
 }
 
-function buildDashboardPdfDefinition(options: DashboardPdfOptions, generatedAt: string): any {
+export async function loadDashboardAiAssessment(options: DashboardPdfOptions, generatedAt: string): Promise<string | null> {
+    if (!options.aiAssessment?.enabled) return null;
+
+    options.aiAssessment.setLoading?.(true);
+    try {
+        const response = await fetch(`${environment.apiUrl}/api/dashboard-ai-assessment/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                departmentId: options.aiAssessment.departmentId,
+                title: options.title,
+                dashboard: options.aiAssessment.dashboard ?? {
+                    metrics: options.metrics ?? [],
+                    secondaryMetrics: options.secondaryMetrics ?? []
+                },
+                filters: options.aiAssessment.filters ?? options.filters ?? [],
+                sections: options.sections?.map(section => ({
+                    title: section.title,
+                    subtitle: section.subtitle,
+                    headers: section.headers,
+                    sampleRows: section.rows.slice(0, 12)
+                })),
+                generatedAt
+            })
+        });
+
+        if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(detail || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json() as { content?: string };
+        return data.content?.trim() || null;
+    } catch (error: any) {
+        console.error('Không thể lấy đánh giá AI cho báo cáo dashboard', error);
+        const detail = error?.error?.detail || error?.error?.title || error?.message || 'Backend AI chưa phản hồi.';
+        alert(`Không thể lấy đánh giá AI: ${detail}\nBáo cáo sẽ được xuất không kèm phần đánh giá AI.`);
+        return null;
+    } finally {
+        options.aiAssessment.setLoading?.(false);
+    }
+}
+
+function buildDashboardPdfDefinition(options: DashboardPdfOptions, generatedAt: string, aiAssessment: string | null = null): any {
     const primaryMetrics = normalizeMetrics(options.metrics ?? []);
     const secondaryMetrics = normalizeMetrics(options.secondaryMetrics ?? []);
     const sections = options.sections ?? [];
@@ -70,13 +126,14 @@ function buildDashboardPdfDefinition(options: DashboardPdfOptions, generatedAt: 
                 { text: `Trang ${currentPage} / ${pageCount}`, alignment: 'right' }
             ],
             margin: [30, 0],
-            fontSize: 8,
+            fontSize: 10,
             color: '#64748b'
         }),
         content: [
             buildCover(options.title, options.subtitle, generatedAt),
             buildExecutiveSummary(primaryMetrics, secondaryMetrics),
             ...(options.filters?.length ? [buildFilterSummary(options.filters)] : []),
+            ...(aiAssessment ? [buildAiAssessmentSection(aiAssessment)] : []),
             ...sections.flatMap((section, index) => [
                 ...(index === 3 ? [{ text: '', pageBreak: 'before' }] : []),
                 buildPdfSection(section)
@@ -88,22 +145,24 @@ function buildDashboardPdfDefinition(options: DashboardPdfOptions, generatedAt: 
             }
         ],
         styles: {
-            reportTitle: { fontSize: 22, bold: true, color: '#ffffff', characterSpacing: 0.5 },
-            reportSubtitle: { fontSize: 9, color: '#bfdbfe', margin: [0, 4, 0, 0] },
-            orgText: { fontSize: 9, color: '#e0f2fe', bold: true },
-            coverLabel: { fontSize: 7, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
-            coverValue: { fontSize: 10, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
-            sectionTitle: { fontSize: 12, bold: true, color: '#0f172a' },
-            sectionSubtitle: { fontSize: 8, color: '#64748b', margin: [0, 2, 0, 6] },
-            tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 8 },
-            tableCell: { fontSize: 8, color: '#111827' },
-            kpiLabel: { fontSize: 7, color: '#64748b', bold: true, characterSpacing: 0.3 },
-            kpiValue: { fontSize: 13, color: '#0f172a', bold: true },
-            kpiNote: { fontSize: 7, color: '#475569' },
-            note: { fontSize: 8, italics: true, color: '#64748b' }
+            reportTitle: { fontSize: 24, bold: true, color: '#ffffff', characterSpacing: 0.5 },
+            reportSubtitle: { fontSize: 11, color: '#bfdbfe', margin: [0, 4, 0, 0] },
+            orgText: { fontSize: 11, color: '#e0f2fe', bold: true },
+            coverLabel: { fontSize: 9, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
+            coverValue: { fontSize: 12, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
+            sectionTitle: { fontSize: 14, bold: true, color: '#0f172a' },
+            sectionSubtitle: { fontSize: 10, color: '#64748b', margin: [0, 2, 0, 6] },
+            tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 10 },
+            tableCell: { fontSize: 10, color: '#111827' },
+            kpiLabel: { fontSize: 9, color: '#64748b', bold: true, characterSpacing: 0.3 },
+            kpiValue: { fontSize: 15, color: '#0f172a', bold: true },
+            kpiNote: { fontSize: 9, color: '#475569' },
+            note: { fontSize: 10, italics: true, color: '#64748b' },
+            aiTitle: { fontSize: 13, bold: true, color: '#4338ca' },
+            aiText: { fontSize: 10.5, color: '#1f2937', lineHeight: 1.18 }
         },
         defaultStyle: {
-            fontSize: 9,
+            fontSize: 11,
             color: '#111827'
         }
     };
@@ -220,6 +279,37 @@ function buildFilterSummary(filters: string[]): any {
     };
 }
 
+function buildAiAssessmentSection(content: string): any {
+    const lines = content
+        .split(/\r?\n/)
+        .map(line => line.replace(/^[-*\d.\s]+/, '').trim())
+        .filter(Boolean);
+
+    const summary = lines.find(line => line.toLowerCase().includes('tổng quan')) ?? lines[0] ?? content;
+    const detailLines = lines.filter(line => line !== summary).slice(0, 7);
+
+    return {
+        table: {
+            widths: ['*'],
+            body: [[{
+                stack: [
+                    { text: 'Đánh giá AI cho báo cáo', style: 'aiTitle', margin: [0, 0, 0, 5] },
+                    { text: summary.replace(/^tổng quan ai\s*[:：-]?\s*/i, ''), style: 'aiText', margin: [0, 0, 0, 6] },
+                    ...detailLines.map((line, index) => ({
+                        text: `${index + 1}. ${line}`,
+                        style: 'aiText',
+                        margin: [0, 2, 0, 0]
+                    }))
+                ],
+                fillColor: '#eef2ff',
+                margin: [10, 9, 10, 9]
+            }]]
+        },
+        layout: cardLayout('#a5b4fc'),
+        margin: [0, 0, 0, 12]
+    };
+}
+
 function buildPdfSection(section: DashboardPdfSection): any[] {
     if (!section.rows.length) {
         return [
@@ -318,6 +408,6 @@ function pickColor(index: number): string {
 function normalizeFilePrefix(title: string): string {
     return title
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[̀-ͯ]/g, '')
         .replace(/[^a-zA-Z0-9]+/g, '') || 'Dashboard';
 }

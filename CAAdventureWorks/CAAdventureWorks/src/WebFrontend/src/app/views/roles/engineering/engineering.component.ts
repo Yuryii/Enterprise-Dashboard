@@ -75,6 +75,10 @@ export class EngineeringComponent {
   readonly title = 'Engineering';
   readonly subtitle = 'Dashboard';
 
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
+
+
   private readonly savedFilterStorageKey = 'engineering_saved_filter';
   readonly gridsterStorageKey = 'engineering_grid_layout';
   private readonly hiddenChartsStorageKey = 'engineering_hidden_charts';
@@ -523,9 +527,24 @@ export class EngineeringComponent {
     this.applyFilters();
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.engineeringHealthCards(),
+      filters: this.filterForm.getRawValue(),
+      bomHierarchy: this.bomHierarchyRows(),
+      productModels: this.filteredProductModels(),
+      scrapFeedback: this.filteredScrapFeedback(),
+      scrapReasonMix: this.filteredScrapReasonMix()
+    };
+
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'engineering', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'EngineeringDashboard',

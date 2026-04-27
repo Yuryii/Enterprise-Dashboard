@@ -96,6 +96,8 @@ export class ProductionControlComponent implements OnInit {
   };
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly controlDashboard = signal<ProductionControlExceptionsResponseDto | null>(
     this.productionDashboardService.getCachedProductionControlExceptions(this.defaultFilter)
@@ -616,6 +618,10 @@ export class ProductionControlComponent implements OnInit {
     this.loadDashboard(true);
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.controlDashboard();
     if (!currentDashboard) {
@@ -625,6 +631,7 @@ export class ProductionControlComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'production-control', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'ProductionControlDashboard',

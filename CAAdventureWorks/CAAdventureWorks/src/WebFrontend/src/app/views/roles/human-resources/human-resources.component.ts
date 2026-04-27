@@ -81,6 +81,8 @@ export class HumanResourcesComponent implements OnInit {
   readonly subtitle = 'Dashboard';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
@@ -554,6 +556,10 @@ export class HumanResourcesComponent implements OnInit {
     this.loadDashboard();
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard() as HRDashboardResponseDto | null;
     if (!currentDashboard) {
@@ -563,6 +569,7 @@ export class HumanResourcesComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'human-resources', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: this.subtitle,
         filePrefix: 'HumanResourcesDashboard',

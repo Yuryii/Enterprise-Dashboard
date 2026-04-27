@@ -30,6 +30,7 @@ import { AlertService, type AlertHistoryDto } from '../../../core/services/alert
 @Component({
   selector: 'app-default-header',
   templateUrl: './default-header.component.html',
+  styleUrl: './default-header.component.scss',
   imports: [
     ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective,
     HeaderNavComponent, NavItemComponent, NavLinkDirective, RouterLink, RouterLinkActive,

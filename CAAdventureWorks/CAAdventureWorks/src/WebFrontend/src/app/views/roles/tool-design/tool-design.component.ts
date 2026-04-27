@@ -100,6 +100,8 @@ export class ToolDesignComponent implements OnInit {
     });
 
     readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
     readonly errorMessage = signal<string | null>(null);
     readonly dashboard = signal<ToolDesignDashboardResponseDto | null>(
         this.toolDesignDashboardService.getCachedDashboard(this.defaultFilter)
@@ -329,7 +331,11 @@ export class ToolDesignComponent implements OnInit {
         this.loadDashboard(true);
     }
 
-    async exportPDF(): Promise<void> {
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
         const currentDashboard = this.dashboard();
         if (!currentDashboard) {
             alert('Chưa có dữ liệu để tải báo cáo Tool Design.');
@@ -338,6 +344,7 @@ export class ToolDesignComponent implements OnInit {
 
         try {
             await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'tool-design', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
                 title: this.title,
                 subtitle: 'Báo cáo theo bộ lọc hiện tại',
                 filePrefix: 'ToolDesignDashboard',

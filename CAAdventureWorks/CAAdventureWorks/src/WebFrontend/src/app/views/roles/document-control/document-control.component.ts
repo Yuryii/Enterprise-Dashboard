@@ -76,6 +76,8 @@ export class DocumentControlComponent implements OnInit {
   readonly subtitle = 'Dashboard';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
@@ -480,6 +482,10 @@ export class DocumentControlComponent implements OnInit {
     return new Date(dateString).toLocaleDateString('vi-VN');
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard() as DocumentControlDashboardResponseDto | null;
     if (!currentDashboard) {
@@ -489,6 +495,7 @@ export class DocumentControlComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'document-control', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'DocumentControlDashboard',

@@ -101,11 +101,15 @@
   <c-dropdown [popperOptions]="{ placement: 'bottom-start' }" variant="nav-item">
     <button [caret]="false" cDropdownToggle class="py-0 pe-0" aria-label="Mở menu người dùng">
       @if (user$ | async; as user) {
-      <c-avatar shape="rounded-1" size="md" src="./assets/images/avatars/user.jpg" status="success" textColor="primary"
-        [alt]="getUserName(user)" />
+      <span class="user-header-avatar" aria-hidden="true">
+        <img src="assets/images/avatars/user.jpg" [alt]="getUserName(user)" />
+        <span class="user-header-avatar__status"></span>
+      </span>
       } @else {
-      <c-avatar shape="rounded-1" size="md" src="./assets/images/avatars/user.jpg" status="success" textColor="primary"
-        alt="User avatar" />
+      <span class="user-header-avatar" aria-hidden="true">
+        <img src="assets/images/avatars/user.jpg" alt="User avatar" />
+        <span class="user-header-avatar__status"></span>
+      </span>
       }
     </button>
     <ul cDropdownMenu class="pt-0 w-auto">

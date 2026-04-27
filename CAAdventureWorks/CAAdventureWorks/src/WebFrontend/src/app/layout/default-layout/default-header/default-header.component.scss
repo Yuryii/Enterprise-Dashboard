@@ -1,0 +1,39 @@
+:host ::ng-deep .user-header-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    overflow: visible;
+    flex: 0 0 44px;
+    background: transparent;
+}
+
+:host ::ng-deep .user-header-avatar>img {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 50%;
+    display: block;
+    overflow: hidden;
+}
+
+:host ::ng-deep .user-header-avatar__status {
+    position: absolute;
+    right: 0;
+    bottom: 1px;
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--cui-body-bg);
+    border-radius: 50%;
+    background: var(--cui-success);
+}

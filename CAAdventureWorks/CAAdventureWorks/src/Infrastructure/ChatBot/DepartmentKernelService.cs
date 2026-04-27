@@ -56,9 +56,13 @@ public class DepartmentKernelService : Application.ChatBot.Services.ISemanticKer
 
                 var kernel = kernelBuilder.Build();
 
-                // Add Text2SQL plugin
-                var textToSqlPlugin = new Plugins.TextToSqlPlugin(_connectionString, config.AllowedTables);
-                kernel.Plugins.AddFromObject(textToSqlPlugin, "TextToSql");
+                // Add Text2SQL plugin only for departments that explicitly allow database tables.
+                // Executive PDF AI assessment uses already-filtered dashboard JSON, so it must not invoke SQL tools.
+                if (config.AllowedTables.Count > 0)
+                {
+                    var textToSqlPlugin = new Plugins.TextToSqlPlugin(_connectionString, config.AllowedTables);
+                    kernel.Plugins.AddFromObject(textToSqlPlugin, "TextToSql");
+                }
 
                 _kernels[deptId] = kernel;
                 _logger.LogInformation("Semantic Kernel built successfully for department: {DeptId}", deptId);
@@ -107,6 +111,7 @@ public class DepartmentKernelService : Application.ChatBot.Services.ISemanticKer
         return deptId.ToLower() switch
         {
             "sales" => "Ban la tro ly AI chuyen ho tro nhan vien phong Kinh Doanh AdventureWorks. Chi duoc truy van cac bang: Sales.SalesOrderHeader, Sales.SalesOrderDetail, Sales.Customer, Sales.SalesPerson, Sales.SalesTerritory. Khong bao gio tiep lo thong tin nhan vien khac. Tra loi tieng Viet.",
+            "executive" => "Ban la chuyen gia phan tich dieu hanh AdventureWorks. Hay danh gia KPI, doanh thu, chi mua, nhan su, nha cung cap va san xuat bang tieng Viet ngan gon, uu tien hanh dong quan tri va rui ro.",
             _ => "Ban la tro ly AI cua AdventureWorks. Hay tra loi tieng Viet, than thien."
         };
     }
@@ -120,11 +125,11 @@ public class DepartmentKernelService : Application.ChatBot.Services.ISemanticKer
         _logger.LogInformation("Getting chat response for department: {DeptId}, user: {UserId}", deptId, userId);
 
         var chatService = kernel.GetRequiredService<IChatCompletionService>();
-            var settings = new OpenAIPromptExecutionSettings
-            {
-                Temperature = 0.7,
-                ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
-            };
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            Temperature = 0.7,
+            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+        };
 
         var history = new Microsoft.SemanticKernel.ChatCompletion.ChatHistory();
         history.AddSystemMessage(GetSystemPrompt(deptId));

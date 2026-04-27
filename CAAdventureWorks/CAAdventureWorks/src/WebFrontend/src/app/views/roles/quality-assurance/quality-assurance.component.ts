@@ -86,6 +86,8 @@ export class QualityAssuranceComponent implements OnInit {
   readonly subtitle = 'Giám sát phế phẩm, nguyên nhân lỗi, vendor reject và nguồn lực kiểm soát chất lượng';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
@@ -535,6 +537,10 @@ export class QualityAssuranceComponent implements OnInit {
     this.loadDashboard();
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard() as QualityAssuranceDashboardResponseDto | null;
     if (!currentDashboard) {
@@ -544,6 +550,7 @@ export class QualityAssuranceComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'quality-assurance', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'QualityAssuranceDashboard',

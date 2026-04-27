@@ -72,6 +72,8 @@ export class FacilitiesComponent {
 
   readonly title = 'Cơ sở vật chất & Bảo trì';
   readonly subtitle = 'Bảng điều khiển';
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
 
   readonly appliedFilters = signal({
     facilityType: 'All',
@@ -524,9 +526,25 @@ export class FacilitiesComponent {
     return labels[value] ?? value;
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.maintenanceCards(),
+      filters: this.filterForm.getRawValue(),
+      utilization: this.utilizationRows(),
+      inventoryCapacity: this.filteredInventoryCapacity(),
+      maintenanceSchedule: this.maintenanceSchedule(),
+      operatingCostMix: this.operatingCostMix(),
+      capacityHeatmap: this.capacityHeatmapRows()
+    };
+
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'facilities', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'FacilitiesDashboard',

@@ -74,6 +74,8 @@ export class InformationServicesComponent implements OnInit {
   readonly subtitle = 'Dashboard';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
@@ -470,6 +472,10 @@ export class InformationServicesComponent implements OnInit {
     }).format(value);
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard() as ISDashboardResponseDto | null;
     if (!currentDashboard) {
@@ -479,6 +485,7 @@ export class InformationServicesComponent implements OnInit {
 
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'information-services', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: 'Information Services',
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'InformationServicesDashboard',

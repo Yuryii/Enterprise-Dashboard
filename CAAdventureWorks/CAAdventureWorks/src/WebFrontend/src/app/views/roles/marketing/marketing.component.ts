@@ -73,6 +73,10 @@ export class MarketingComponent {
   readonly title = 'Marketing';
   readonly subtitle = 'Dashboard';
 
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
+
+
   readonly appliedFilters = signal({
     campaignType: 'All',
     reviewSentiment: 'All',
@@ -693,9 +697,23 @@ export class MarketingComponent {
     this.applyFilters();
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.brandHealthCards(),
+      filters: this.filterForm.getRawValue(),
+      campaigns: this.filteredCampaigns(),
+      reviews: this.filteredReviews(),
+      storeSegments: this.filteredStoreSegments()
+    };
+
     try {
       await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'marketing', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
         title: this.title,
         subtitle: 'Báo cáo theo bộ lọc hiện tại',
         filePrefix: 'MarketingDashboard',

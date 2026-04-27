@@ -26,6 +26,7 @@ import {
   ExecutiveDashboardService,
   ExecutiveOrderStatusItemDto
 } from './executive-dashboard.service';
+import { firstValueFrom } from 'rxjs';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
 import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
@@ -93,6 +94,8 @@ export class ExecutiveComponent implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<ExecutiveDashboardResponseDto | null>(null);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
 
   readonly savedFilterStorageKey = 'executive_saved_filter';
   readonly gridsterStorageKey = 'executive_grid_layout';
@@ -641,6 +644,10 @@ export class ExecutiveComponent implements OnInit {
     return translations[name] ?? name;
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard();
     if (!currentDashboard) {
@@ -654,6 +661,10 @@ export class ExecutiveComponent implements OnInit {
     }).format(new Date());
 
     try {
+      const aiAssessment = this.includeAiAssessment()
+        ? await this.loadExecutiveAiAssessment(currentDashboard, this.filterForm.getRawValue(), generatedAt)
+        : null;
+
       const [pdfMakeModule, pdfFontsModule] = await Promise.all([
         import('pdfmake/build/pdfmake' as string),
         import('pdfmake/build/vfs_fonts' as string)
@@ -669,7 +680,7 @@ export class ExecutiveComponent implements OnInit {
       }
 
       pdfMake
-        .createPdf(this.buildExecutivePdfDefinition(currentDashboard, this.filterForm.getRawValue(), generatedAt))
+        .createPdf(this.buildExecutivePdfDefinition(currentDashboard, this.filterForm.getRawValue(), generatedAt, aiAssessment))
         .download(`ExecutiveDashboard_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`);
     } catch (error) {
       console.error('Không thể tạo PDF ban điều hành', error);
@@ -677,10 +688,34 @@ export class ExecutiveComponent implements OnInit {
     }
   }
 
-  private buildExecutivePdfDefinition(
+  private async loadExecutiveAiAssessment(
     dashboard: ExecutiveDashboardResponseDto,
     filter: ReturnType<typeof this.filterForm.getRawValue>,
     generatedAt: string
+  ): Promise<string | null> {
+    this.aiAssessmentLoading.set(true);
+    try {
+      const response = await firstValueFrom(this.executiveDashboardService.getAiAssessment({
+        dashboard,
+        filters: filter,
+        generatedAt
+      }));
+      return response.content?.trim() || null;
+    } catch (error: any) {
+      console.error('Không thể lấy đánh giá AI cho báo cáo ban điều hành', error);
+      const detail = error?.error?.detail || error?.error?.title || error?.message || 'Backend AI chưa phản hồi.';
+      alert(`Không thể lấy đánh giá AI: ${detail}\nBáo cáo sẽ được xuất không kèm phần đánh giá AI.`);
+      return null;
+    } finally {
+      this.aiAssessmentLoading.set(false);
+    }
+  }
+
+  private buildExecutivePdfDefinition(
+    dashboard: ExecutiveDashboardResponseDto,
+    filter: ReturnType<typeof this.filterForm.getRawValue>,
+    generatedAt: string,
+    aiAssessment: string | null = null
   ): any {
     const overview = dashboard.overview;
     const periodText = `${this.formatReportDate(filter.startDate)} - ${this.formatReportDate(filter.endDate)}`;
@@ -702,7 +737,7 @@ export class ExecutiveComponent implements OnInit {
           { text: `Trang ${currentPage} / ${pageCount}`, alignment: 'right' }
         ],
         margin: [30, 0],
-        fontSize: 8,
+        fontSize: 10,
         color: '#64748b'
       }),
       content: [
@@ -758,6 +793,7 @@ export class ExecutiveComponent implements OnInit {
           margin: [0, 0, 0, 12]
         },
         this.buildFilterSummary(this.describeExecutiveFilters(filter, dashboard)),
+        ...(aiAssessment ? [this.buildAiAssessmentSection(aiAssessment)] : []),
         {
           columns: [
             this.buildKpiPdfCard('Tổng doanh thu', this.formatCurrency(overview.totalRevenue), `${this.formatNumber(overview.salesOrders)} đơn bán`, '#2563eb'),
@@ -835,24 +871,26 @@ export class ExecutiveComponent implements OnInit {
         }
       ],
       styles: {
-        reportTitle: { fontSize: 22, bold: true, color: '#ffffff', characterSpacing: 0.5 },
-        reportSubtitle: { fontSize: 9, color: '#bfdbfe', margin: [0, 4, 0, 0] },
-        orgText: { fontSize: 9, color: '#e0f2fe', bold: true },
-        coverLabel: { fontSize: 7, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
-        coverValue: { fontSize: 10, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
-        sectionTitle: { fontSize: 12, bold: true, color: '#0f172a' },
-        sectionSubtitle: { fontSize: 8, color: '#64748b', margin: [0, 2, 0, 6] },
-        tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 8 },
-        tableCell: { fontSize: 8, color: '#111827' },
-        kpiLabel: { fontSize: 7, color: '#64748b', bold: true, characterSpacing: 0.3 },
-        kpiValue: { fontSize: 13, color: '#0f172a', bold: true },
-        kpiNote: { fontSize: 7, color: '#475569' },
-        metricLabel: { fontSize: 7, color: '#64748b', bold: true },
-        metricValue: { fontSize: 11, bold: true, color: '#0f172a' },
-        note: { fontSize: 8, italics: true, color: '#64748b' }
+        reportTitle: { fontSize: 26, bold: true, color: '#ffffff', characterSpacing: 0.5 },
+        reportSubtitle: { fontSize: 12.5, color: '#bfdbfe', margin: [0, 4, 0, 0] },
+        orgText: { fontSize: 12.5, color: '#e0f2fe', bold: true },
+        coverLabel: { fontSize: 10.5, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
+        coverValue: { fontSize: 13.5, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
+        sectionTitle: { fontSize: 16, bold: true, color: '#0f172a' },
+        sectionSubtitle: { fontSize: 11.5, color: '#64748b', margin: [0, 2, 0, 6] },
+        tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 11.5 },
+        tableCell: { fontSize: 11.5, color: '#111827' },
+        kpiLabel: { fontSize: 10.5, color: '#64748b', bold: true, characterSpacing: 0.3 },
+        kpiValue: { fontSize: 17, color: '#0f172a', bold: true },
+        kpiNote: { fontSize: 10.5, color: '#475569' },
+        metricLabel: { fontSize: 10.5, color: '#64748b', bold: true },
+        metricValue: { fontSize: 15, bold: true, color: '#0f172a' },
+        aiTitle: { fontSize: 16, bold: true, color: '#312e81' },
+        aiText: { fontSize: 12, color: '#1e293b', lineHeight: 1.25 },
+        note: { fontSize: 11.5, italics: true, color: '#64748b' }
       },
       defaultStyle: {
-        fontSize: 9,
+        fontSize: 12,
         color: '#111827'
       }
     };
@@ -871,6 +909,37 @@ export class ExecutiveComponent implements OnInit {
       `Ngành hàng: ${findName(options.productCategories, filter.productCategoryId)}`,
       `Nhân sự: ${filter.currentEmployeesOnly ? 'Chỉ nhân sự hiện hành' : 'Tất cả lịch sử'}`
     ];
+  }
+
+  private buildAiAssessmentSection(content: string): any {
+    const lines = content
+      .split(/\r?\n/)
+      .map(line => line.replace(/^[-*\d.\s]+/, '').trim())
+      .filter(Boolean);
+
+    const summary = lines.find(line => line.toLowerCase().includes('tổng quan')) ?? lines[0] ?? content;
+    const detailLines = lines.filter(line => line !== summary).slice(0, 7);
+
+    return {
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: [
+            { text: 'Đánh giá AI cho báo cáo', style: 'aiTitle', margin: [0, 0, 0, 5] },
+            { text: summary.replace(/^tổng quan ai\s*[:：-]?\s*/i, ''), style: 'aiText', margin: [0, 0, 0, 6] },
+            ...detailLines.map((line, index) => ({
+              text: `${index + 1}. ${line}`,
+              style: 'aiText',
+              margin: [0, 2, 0, 0]
+            }))
+          ],
+          fillColor: '#eef2ff',
+          margin: [10, 9, 10, 9]
+        }]]
+      },
+      layout: this.cardLayout('#a5b4fc'),
+      margin: [0, 0, 0, 12]
+    };
   }
 
   private buildFilterSummary(filters: string[]): any {

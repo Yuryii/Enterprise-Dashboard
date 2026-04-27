@@ -39,6 +39,7 @@ import {
   ProductionTransactionTrendPointDto,
   ProductionTrendPointDto
 } from './production-dashboard.service';
+import { loadDashboardAiAssessment } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -105,6 +106,8 @@ export class ProductionComponent implements OnInit {
 
   readonly title = 'Sản xuất';
   readonly subtitle = 'Theo dõi lệnh sản xuất, công suất vận hành, tồn kho và biến động chi phí toàn xưởng';
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
 
   private readonly defaultFilter = {
     startDate: '2013-01-01',
@@ -715,6 +718,10 @@ export class ProductionComponent implements OnInit {
     this.loadDashboard(true);
   }
 
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
   async exportPDF(): Promise<void> {
     const currentDashboard = this.dashboard();
     if (!currentDashboard) {
@@ -728,9 +735,20 @@ export class ProductionComponent implements OnInit {
     }).format(new Date());
 
     try {
+      const aiAssessment = await loadDashboardAiAssessment({
+        title: this.title,
+        aiAssessment: {
+          enabled: this.includeAiAssessment(),
+          departmentId: 'production',
+          dashboard: currentDashboard,
+          filters: this.filterForm.getRawValue(),
+          setLoading: value => this.aiAssessmentLoading.set(value)
+        }
+      }, generatedAt);
+
       const [pdfMakeModule, pdfFontsModule] = await Promise.all([
-        import('pdfmake/build/pdfmake'),
-        import('pdfmake/build/vfs_fonts')
+        import('pdfmake/build/pdfmake' as string),
+        import('pdfmake/build/vfs_fonts' as string)
       ]);
       const pdfMake = (pdfMakeModule as any).default ?? pdfMakeModule;
       const pdfFonts = (pdfFontsModule as any).default ?? pdfFontsModule;
@@ -742,7 +760,7 @@ export class ProductionComponent implements OnInit {
         pdfMake.vfs = vfs;
       }
       pdfMake
-        .createPdf(this.buildProductionPdfDefinition(currentDashboard, this.filterForm.getRawValue(), generatedAt))
+        .createPdf(this.buildProductionPdfDefinition(currentDashboard, this.filterForm.getRawValue(), generatedAt, aiAssessment))
         .download(`ProductionDashboard_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`);
     } catch (error) {
       console.error('Không thể tạo PDF sản xuất', error);
@@ -753,7 +771,8 @@ export class ProductionComponent implements OnInit {
   private buildProductionPdfDefinition(
     dashboard: ProductionDashboardResponseDto,
     filter: ReturnType<typeof this.filterForm.getRawValue>,
-    generatedAt: string
+    generatedAt: string,
+    aiAssessment: string | null = null
   ): any {
     const overview = dashboard.overview;
     const periodText = `${this.formatReportDate(filter.startDate)} - ${this.formatReportDate(filter.endDate)}`;
@@ -775,7 +794,7 @@ export class ProductionComponent implements OnInit {
           { text: `Trang ${currentPage} / ${pageCount}`, alignment: 'right' }
         ],
         margin: [30, 0],
-        fontSize: 8,
+        fontSize: 10,
         color: '#64748b'
       }),
       content: [
@@ -831,6 +850,7 @@ export class ProductionComponent implements OnInit {
           margin: [0, 0, 0, 12]
         },
         this.buildFilterSummary(activeFilters),
+        ...(aiAssessment ? [this.buildAiAssessmentSection(aiAssessment)] : []),
         {
           columns: [
             this.buildKpiPdfCard('Lệnh sản xuất', this.formatNumber(overview.totalWorkOrders), `Đang mở: ${this.formatNumber(overview.openWorkOrders)}`, '#2563eb'),
@@ -901,26 +921,59 @@ export class ProductionComponent implements OnInit {
         }
       ],
       styles: {
-        reportTitle: { fontSize: 22, bold: true, color: '#ffffff', characterSpacing: 0.5 },
-        reportSubtitle: { fontSize: 9, color: '#bfdbfe', margin: [0, 4, 0, 0] },
-        orgText: { fontSize: 9, color: '#e0f2fe', bold: true },
-        coverLabel: { fontSize: 7, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
-        coverValue: { fontSize: 10, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
-        sectionTitle: { fontSize: 12, bold: true, color: '#0f172a' },
-        sectionSubtitle: { fontSize: 8, color: '#64748b', margin: [0, 2, 0, 6] },
-        tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 8 },
-        tableCell: { fontSize: 8, color: '#111827' },
-        kpiLabel: { fontSize: 7, color: '#64748b', bold: true, characterSpacing: 0.3 },
-        kpiValue: { fontSize: 13, color: '#0f172a', bold: true },
-        kpiNote: { fontSize: 7, color: '#475569' },
-        metricLabel: { fontSize: 7, color: '#64748b', bold: true },
-        metricValue: { fontSize: 11, bold: true, color: '#0f172a' },
-        note: { fontSize: 8, italics: true, color: '#64748b' }
+        reportTitle: { fontSize: 24, bold: true, color: '#ffffff', characterSpacing: 0.5 },
+        reportSubtitle: { fontSize: 11, color: '#bfdbfe', margin: [0, 4, 0, 0] },
+        orgText: { fontSize: 11, color: '#e0f2fe', bold: true },
+        coverLabel: { fontSize: 9, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
+        coverValue: { fontSize: 12, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
+        sectionTitle: { fontSize: 14, bold: true, color: '#0f172a' },
+        sectionSubtitle: { fontSize: 10, color: '#64748b', margin: [0, 2, 0, 6] },
+        tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 10 },
+        tableCell: { fontSize: 10, color: '#111827' },
+        kpiLabel: { fontSize: 9, color: '#64748b', bold: true, characterSpacing: 0.3 },
+        kpiValue: { fontSize: 15, color: '#0f172a', bold: true },
+        kpiNote: { fontSize: 9, color: '#475569' },
+        metricLabel: { fontSize: 9, color: '#64748b', bold: true },
+        metricValue: { fontSize: 13, bold: true, color: '#0f172a' },
+        aiTitle: { fontSize: 14, bold: true, color: '#312e81' },
+        aiText: { fontSize: 10.5, color: '#1f2937', lineHeight: 1.2 },
+        note: { fontSize: 10, italics: true, color: '#64748b' }
       },
       defaultStyle: {
-        fontSize: 9,
+        fontSize: 11,
         color: '#111827'
       }
+    };
+  }
+
+  private buildAiAssessmentSection(content: string): any {
+    const lines = content
+      .split(/\r?\n/)
+      .map(line => line.replace(/^[-*\d.\s]+/, '').trim())
+      .filter(Boolean);
+
+    const summary = lines.find(line => line.toLowerCase().includes('tổng quan')) ?? lines[0] ?? content;
+    const detailLines = lines.filter(line => line !== summary).slice(0, 7);
+
+    return {
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: [
+            { text: 'Đánh giá AI cho báo cáo', style: 'aiTitle', margin: [0, 0, 0, 5] },
+            { text: summary.replace(/^tổng quan ai\s*[:：-]?\s*/i, ''), style: 'aiText', margin: [0, 0, 0, 6] },
+            ...detailLines.map((line, index) => ({
+              text: `${index + 1}. ${line}`,
+              style: 'aiText',
+              margin: [0, 2, 0, 0]
+            }))
+          ],
+          fillColor: '#eef2ff',
+          margin: [10, 9, 10, 9]
+        }]]
+      },
+      layout: this.cardLayout('#a5b4fc'),
+      margin: [0, 0, 0, 12]
     };
   }
 
