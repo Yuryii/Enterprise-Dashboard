@@ -89,6 +89,15 @@
             </div>
             <div class="chat-empty-text">Xin chào! Tôi là trợ lý AI của {{ currentDeptName() }}.</div>
             <div class="chat-empty-subtext">Hãy hỏi tôi về bất kỳ điều gì liên quan đến dữ liệu phòng ban.</div>
+            @if (suggestedQuestions().length > 0) {
+              <div class="chat-suggested">
+                @for (q of suggestedQuestions(); track q) {
+                  <button type="button" class="chat-suggested-chip" (click)="suggestedQuestionClick(q)">
+                    {{ q }}
+                  </button>
+                }
+              </div>
+            }
           }
         </div>
       }

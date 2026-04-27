@@ -1,3 +1,4 @@
+using CAAdventureWorks.Application.Alerts.ComputeServices;
 using CAAdventureWorks.Application.Alerts.Interfaces;
 using CAAdventureWorks.Application.Common.Interfaces;
 using CAAdventureWorks.Domain.Entities.ChatBot;
@@ -9,11 +10,93 @@ public class AlertEvaluationService : IAlertEvaluationService
 {
     private readonly IApplicationDbContext _mainDb;
     private readonly IChatBotDbContext _alertDb;
+    private readonly IEnumerable<IAlertComputeService> _computeServices;
 
-    public AlertEvaluationService(IApplicationDbContext mainDb, IChatBotDbContext alertDb)
+    private static readonly Dictionary<string, (string DeptCode, string MetricKey, Func<decimal, decimal, bool> TriggerCondition)> AlertMetricMap = new()
+    {
+        // Sales
+        ["SALES_REVENUE_DECLINE"] = ("Sales", "REVENUE_CHANGE", (actual, threshold) => actual < -threshold),
+        ["SALES_ORDER_COUNT_DECLINE"] = ("Sales", "ORDER_COUNT_CHANGE", (actual, threshold) => actual < -threshold),
+        ["SALES_TOP_PRODUCT_CHANGE"] = ("Sales", "TOP_PRODUCT_CHANGE", (actual, _) => actual > 0),
+        ["SALES_ORDER_STATUS_ISSUE"] = ("Sales", "ORDER_STATUS_ISSUE", (actual, threshold) => actual > threshold),
+        ["SALES_CUSTOMER_CONCENTRATION"] = ("Sales", "CUSTOMER_CONCENTRATION", (actual, threshold) => actual > threshold),
+        // Production
+        ["PRODUCTION_SCRAP_RATE"] = ("Production", "SCRAP_RATE", (actual, threshold) => actual > threshold),
+        ["PRODUCTION_WORKORDER_DELAY"] = ("Production", "WORKORDER_DELAY", (actual, threshold) => actual > threshold),
+        ["PRODUCTION_MACHINE_DOWNTIME"] = ("Production", "MACHINE_DOWNTIME", (actual, threshold) => actual > threshold),
+        ["PRODUCTION_INVENTORY_LOW"] = ("Production", "INVENTORY_LOW", (actual, threshold) => actual < threshold),
+        // Purchasing
+        ["PURCHASING_PO_DELAY"] = ("Purchasing", "PO_DELAY", (actual, threshold) => actual > threshold),
+        ["PURCHASING_VENDOR_PERF"] = ("Purchasing", "VENDOR_PERF", (actual, threshold) => actual < threshold),
+        ["PURCHASING_STOCKOUT"] = ("Purchasing", "STOCKOUT", (actual, threshold) => actual > threshold),
+        ["PURCHASING_PRICE_VARIANCE"] = ("Purchasing", "PRICE_VARIANCE", (actual, threshold) => true),
+        // Human Resources
+        ["HR_OPEN_POSITIONS"] = ("HumanResources", "OPEN_POSITIONS", (actual, threshold) => actual > threshold),
+        ["HR_TURNOVER_RATE"] = ("HumanResources", "ACTIVE_EMPLOYEES", (actual, threshold) => true),
+        ["HR_OVERTIME_HIGH"] = ("HumanResources", "OVERTIME_HIGH", (actual, threshold) => actual > threshold),
+        ["HR_SICK_LEAVE_HIGH"] = ("HumanResources", "SICK_LEAVE_HIGH", (actual, threshold) => actual > threshold),
+        // Finance
+        ["FINANCE_BUDGET_VARIANCE"] = ("Finance", "BUDGET_VARIANCE", (actual, threshold) => Math.Abs(actual) > threshold),
+        ["FINANCE_OVERDUE_PAYMENT"] = ("Finance", "OVERDUE_PAYMENT", (actual, threshold) => actual > threshold),
+        ["FINANCE_AR_AGING"] = ("Finance", "AR_AGING", (actual, threshold) => actual > threshold),
+        ["FINANCE_CREDIT_LIMIT"] = ("Finance", "CREDIT_LIMIT", (actual, threshold) => true),
+        // Engineering
+        ["ENG_PROJECT_DELAY"] = ("Engineering", "PROJECT_DELAY", (actual, threshold) => actual > threshold),
+        ["ENG_CHANGE_ORDER_RATE"] = ("Engineering", "CHANGE_ORDER_RATE", (actual, threshold) => actual > threshold),
+        ["ENG_DOCUMENT_REVISION"] = ("Engineering", "DOCUMENT_REVISION", (actual, threshold) => actual > threshold),
+        // Marketing
+        ["MKT_CAMPAIGN_ROI"] = ("Marketing", "CAMPAIGN_ROI", (actual, threshold) => true),
+        ["MKT_LEAD_CONVERSION"] = ("Marketing", "LEAD_CONVERSION", (actual, threshold) => actual < threshold),
+        ["MKT_WEBSITE_TRAFFIC"] = ("Marketing", "WEBSITE_TRAFFIC", (actual, threshold) => true),
+        ["MKT_SOCIAL_ENGAGEMENT"] = ("Marketing", "SOCIAL_ENGAGEMENT", (actual, threshold) => true),
+        // Quality Assurance
+        ["QA_DEFECT_RATE"] = ("QualityAssurance", "DEFECT_RATE", (actual, threshold) => actual > threshold),
+        ["QA_INSPECTION_FAIL"] = ("QualityAssurance", "INSPECTION_FAIL", (actual, threshold) => actual > threshold),
+        ["QA_RETURN_RATE"] = ("QualityAssurance", "RETURN_RATE", (actual, threshold) => actual > threshold),
+        ["QA_CUSTOMER_COMPLAINT"] = ("QualityAssurance", "CUSTOMER_COMPLAINT", (actual, threshold) => actual > threshold),
+        // Document Control
+        ["DOC_PENDING_APPROVAL"] = ("DocumentControl", "PENDING_APPROVAL", (actual, threshold) => actual > threshold),
+        ["DOC_EXPIRING"] = ("DocumentControl", "EXPIRING", (actual, threshold) => actual > threshold),
+        ["DOC_REVISION_PENDING"] = ("DocumentControl", "REVISION_PENDING", (actual, threshold) => actual > threshold),
+        // Facilities
+        ["FAC_WORKORDER_BACKLOG"] = ("Facilities", "WORKORDER_BACKLOG", (actual, threshold) => actual > threshold),
+        ["FAC_EQUIPMENT_FAILURE"] = ("Facilities", "EQUIPMENT_FAILURE", (actual, threshold) => actual > threshold),
+        ["FAC_UTILITY_COST"] = ("Facilities", "UTILITY_COST", (actual, threshold) => true),
+        ["FAC_SAFETY_INCIDENT"] = ("Facilities", "SAFETY_INCIDENT", (actual, threshold) => actual > 0),
+        // Information Services
+        ["IS_SYSTEM_DOWN"] = ("InformationServices", "SYSTEM_DOWN", (actual, threshold) => true),
+        ["IS_TICKET_BACKLOG"] = ("InformationServices", "TICKET_BACKLOG", (actual, threshold) => actual > threshold),
+        ["IS_SECURITY_ALERT"] = ("InformationServices", "SECURITY_ALERT", (actual, threshold) => actual > threshold),
+        ["IS_BACKUP_FAILURE"] = ("InformationServices", "BACKUP_FAILURE", (actual, threshold) => actual > 0),
+        // Shipping and Receiving
+        ["SHIP_DELAY_RATE"] = ("ShippingAndReceiving", "SHIP_DELAY_RATE", (actual, threshold) => actual > threshold),
+        ["SHIP_RETURN_RATE"] = ("ShippingAndReceiving", "RETURN_RATE", (actual, threshold) => actual > threshold),
+        ["SHIP_RECEIVING_BACKLOG"] = ("ShippingAndReceiving", "RECEIVING_BACKLOG", (actual, threshold) => actual > threshold),
+        ["SHIP_DAMAGE_RATE"] = ("ShippingAndReceiving", "DAMAGE_RATE", (actual, threshold) => actual > threshold),
+        // Production Control
+        ["PRODCTRL_SCHEDULE_ADHERENCE"] = ("ProductionControl", "SCHEDULE_ADHERENCE", (actual, threshold) => actual < threshold),
+        ["PRODCTRL_WIP_HIGH"] = ("ProductionControl", "WIP_HIGH", (actual, threshold) => actual > threshold),
+        ["PRODCTRL_CYCLE_TIME"] = ("ProductionControl", "CYCLE_TIME", (actual, threshold) => actual > threshold),
+        // Tool Design
+        ["TOOL_REVISION_RATE"] = ("ToolDesign", "REVISION_RATE", (actual, threshold) => actual > threshold),
+        ["TOOL_DELIVERY_DELAY"] = ("ToolDesign", "DELIVERY_DELAY", (actual, threshold) => actual < threshold),
+        ["TOOL_COST_OVERRUN"] = ("ToolDesign", "COST_OVERRUN", (actual, threshold) => true),
+        // Executive
+        ["EXEC_REVENUE_BELOW_TARGET"] = ("Executive", "REVENUE_BELOW_TARGET", (actual, threshold) => actual < threshold),
+        ["EXEC_MARGIN_DECLINE"] = ("Executive", "MARGIN_DECLINE", (actual, threshold) => actual < -threshold),
+        ["EXEC_INVENTORY_TURNS"] = ("Executive", "INVENTORY_TURNS", (actual, threshold) => actual < threshold),
+        ["EXEC_EMPLOYEE_SATISFACTION"] = ("Executive", "EMPLOYEE_SATISFACTION", (actual, threshold) => actual < threshold),
+        ["EXEC_CUSTOMER_SATISFACTION"] = ("Executive", "CUSTOMER_SATISFACTION", (actual, threshold) => actual < threshold),
+    };
+
+    public AlertEvaluationService(
+        IApplicationDbContext mainDb,
+        IChatBotDbContext alertDb,
+        IEnumerable<IAlertComputeService> computeServices)
     {
         _mainDb = mainDb;
         _alertDb = alertDb;
+        _computeServices = computeServices;
     }
 
     public async Task<AlertEvaluationResult> EvaluateAsync(AlertConfiguration config, CancellationToken ct = default)
@@ -24,217 +107,28 @@ public class AlertEvaluationService : IAlertEvaluationService
             return new AlertEvaluationResult(false, 0, "Định nghĩa cảnh báo chưa được tải.");
         }
 
-        var effectiveNow = await _mainDb.SalesOrderHeaders
-            .MaxAsync(o => (DateTime?)o.OrderDate, ct) ?? DateTime.UtcNow;
-
-        return definition.Code switch
+        if (!AlertMetricMap.TryGetValue(definition.Code, out var mapping))
         {
-            "SALES_REVENUE_DECLINE" => await EvaluateSalesRevenueDeclineAsync(config, effectiveNow, ct),
-            "SALES_ORDER_COUNT_DECLINE" => await EvaluateSalesOrderCountDeclineAsync(config, effectiveNow, ct),
-            "SALES_TOP_PRODUCT_CHANGE" => await EvaluateSalesTopProductChangeAsync(config, effectiveNow, ct),
-            "SALES_ORDER_STATUS_ISSUE" => await EvaluateSalesOrderStatusIssueAsync(config, effectiveNow, ct),
-            "SALES_CUSTOMER_CONCENTRATION" => await EvaluateCustomerConcentrationAsync(config, effectiveNow, ct),
-            _ => new AlertEvaluationResult(false, 0, $"Mã cảnh báo không xác định: {definition.Code}")
-        };
-    }
-
-    private async Task<AlertEvaluationResult> EvaluateSalesRevenueDeclineAsync(
-        AlertConfiguration config, DateTime effectiveNow, CancellationToken ct)
-    {
-        var scanDays = config.ScanIntervalDays;
-        var threshold = config.ThresholdValue ?? config.AlertDefinition?.DefaultThreshold ?? 10m;
-        var currentPeriodStart = effectiveNow.AddDays(-scanDays);
-        var previousPeriodStart = currentPeriodStart.AddDays(-scanDays);
-
-        var currentRevenue = await _mainDb.SalesOrderHeaders
-            .Where(o => o.OrderDate >= currentPeriodStart && o.OrderDate <= effectiveNow && o.Status != 6)
-            .SumAsync(o => (decimal?)o.TotalDue, ct) ?? 0m;
-
-        var previousRevenue = await _mainDb.SalesOrderHeaders
-            .Where(o => o.OrderDate >= previousPeriodStart && o.OrderDate < currentPeriodStart && o.Status != 6)
-            .SumAsync(o => (decimal?)o.TotalDue, ct) ?? 0m;
-
-        if (previousRevenue == 0)
-        {
-            return new AlertEvaluationResult(false, 0, "Không có dữ liệu kỳ trước để so sánh.");
+            return new AlertEvaluationResult(false, 0, $"Mã cảnh báo không xác định: {definition.Code}");
         }
 
-        var changePercent = ((currentRevenue - previousRevenue) / previousRevenue) * 100m;
-
-        if (changePercent < -threshold)
+        var computeService = _computeServices.FirstOrDefault(s => s.DepartmentCode == mapping.DeptCode);
+        if (computeService == null)
         {
-            return new AlertEvaluationResult(
-                true,
-                changePercent,
-                $"Doanh thu {scanDays} ngày: ${currentRevenue:N0} (giảm {changePercent:N1}% so với kỳ trước). Vượt ngưỡng -{threshold:N0}%."
-            );
+            return new AlertEvaluationResult(false, 0, $"Không tìm thấy compute service cho department: {mapping.DeptCode}");
         }
 
-        return new AlertEvaluationResult(
-            false,
-            changePercent,
-            $"Doanh thu {scanDays} ngày: ${currentRevenue:N0} ({changePercent.ToString("+0.0;-0.0;0")}% so với kỳ trước). Không vượt ngưỡng -{threshold:N0}%."
-        );
-    }
+        var metrics = await computeService.ComputeAsync(config.ScanIntervalDays, ct);
 
-    private async Task<AlertEvaluationResult> EvaluateSalesOrderCountDeclineAsync(
-        AlertConfiguration config, DateTime effectiveNow, CancellationToken ct)
-    {
-        var scanDays = config.ScanIntervalDays;
-        var threshold = config.ThresholdValue ?? config.AlertDefinition?.DefaultThreshold ?? 10m;
-        var currentPeriodStart = effectiveNow.AddDays(-scanDays);
-        var previousPeriodStart = currentPeriodStart.AddDays(-scanDays);
-
-        var currentCount = await _mainDb.SalesOrderHeaders
-            .Where(o => o.OrderDate >= currentPeriodStart && o.OrderDate <= effectiveNow && o.Status != 6)
-            .CountAsync(ct);
-
-        var previousCount = await _mainDb.SalesOrderHeaders
-            .Where(o => o.OrderDate >= previousPeriodStart && o.OrderDate < currentPeriodStart && o.Status != 6)
-            .CountAsync(ct);
-
-        if (previousCount == 0)
+        if (!metrics.MetricValues.TryGetValue(mapping.MetricKey, out var actualValue))
         {
-            return new AlertEvaluationResult(false, 0, "Không có dữ liệu kỳ trước để so sánh.");
+            return new AlertEvaluationResult(false, 0, $"Không tìm thấy metric: {mapping.MetricKey}");
         }
 
-        var changePercent = ((decimal)(currentCount - previousCount) / previousCount) * 100m;
+        var threshold = config.ThresholdValue ?? definition.DefaultThreshold ?? 0m;
+        var message = metrics.MetricMessages.GetValueOrDefault(mapping.MetricKey, $"Giá trị: {actualValue:N2}");
+        var isTriggered = mapping.TriggerCondition(actualValue, threshold);
 
-        if (changePercent < -threshold)
-        {
-            return new AlertEvaluationResult(
-                true,
-                changePercent,
-                $"Số đơn hàng {scanDays} ngày: {currentCount:N0} (giảm {changePercent:N1}% so với kỳ trước). Vượt ngưỡng -{threshold:N0}%."
-            );
-        }
-
-        return new AlertEvaluationResult(
-            false,
-            changePercent,
-            $"Số đơn hàng {scanDays} ngày: {currentCount:N0} ({changePercent.ToString("+0.0;-0.0;0")}% so với kỳ trước). Không vượt ngưỡng -{threshold:N0}%."
-        );
-    }
-
-    private async Task<AlertEvaluationResult> EvaluateSalesTopProductChangeAsync(
-        AlertConfiguration config, DateTime effectiveNow, CancellationToken ct)
-    {
-        var scanDays = config.ScanIntervalDays;
-        var currentPeriodStart = effectiveNow.AddDays(-scanDays);
-        var previousPeriodStart = currentPeriodStart.AddDays(-scanDays);
-
-        var currentTopProducts = await _mainDb.SalesOrderDetails
-            .Where(d => d.SalesOrder!.OrderDate >= currentPeriodStart && d.SalesOrder!.OrderDate <= effectiveNow && d.SalesOrder!.Status != 6)
-            .GroupBy(d => d.ProductId)
-            .Select(g => new { ProductId = g.Key, TotalRevenue = g.Sum(d => d.LineTotal) })
-            .OrderByDescending(p => p.TotalRevenue)
-            .Take(5)
-            .Select(p => p.ProductId)
-            .ToListAsync(ct);
-
-        var previousTopProducts = await _mainDb.SalesOrderDetails
-            .Where(d => d.SalesOrder!.OrderDate >= previousPeriodStart && d.SalesOrder!.OrderDate < currentPeriodStart && d.SalesOrder!.Status != 6)
-            .GroupBy(d => d.ProductId)
-            .Select(g => new { ProductId = g.Key, TotalRevenue = g.Sum(d => d.LineTotal) })
-            .OrderByDescending(p => p.TotalRevenue)
-            .Take(5)
-            .Select(p => p.ProductId)
-            .ToListAsync(ct);
-
-        var changedCount = currentTopProducts.Count(p => !previousTopProducts.Contains(p));
-
-        if (changedCount > 0)
-        {
-            return new AlertEvaluationResult(
-                true,
-                changedCount,
-                $"Top sản phẩm bán chạy thay đổi: có {changedCount}/5 sản phẩm mới trong {scanDays} ngày."
-            );
-        }
-
-        return new AlertEvaluationResult(
-            false,
-            changedCount,
-            "Top sản phẩm bán chạy ổn định."
-        );
-    }
-
-    private async Task<AlertEvaluationResult> EvaluateSalesOrderStatusIssueAsync(
-        AlertConfiguration config, DateTime effectiveNow, CancellationToken ct)
-    {
-        var scanDays = config.ScanIntervalDays;
-        var threshold = config.ThresholdValue ?? config.AlertDefinition?.DefaultThreshold ?? 20m;
-        var cutoff = effectiveNow.AddDays(-scanDays);
-
-        var totalOrders = await _mainDb.SalesOrderHeaders
-            .Where(o => o.OrderDate >= cutoff && o.OrderDate <= effectiveNow)
-            .CountAsync(ct);
-
-        var rejectedOrCancelled = await _mainDb.SalesOrderHeaders
-            .Where(o => o.OrderDate >= cutoff && o.OrderDate <= effectiveNow && (o.Status == 4 || o.Status == 6))
-            .CountAsync(ct);
-
-        if (totalOrders == 0)
-        {
-            return new AlertEvaluationResult(false, 0, "Không có đơn hàng trong kỳ.");
-        }
-
-        var issueRate = ((decimal)rejectedOrCancelled / totalOrders) * 100m;
-
-        if (issueRate > threshold)
-        {
-            return new AlertEvaluationResult(
-                true,
-                issueRate,
-                $"Tỷ lệ đơn hàng bị từ chối/hủy: {issueRate:N1}% (vượt ngưỡng {threshold:N0}%). {rejectedOrCancelled}/{totalOrders} đơn."
-            );
-        }
-
-        return new AlertEvaluationResult(
-            false,
-            issueRate,
-            $"Tỷ lệ đơn hàng có vấn đề: {issueRate:N1}%."
-        );
-    }
-
-    private async Task<AlertEvaluationResult> EvaluateCustomerConcentrationAsync(
-        AlertConfiguration config, DateTime effectiveNow, CancellationToken ct)
-    {
-        var scanDays = config.ScanIntervalDays;
-        var threshold = config.ThresholdValue ?? config.AlertDefinition?.DefaultThreshold ?? 30m;
-        var cutoff = effectiveNow.AddDays(-scanDays);
-
-        var totalRevenue = await _mainDb.SalesOrderDetails
-            .Where(d => d.SalesOrder!.OrderDate >= cutoff && d.SalesOrder!.OrderDate <= effectiveNow && d.SalesOrder!.Status != 6)
-            .SumAsync(d => (decimal?)d.LineTotal, ct) ?? 0m;
-
-        if (totalRevenue == 0)
-        {
-            return new AlertEvaluationResult(false, 0, "Không có doanh thu trong kỳ.");
-        }
-
-        var topCustomerRevenue = await _mainDb.SalesOrderDetails
-            .Where(d => d.SalesOrder!.OrderDate >= cutoff && d.SalesOrder!.OrderDate <= effectiveNow && d.SalesOrder!.Status != 6)
-            .GroupBy(d => d.SalesOrder!.CustomerId)
-            .Select(g => g.Sum(d => d.LineTotal))
-            .OrderByDescending(r => r)
-            .FirstAsync(ct);
-
-        var concentration = (topCustomerRevenue / totalRevenue) * 100m;
-
-        if (concentration > threshold)
-        {
-            return new AlertEvaluationResult(
-                true,
-                concentration,
-                $"Khách hàng top 1 chiếm {concentration:N1}% doanh thu (vượt ngưỡng {threshold:N0}%). Cảnh báo phụ thuộc quá mức vào 1 khách hàng."
-            );
-        }
-
-        return new AlertEvaluationResult(
-            false,
-            concentration,
-            $"Khách hàng top 1 chiếm {concentration:N1}% doanh thu."
-        );
+        return new AlertEvaluationResult(isTriggered, actualValue, message);
     }
 }

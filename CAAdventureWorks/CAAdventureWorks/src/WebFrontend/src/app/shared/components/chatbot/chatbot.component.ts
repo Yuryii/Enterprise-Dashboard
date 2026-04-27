@@ -46,6 +46,21 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     return deptNames[this.currentDeptId()] || 'Chatbot';
   });
 
+  suggestedQuestions = computed(() => {
+    const questions: Record<string, string[]> = {
+      sales: [
+        'Doanh thu tháng này?',
+        'Top 5 sản phẩm bán chạy?',
+        'Đơn hàng gần đây?',
+        'Khách hàng tiềm năng?',
+      ],
+      production: [],
+      purchasing: [],
+      quality: [],
+    };
+    return questions[this.currentDeptId()] || [];
+  });
+
   messages = signal<ChatMessage[]>([]);
   inputValue = signal('');
   streamingContent = signal('');
@@ -182,6 +197,11 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     }
     this.isLoading.set(false);
     this.shouldScrollToBottom = true;
+  }
+
+  suggestedQuestionClick(question: string): void {
+    this.inputValue.set(question);
+    this.sendMessage();
   }
 
   clearChat(): void {

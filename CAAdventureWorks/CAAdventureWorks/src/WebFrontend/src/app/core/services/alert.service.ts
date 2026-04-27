@@ -1,7 +1,8 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { interval, Observable, firstValueFrom } from 'rxjs';
+import { interval, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface AlertDefinitionDto {
   id: number;
@@ -70,6 +71,7 @@ export interface UpdateAlertConfigDto {
 @Injectable({ providedIn: 'root' })
 export class AlertService {
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly baseUrl = `${environment.apiUrl}/api/alerts`;
 
   readonly unreadCount = signal<number>(0);
@@ -78,8 +80,72 @@ export class AlertService {
   private pollIntervalMs = 30000;
   private pollingActive = false;
 
+  private readonly departmentMap: Record<string, string> = {
+    // Sales
+    'Sales': 'Sales',
+    'Sales-and-Marketing': 'Sales',
+    // Human Resources
+    'HumanResources': 'HumanResources',
+    'Executive-General-And-Administration-Manager': 'HumanResources',
+    // Finance
+    'Finance': 'Finance',
+    // Production
+    'Production': 'Production',
+    'Manufacturing': 'Production',
+    // Production Control
+    'Production-Control': 'ProductionControl',
+    // Purchasing
+    'Purchasing': 'Purchasing',
+    // Marketing
+    'Marketing': 'Marketing',
+    // Quality Assurance
+    'Quality-Assurance': 'QualityAssurance',
+    'Quality-Assurance-Manager': 'QualityAssurance',
+    // Document Control
+    'Document-Control': 'DocumentControl',
+    // Engineering
+    'Engineering': 'Engineering',
+    // Tool Design
+    'Tool-Design': 'ToolDesign',
+    // Shipping and Receiving
+    'Shipping-and-Receiving': 'ShippingAndReceiving',
+    // Facilities
+    'Facilities': 'Facilities',
+    'Facilities-And-Maintenance': 'Facilities',
+    // Information Services
+    'Information-Services': 'InformationServices',
+    // Research and Development
+    'Research-and-Development': 'Engineering',
+    // Executive
+    'Executive': 'Executive',
+  };
+
+  private userDepartment: string | null = null;
+
   constructor() {
+    this.initUserDepartment();
     this.startPolling();
+  }
+
+  private initUserDepartment(): void {
+    try {
+      const roles = this.authService.getRoles();
+      if (Array.isArray(roles)) {
+        for (const role of roles) {
+          const dept = this.departmentMap[role];
+          if (dept) {
+            this.userDepartment = dept;
+            break;
+          }
+        }
+      }
+    } catch {
+      this.userDepartment = null;
+    }
+  }
+
+  getCurrentDepartment(): string | null {
+    return this.userDepartment;
   }
 
   private startPolling(): void {
@@ -108,11 +174,23 @@ export class AlertService {
     });
   }
 
-  getAlertDefinitions(departmentCode?: string): Observable<AlertDefinitionDto[]> {
+  /**
+   * Get alert definitions filtered by current user's department.
+   */
+  getAlertDefinitions(): Observable<AlertDefinitionDto[]> {
+    const dept = this.userDepartment;
     let params = new HttpParams();
-    if (departmentCode) {
-      params = params.set('departmentCode', departmentCode);
+    if (dept) {
+      params = params.set('departmentCode', dept);
     }
+    return this.http.get<AlertDefinitionDto[]>(`${this.baseUrl}/definitions`, { params });
+  }
+
+  /**
+   * Get alert definitions for a specific department.
+   */
+  getAlertDefinitionsByDepartment(departmentCode: string): Observable<AlertDefinitionDto[]> {
+    const params = new HttpParams().set('departmentCode', departmentCode);
     return this.http.get<AlertDefinitionDto[]>(`${this.baseUrl}/definitions`, { params });
   }
 

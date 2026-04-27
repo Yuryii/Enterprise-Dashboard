@@ -66,7 +66,24 @@ export class AuthService {
     // - For Purchasing: ['Purchasing']
     // - For Executive (all access): ['Executive']
     if (this.useMockAuth) {
-      return ['Sales']; // Currently set to Sales role only
+      // Return all roles so any developer role can access the Alerts page during dev.
+      // The AlertService filters definitions by department based on the actual role returned here.
+      return [
+        'Sales',
+        'Executive',
+        'Production',
+        'Purchasing',
+        'Marketing',
+        'HumanResources',
+        'Finance',
+        'Quality-Assurance',
+        'Document-Control',
+        'Engineering',
+        'Tool-Design',
+        'Shipping-and-Receiving',
+        'Facilities-And-Maintenance',
+        'Information-Services',
+      ];
     }
 
     const token = await firstValueFrom(

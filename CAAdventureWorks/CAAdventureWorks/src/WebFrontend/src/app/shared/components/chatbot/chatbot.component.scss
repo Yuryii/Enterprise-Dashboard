@@ -197,6 +197,31 @@
     font-size: 13px;
     opacity: 0.8;
   }
+
+  &-suggested {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+    max-width: 320px;
+  }
+
+  &-chip {
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid #321fdb;
+    background: transparent;
+    color: #321fdb;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #321fdb;
+      color: #fff;
+    }
+  }
 }
 
 // Message Bubbles

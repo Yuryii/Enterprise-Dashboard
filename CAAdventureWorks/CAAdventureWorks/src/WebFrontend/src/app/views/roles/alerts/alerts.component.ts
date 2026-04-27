@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -14,12 +14,6 @@ import {
 } from '@coreui/angular';
 import { IconDirective } from '@coreui/icons-angular';
 import { AlertService, type AlertDefinitionDto, type AlertConfigurationDto, type AlertHistoryDto } from '../../../core/services/alert.service';
-
-interface CountdownData {
-  total: number;
-  remaining: number;
-  isSeconds: boolean;
-}
 
 @Component({
   selector: 'app-alerts',
@@ -39,7 +33,7 @@ interface CountdownData {
   templateUrl: './alerts.component.html',
   styleUrl: './alerts.component.scss'
 })
-export class AlertsComponent implements OnInit, OnDestroy {
+export class AlertsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly alertService = inject(AlertService);
   private readonly messageService = inject(MessageService);
@@ -58,9 +52,6 @@ export class AlertsComponent implements OnInit, OnDestroy {
   readonly selectedDefinition = signal<AlertDefinitionDto | null>(null);
   readonly activating = signal(false);
   readonly selectedHistory = signal<AlertHistoryDto | null>(null);
-
-  private readonly configCountdowns = signal<Map<number, CountdownData>>(new Map());
-  private countdownInterval: ReturnType<typeof setInterval> | null = null;
 
   readonly scanIntervalOptions = [
     { value: 15, label: '15 giây' },
@@ -84,7 +75,8 @@ export class AlertsComponent implements OnInit, OnDestroy {
   loadInitialData(): void {
     this.loading.set(true);
 
-    this.alertService.getAlertDefinitions('Sales')
+    // Load definitions filtered by user's department (backend enforces this)
+    this.alertService.getAlertDefinitions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (defs) => {
@@ -101,13 +93,11 @@ export class AlertsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (configs) => {
           this.configurations.set(configs);
-          this.refreshCountdowns();
         },
         error: () => {}
       });
 
     this.loadHistory();
-    this.startCountdownTimer();
   }
 
   loadHistory(page: number = 1): void {
@@ -270,9 +260,6 @@ export class AlertsComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.stopCountdownTimer();
-  }
 
   onActivateNow(): void {
     const def = this.selectedDefinition();
@@ -308,7 +295,6 @@ export class AlertsComponent implements OnInit, OnDestroy {
           .subscribe({
             next: (configs) => {
               this.configurations.set(configs);
-              this.resetCountdown(existing.id);
             },
             error: () => {}
           });
@@ -381,24 +367,167 @@ export class AlertsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Get color for an alert based on its code prefix.
+   * Each department prefix has a consistent color scheme.
+   */
   getAlertColor(alertCode: string): string {
     const colors: Record<string, string> = {
+      // Sales
       'SALES_REVENUE_DECLINE': 'danger',
       'SALES_ORDER_COUNT_DECLINE': 'warning',
       'SALES_TOP_PRODUCT_CHANGE': 'info',
       'SALES_ORDER_STATUS_ISSUE': 'danger',
       'SALES_CUSTOMER_CONCENTRATION': 'warning',
+      // Production
+      'PRODUCTION_SCRAP_RATE': 'danger',
+      'PRODUCTION_WORKORDER_DELAY': 'warning',
+      'PRODUCTION_MACHINE_DOWNTIME': 'danger',
+      'PRODUCTION_INVENTORY_LOW': 'warning',
+      // Purchasing
+      'PURCHASING_PO_DELAY': 'warning',
+      'PURCHASING_VENDOR_PERF': 'warning',
+      'PURCHASING_STOCKOUT': 'danger',
+      'PURCHASING_PRICE_VARIANCE': 'info',
+      // Human Resources
+      'HR_OPEN_POSITIONS': 'info',
+      'HR_TURNOVER_RATE': 'warning',
+      'HR_OVERTIME_HIGH': 'warning',
+      'HR_SICK_LEAVE_HIGH': 'info',
+      // Finance
+      'FINANCE_BUDGET_VARIANCE': 'danger',
+      'FINANCE_OVERDUE_PAYMENT': 'danger',
+      'FINANCE_AR_AGING': 'warning',
+      'FINANCE_CREDIT_LIMIT': 'info',
+      // Engineering
+      'ENG_PROJECT_DELAY': 'danger',
+      'ENG_CHANGE_ORDER_RATE': 'warning',
+      'ENG_DOCUMENT_REVISION': 'info',
+      // Marketing
+      'MKT_CAMPAIGN_ROI': 'info',
+      'MKT_LEAD_CONVERSION': 'warning',
+      'MKT_WEBSITE_TRAFFIC': 'info',
+      'MKT_SOCIAL_ENGAGEMENT': 'info',
+      // Quality Assurance
+      'QA_DEFECT_RATE': 'danger',
+      'QA_INSPECTION_FAIL': 'danger',
+      'QA_RETURN_RATE': 'warning',
+      'QA_CUSTOMER_COMPLAINT': 'danger',
+      // Document Control
+      'DOC_PENDING_APPROVAL': 'warning',
+      'DOC_EXPIRING': 'info',
+      'DOC_REVISION_PENDING': 'info',
+      // Facilities
+      'FAC_WORKORDER_BACKLOG': 'warning',
+      'FAC_EQUIPMENT_FAILURE': 'danger',
+      'FAC_UTILITY_COST': 'info',
+      'FAC_SAFETY_INCIDENT': 'danger',
+      // Information Services
+      'IS_SYSTEM_DOWN': 'danger',
+      'IS_TICKET_BACKLOG': 'warning',
+      'IS_SECURITY_ALERT': 'danger',
+      'IS_BACKUP_FAILURE': 'danger',
+      // Shipping and Receiving
+      'SHIP_DELAY_RATE': 'warning',
+      'SHIP_RETURN_RATE': 'warning',
+      'SHIP_RECEIVING_BACKLOG': 'info',
+      'SHIP_DAMAGE_RATE': 'danger',
+      // Production Control
+      'PRODCTRL_SCHEDULE_ADHERENCE': 'info',
+      'PRODCTRL_WIP_HIGH': 'warning',
+      'PRODCTRL_CYCLE_TIME': 'info',
+      // Tool Design
+      'TOOL_REVISION_RATE': 'info',
+      'TOOL_DELIVERY_DELAY': 'warning',
+      'TOOL_COST_OVERRUN': 'warning',
+      // Executive
+      'EXEC_REVENUE_BELOW_TARGET': 'danger',
+      'EXEC_MARGIN_DECLINE': 'danger',
+      'EXEC_INVENTORY_TURNS': 'info',
+      'EXEC_EMPLOYEE_SATISFACTION': 'warning',
+      'EXEC_CUSTOMER_SATISFACTION': 'warning',
     };
     return colors[alertCode] ?? 'secondary';
   }
 
+  /**
+   * Get icon for an alert based on its code prefix.
+   */
   getAlertIcon(alertCode: string): string {
     const icons: Record<string, string> = {
+      // Sales
       'SALES_REVENUE_DECLINE': 'cilChartLineDown',
       'SALES_ORDER_COUNT_DECLINE': 'cilCart',
       'SALES_TOP_PRODUCT_CHANGE': 'cilStar',
       'SALES_ORDER_STATUS_ISSUE': 'cilWarning',
       'SALES_CUSTOMER_CONCENTRATION': 'cilPeople',
+      // Production
+      'PRODUCTION_SCRAP_RATE': 'cilIndustry',
+      'PRODUCTION_WORKORDER_DELAY': 'cilClock',
+      'PRODUCTION_MACHINE_DOWNTIME': 'cilSettings',
+      'PRODUCTION_INVENTORY_LOW': 'cilBox',
+      // Purchasing
+      'PURCHASING_PO_DELAY': 'cilTruck',
+      'PURCHASING_VENDOR_PERF': 'cilStar',
+      'PURCHASING_STOCKOUT': 'cilWarning',
+      'PURCHASING_PRICE_VARIANCE': 'cilChartLine',
+      // Human Resources
+      'HR_OPEN_POSITIONS': 'cilUserFollow',
+      'HR_TURNOVER_RATE': 'cilUserUnfollow',
+      'HR_OVERTIME_HIGH': 'cilClock',
+      'HR_SICK_LEAVE_HIGH': 'cilMedical',
+      // Finance
+      'FINANCE_BUDGET_VARIANCE': 'cilCalculator',
+      'FINANCE_OVERDUE_PAYMENT': 'cilWarning',
+      'FINANCE_AR_AGING': 'cilClock',
+      'FINANCE_CREDIT_LIMIT': 'cilCreditCard',
+      // Engineering
+      'ENG_PROJECT_DELAY': 'cilClock',
+      'ENG_CHANGE_ORDER_RATE': 'cilPencil',
+      'ENG_DOCUMENT_REVISION': 'cilDescription',
+      // Marketing
+      'MKT_CAMPAIGN_ROI': 'cilChartPie',
+      'MKT_LEAD_CONVERSION': 'cilPeople',
+      'MKT_WEBSITE_TRAFFIC': 'cilGlobeAlt',
+      'MKT_SOCIAL_ENGAGEMENT': 'cilShare',
+      // Quality Assurance
+      'QA_DEFECT_RATE': 'cilWarning',
+      'QA_INSPECTION_FAIL': 'cilXCircle',
+      'QA_RETURN_RATE': 'cilReturn',
+      'QA_CUSTOMER_COMPLAINT': 'cilSpeech',
+      // Document Control
+      'DOC_PENDING_APPROVAL': 'cilCheckCircle',
+      'DOC_EXPIRING': 'cilClock',
+      'DOC_REVISION_PENDING': 'cilPen',
+      // Facilities
+      'FAC_WORKORDER_BACKLOG': 'cilList',
+      'FAC_EQUIPMENT_FAILURE': 'cilWarning',
+      'FAC_UTILITY_COST': 'cilDollar',
+      'FAC_SAFETY_INCIDENT': 'cilShieldAlt',
+      // Information Services
+      'IS_SYSTEM_DOWN': 'cilCloudSlash',
+      'IS_TICKET_BACKLOG': 'cilList',
+      'IS_SECURITY_ALERT': 'cilShieldAlt',
+      'IS_BACKUP_FAILURE': 'cilWarning',
+      // Shipping and Receiving
+      'SHIP_DELAY_RATE': 'cilTruck',
+      'SHIP_RETURN_RATE': 'cilReturn',
+      'SHIP_RECEIVING_BACKLOG': 'cilInbox',
+      'SHIP_DAMAGE_RATE': 'cilWarning',
+      // Production Control
+      'PRODCTRL_SCHEDULE_ADHERENCE': 'cilCheck',
+      'PRODCTRL_WIP_HIGH': 'cilLayers',
+      'PRODCTRL_CYCLE_TIME': 'cilClock',
+      // Tool Design
+      'TOOL_REVISION_RATE': 'cilPencil',
+      'TOOL_DELIVERY_DELAY': 'cilClock',
+      'TOOL_COST_OVERRUN': 'cilCalculator',
+      // Executive
+      'EXEC_REVENUE_BELOW_TARGET': 'cilChartLineDown',
+      'EXEC_MARGIN_DECLINE': 'cilChartLineDown',
+      'EXEC_INVENTORY_TURNS': 'cilLoopCircular',
+      'EXEC_EMPLOYEE_SATISFACTION': 'cilPeople',
+      'EXEC_CUSTOMER_SATISFACTION': 'cilStar',
     };
     return icons[alertCode] ?? 'cilBell';
   }
@@ -423,80 +552,6 @@ export class AlertsComponent implements OnInit, OnDestroy {
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return `${diffDays} ngày trước`;
     return vnDate.toLocaleDateString('vi-VN');
-  }
-
-  getCountdown(definitionId: number): CountdownData | null {
-    const config = this.getConfigForDefinition(definitionId);
-    if (!config || !config.isEnabled) return null;
-    return this.configCountdowns().get(config.id) ?? null;
-  }
-
-  formatCountdown(seconds: number): string {
-    if (seconds <= 0) return '0s';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s}s`;
-  }
-
-  private startCountdownTimer(): void {
-    this.refreshCountdowns();
-    this.countdownInterval = setInterval(() => {
-      this.refreshCountdowns();
-    }, 1000);
-  }
-
-  private stopCountdownTimer(): void {
-    if (this.countdownInterval !== null) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = null;
-    }
-  }
-
-  private refreshCountdowns(): void {
-    const now = new Date();
-    const updated = new Map<number, CountdownData>();
-
-    for (const config of this.configurations()) {
-      if (!config.isEnabled) continue;
-
-      const isSeconds = !!(config.scanIntervalSeconds && config.scanIntervalSeconds > 0);
-      let total: number;
-      let remaining: number;
-
-      if (isSeconds) {
-        total = config.scanIntervalSeconds!;
-        const elapsed = config.lastTriggeredAt
-          ? Math.floor((now.getTime() - new Date(config.lastTriggeredAt).getTime()) / 1000)
-          : total + 1;
-        remaining = Math.max(0, total - (elapsed % total));
-        if (remaining === 0) remaining = total;
-      } else {
-        total = config.scanIntervalDays * 86400;
-        if (config.lastTriggeredAt) {
-          const lastTriggered = new Date(config.lastTriggeredAt);
-          const nextRun = new Date(lastTriggered);
-          nextRun.setDate(nextRun.getDate() + config.scanIntervalDays);
-          nextRun.setHours(0, 0, 0, 0);
-          if (nextRun <= lastTriggered) {
-            nextRun.setDate(nextRun.getDate() + config.scanIntervalDays);
-          }
-          remaining = Math.max(0, Math.floor((nextRun.getTime() - now.getTime()) / 1000));
-        } else {
-          remaining = total;
-        }
-      }
-
-      updated.set(config.id, { total, remaining, isSeconds });
-    }
-
-    this.configCountdowns.set(updated);
-  }
-
-  private resetCountdown(configId: number): void {
-    this.refreshCountdowns();
   }
 
   get totalPages(): number {

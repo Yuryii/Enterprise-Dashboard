@@ -21,7 +21,7 @@ public sealed class AlertsEndpoint : IEndpointGroup
 
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.RequireAuthorization("Sales", "Executive");
+        groupBuilder.RequireAuthorization("Alerts");
 
         groupBuilder.MapGet(GetAlertDefinitions, "/definitions")
             .WithName("GetAlertDefinitions")
@@ -65,9 +65,52 @@ public sealed class AlertsEndpoint : IEndpointGroup
     }
 
     private static async Task<Ok<IReadOnlyList<AlertDefinitionDto>>> GetAlertDefinitions(
-        string? departmentCode,
-        ISender sender) =>
-        TypedResults.Ok(await sender.Send(new GetAlertDefinitionsQuery(departmentCode)));
+        IUser user,
+        ISender sender)
+    {
+        var departmentCode = GetDepartmentFromRoles(user.Roles);
+        return TypedResults.Ok(await sender.Send(new GetAlertDefinitionsQuery(departmentCode)));
+    }
+
+    private static string? GetDepartmentFromRoles(List<string>? roles)
+    {
+        if (roles is null or { Count: 0 })
+            return null;
+
+        foreach (var role in roles)
+        {
+            var dept = roleDepartmentMap.GetValueOrDefault(role);
+            if (dept is not null)
+                return dept;
+        }
+
+        return null;
+    }
+
+    private static readonly Dictionary<string, string> roleDepartmentMap = new()
+    {
+        ["Sales"] = "Sales",
+        ["Sales-and-Marketing"] = "Sales",
+        ["HumanResources"] = "HumanResources",
+        ["Executive-General-And-Administration-Manager"] = "HumanResources",
+        ["Finance"] = "Finance",
+        ["Production"] = "Production",
+        ["Manufacturing"] = "Production",
+        ["Production-Control"] = "ProductionControl",
+        ["Purchasing"] = "Purchasing",
+        ["Marketing"] = "Marketing",
+        ["Quality-Assurance"] = "QualityAssurance",
+        ["Quality-Assurance-Manager"] = "QualityAssurance",
+        ["Document-Control"] = "DocumentControl",
+        ["Engineering"] = "Engineering",
+        ["Tool-Design"] = "ToolDesign",
+        ["Shipping-and-Receiving"] = "ShippingAndReceiving",
+        ["Facilities"] = "Facilities",
+        ["Facilities-And-Maintenance"] = "Facilities",
+        ["Information-Services"] = "InformationServices",
+        ["Research-and-Development"] = "Engineering",
+        ["Executive"] = "Executive",
+    };
 
     private static async Task<Ok<IReadOnlyList<AlertConfigurationDto>>> GetConfigurations(
         IUser user,

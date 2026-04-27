@@ -97,7 +97,7 @@ export const navItems: INavData[] = [
   {
     name: 'Thiết Kế Dụng Cụ',
     url: '/roles/tool-design',
-    iconComponent: { name: 'cil-construction' },
+    iconComponent: { name: 'cil-warning' },
     roles: ['Tool-Design', 'Research-and-Development'],
   } as NavRole,
   {

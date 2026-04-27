@@ -42,7 +42,10 @@
                 >
                   <svg cIcon [name]="getAlertIcon(def.code)" size="lg" class="flex-shrink-0 text-primary"></svg>
                   <div class="flex-grow-1 overflow-hidden">
-                    <div class="fw-semibold text-truncate">{{ def.name }}</div>
+                    <div class="fw-semibold text-truncate d-flex align-items-center gap-2">
+                      {{ def.name }}
+                      <span class="badge bg-light text-dark border small">{{ def.departmentCode }}</span>
+                    </div>
                     <div class="text-body-secondary small text-truncate">{{ def.description }}</div>
                     @if (def.requiresParameters && def.defaultThreshold) {
                     <div class="text-body-secondary small">Ngưỡng mặc định: {{ def.defaultThreshold }}{{ def.thresholdUnit === 'Percent' ? '%' : '' }}</div>
@@ -57,15 +60,6 @@
                       (change)="onToggleAlert(def, !isAlertEnabled(def.id), $event)"
                     />
                   </div>
-                  @if (getCountdown(def.id); as cd) {
-                  <div class="flex-shrink-0 text-end" style="min-width: 90px;">
-                    @if (cd.isSeconds) {
-                    <span class="badge bg-info small">{{ cd.remaining }}s</span>
-                    } @else {
-                    <div class="small text-body-secondary" style="white-space: nowrap;">{{ formatCountdown(cd.remaining) }}</div>
-                    }
-                  </div>
-                  }
                 </div>
                 }
               </div>

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CAAdventureWorks.Application.Alerts.ComputeServices;
 using CAAdventureWorks.Application.Alerts.Interfaces;
 using CAAdventureWorks.Application.Common.Interfaces;
 using CAAdventureWorks.Infrastructure.Alerts;
@@ -59,6 +60,23 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAlertEvaluationService, AlertEvaluationService>();
         builder.Services.AddScoped<IAlertScheduler, AlertRecurringJobScheduler>();
         builder.Services.AddScoped<AlertEvaluationJob>();
+
+        // Alert Compute Services (one per department)
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.SalesAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.ProductionAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.ProductionControlAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.PurchasingAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.HumanResourcesAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.FinanceAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.EngineeringAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.MarketingAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.QualityAssuranceAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.ShippingAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.ToolDesignAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.DocumentControlAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.FacilitiesAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.InformationServicesAlertComputeService>();
+        builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.ExecutiveAlertComputeService>();
 
         var keycloakAuthority = builder.Configuration["Keycloak:Authority"];
         var keycloakAudience = builder.Configuration["Keycloak:Audience"];
@@ -145,6 +163,26 @@ public static class DependencyInjection
         });
 
         builder.Services.AddAuthorizationBuilder()
+    // Alerts — any authenticated user with a valid role can access alerts
+    .AddPolicy("Alerts", policy =>
+        policy.RequireAssertion(context =>
+            context.User.IsInRole("Sales") ||
+            context.User.IsInRole("Executive") ||
+            context.User.IsInRole("Production") ||
+            context.User.IsInRole("Production-Control") ||
+            context.User.IsInRole("Purchasing") ||
+            context.User.IsInRole("Marketing") ||
+            context.User.IsInRole("Quality-Assurance") ||
+            context.User.IsInRole("Document-Control") ||
+            context.User.IsInRole("Engineering") ||
+            context.User.IsInRole("Tool-Design") ||
+            context.User.IsInRole("Shipping-and-Receiving") ||
+            context.User.IsInRole("Facilities") ||
+            context.User.IsInRole("Facilities-And-Maintenance") ||
+            context.User.IsInRole("Information-Services") ||
+            context.User.IsInRole("Finance") ||
+            context.User.IsInRole("HumanResources") ||
+            context.User.IsInRole("Human-Resources")))
     // Executive — chỉ xem được component Executive
     .AddPolicy("Executive", policy =>
         policy.RequireRole("Executive"))
@@ -179,6 +217,8 @@ public static class DependencyInjection
         policy.RequireRole("Production", "Production-Control"))
     .AddPolicy("Production", policy =>
         policy.RequireRole("Production"))
+    .AddPolicy("Production-Control", policy =>
+        policy.RequireRole("Production-Control"))
     // Sales-and-Marketing — xem Sales + Marketing
     .AddPolicy("Sales-and-Marketing", policy =>
         policy.RequireRole("Sales", "Marketing"))
@@ -186,10 +226,14 @@ public static class DependencyInjection
         policy.RequireRole("Sales"))
     .AddPolicy("Marketing", policy =>
         policy.RequireRole("Marketing"))
+    .AddPolicy("Purchasing", policy =>
+        policy.RequireRole("Purchasing"))
     .AddPolicy("Inventory-Management", policy =>
         policy.RequireRole("Purchasing"))
     .AddPolicy("Shipping-and-Receiving", policy =>
-        policy.RequireRole("Shipping-and-Receiving"));
+        policy.RequireRole("Shipping-and-Receiving"))
+    .AddPolicy("Facilities", policy =>
+        policy.RequireRole("Facilities"));
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();

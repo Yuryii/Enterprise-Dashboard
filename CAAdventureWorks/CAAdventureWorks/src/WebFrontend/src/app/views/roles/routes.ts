@@ -67,7 +67,7 @@ export const routes: Routes = [
   },
   {
     path: 'alerts',
-    canActivate: [roleGuard(['Sales', 'Executive'])],
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./alerts/alerts.component').then((m) => m.AlertsComponent),
     data: { title: 'Quản lý Cảnh báo' }
