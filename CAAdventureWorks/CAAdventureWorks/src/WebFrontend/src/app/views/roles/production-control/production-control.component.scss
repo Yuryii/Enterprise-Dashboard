@@ -5,7 +5,7 @@
 .purchasing-app {
     width: 100%;
     min-height: 100vh;
-    background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)
+    background: transparent
 }
 
 .purchasing-content {
@@ -884,7 +884,7 @@ gridster-item {
 :host-context([data-bs-theme='dark']),
 :host-context(.dark-theme) {
     .purchasing-app {
-        background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+        background: transparent;
         color: var(--cui-body-color, #e5e7eb);
     }
 
@@ -933,6 +933,18 @@ gridster-item {
         background: rgba(31, 41, 55, .92);
         border-color: rgba(148, 163, 184, .28);
         color: var(--cui-body-color, #f3f4f6);
+    }
+
+    .sales-action-buttons .export-btn {
+        background: linear-gradient(135deg, #ff5a1f 0%, #ff3d00 100%);
+        border-color: #ff4b12;
+        color: #fff;
+        box-shadow: 0 10px 20px rgba(255, 90, 31, .25);
+    }
+
+    .sales-action-buttons .export-btn svg {
+        color: #fff;
+        fill: #fff;
     }
 
     .sales-action-buttons .warning-btn {

@@ -500,10 +500,10 @@ export class MarketingComponent {
     const targetStores = this.filteredStoreSegments().length;
 
     return [
-      { label: 'Điểm rating trung bình', value: avgRating, suffix: '' },
-      { label: 'Tỷ lệ review tích cực', value: positiveRate * 100, suffix: '%' },
-      { label: 'Tỷ lệ review tiêu cực', value: negativeRate * 100, suffix: '%' },
-      { label: 'Cửa hàng mục tiêu', value: targetStores, suffix: '' }
+      { label: 'Điểm rating trung bình', value: avgRating, suffix: '', progress: avgRating * 20, tone: 'progress-info' },
+      { label: 'Tỷ lệ review tích cực', value: positiveRate * 100, suffix: '%', progress: positiveRate * 100, tone: 'progress-success' },
+      { label: 'Tỷ lệ review tiêu cực', value: negativeRate * 100, suffix: '%', progress: negativeRate * 100, tone: 'progress-warning' },
+      { label: 'Cửa hàng mục tiêu', value: targetStores, suffix: '', progress: Math.min(100, targetStores * 20), tone: 'progress-primary' }
     ];
   });
 

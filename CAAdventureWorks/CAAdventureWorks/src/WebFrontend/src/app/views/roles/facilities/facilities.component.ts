@@ -180,10 +180,10 @@ export class FacilitiesComponent {
     const plannedCount = this.maintenanceSchedule().filter((item) => item.status === 'Planned').length;
 
     return [
-      { label: 'Tổng tồn lưu trữ', value: totalQuantity, suffix: '' },
-      { label: 'Tỷ lệ lấp đầy TB', value: avgFillRate * 100, suffix: '%' },
-      { label: 'Lịch bảo trì khẩn', value: urgentCount, suffix: '' },
-      { label: 'Lịch bảo trì kế hoạch', value: plannedCount, suffix: '' }
+      { label: 'Tổng tồn lưu trữ', value: totalQuantity, suffix: '', progress: Math.min(100, totalQuantity / 80), tone: 'progress-info' },
+      { label: 'Tỷ lệ lấp đầy TB', value: avgFillRate * 100, suffix: '%', progress: avgFillRate * 100, tone: 'progress-success' },
+      { label: 'Lịch bảo trì khẩn', value: urgentCount, suffix: '', progress: Math.min(100, urgentCount * 25), tone: 'progress-warning' },
+      { label: 'Lịch bảo trì kế hoạch', value: plannedCount, suffix: '', progress: Math.min(100, plannedCount * 25), tone: 'progress-primary' }
     ];
   });
 

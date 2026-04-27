@@ -455,7 +455,7 @@ export class DocumentControlComponent implements OnInit {
   }
 
   loadDashboard(): void {
-    this.loading.set(true);
+    this.loading.set(false);
     this.errorMessage.set(null);
 
     this.documentControlDashboardService.getDashboard(this.filterForm.getRawValue())

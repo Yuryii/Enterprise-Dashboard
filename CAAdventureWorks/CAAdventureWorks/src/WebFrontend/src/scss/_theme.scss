@@ -12,13 +12,36 @@ body {
   @include transition(padding .15s);
 }
 
-.header > .container-fluid,
+.header>.container-fluid,
 .sidebar-header {
   min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
 }
 
 .sidebar-brand-full {
   margin-left: 3px;
+}
+
+.sidebar-brand {
+  width: 100%;
+  justify-content: center;
+}
+
+.sidebar-brand-text {
+  position: relative;
+  top: 8px;
+  margin-left: .75rem;
+  color: var(--cui-sidebar-brand-color, #fff);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebar-narrow,
+.sidebar-narrow-unfoldable:not(:hover) {
+  .sidebar-brand-text {
+    display: none;
+  }
 }
 
 .sidebar-header {
@@ -45,7 +68,7 @@ body {
   }
 }
 
-.header > .container-fluid + .container-fluid {
+.header>.container-fluid+.container-fluid {
   min-height: 3rem;
 }
 

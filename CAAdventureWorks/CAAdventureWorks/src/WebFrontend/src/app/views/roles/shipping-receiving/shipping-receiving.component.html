@@ -119,13 +119,17 @@
       }
     </c-row>
 
-    <c-row class="mb-3">
-      @for (item of logisticsCards(); track item.label) {
-      <c-col md="3">
-        <c-card class="metric-mini-card mb-3">
+    <c-row class="g-4 mb-4">
+      @for (item of logisticsCards(); track item.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-card class="health-metric-card shipping-health-card mb-0">
           <c-card-body>
-            <div class="metric-mini-label">{{ item.label }}</div>
-            <div class="metric-mini-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+            <div class="health-metric-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+            <div class="health-metric-label">{{ item.label }}</div>
+            <div class="health-metric-progress">
+              <div class="health-metric-progress-bar" [class.progress-success]="i === 0" [class.progress-info]="i === 1"
+                [class.progress-warning]="i === 2" [class.progress-primary]="i === 3"></div>
+            </div>
           </c-card-body>
         </c-card>
       </c-col>

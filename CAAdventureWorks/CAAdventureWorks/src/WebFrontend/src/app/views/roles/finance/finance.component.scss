@@ -429,6 +429,64 @@ c-widget-stat-a {
     }
 }
 
+.health-metric-card {
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: none;
+    background: var(--cui-card-bg, #ffffff);
+    height: 100%;
+
+    c-card-body {
+        padding: 20px 24px 14px;
+    }
+}
+
+.health-metric-value {
+    font-size: 1.34rem;
+    line-height: 1.15;
+    font-weight: 400;
+    color: var(--cui-body-color, #1f3349);
+    margin-bottom: 6px;
+}
+
+.health-metric-label {
+    font-size: 0.77rem;
+    line-height: 1.25;
+    font-weight: 400;
+    color: var(--cui-body-color, #1f3349);
+    margin-bottom: 10px;
+}
+
+.health-metric-progress {
+    width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.health-metric-progress-bar {
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+}
+
+.progress-success {
+    background: #22c55e;
+}
+
+.progress-info {
+    background: #3b82f6;
+}
+
+.progress-warning {
+    background: #f59e0b;
+}
+
+.progress-primary {
+    background: #6366f1;
+}
+
 .sales-widget-title-block {
     display: flex;
     flex-direction: column;
