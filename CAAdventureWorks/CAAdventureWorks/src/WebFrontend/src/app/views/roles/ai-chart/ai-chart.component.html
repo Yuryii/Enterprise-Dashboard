@@ -115,7 +115,60 @@
       <span class="button-icon me-1">↻</span>
       Xóa tất cả
     </button>
+    <button cButton color="info" variant="outline" type="button" class="action-btn light-btn info-btn"
+      (click)="toggleSavedChartsPanel()">
+      <svg cIcon name="cil-list" class="me-1"></svg>
+      Biểu đồ đã lưu
+      @if (savedCharts().length > 0) {
+      <span class="badge bg-primary ms-1">{{ savedCharts().length }}</span>
+      }
+    </button>
   </div>
+
+  <!-- Saved Charts Panel -->
+  @if (showSavedChartsPanel()) {
+  <div class="saved-charts-panel mb-3">
+    <c-card>
+      <c-card-header class="d-flex align-items-center justify-content-between">
+        <strong>Biểu đồ đã lưu</strong>
+        <button class="btn btn-sm btn-link p-0" (click)="toggleSavedChartsPanel()">
+          <svg cIcon name="cilX"></svg>
+        </button>
+      </c-card-header>
+      <c-card-body class="p-0">
+        @if (savedCharts().length === 0) {
+        <div class="text-center text-body-secondary py-4">
+          <svg cIcon name="cilChartLine" size="2xl" class="mb-2 opacity-25"></svg>
+          <div class="small">Chưa có biểu đồ nào được lưu</div>
+        </div>
+        } @else {
+        <ul class="saved-charts-list list-unstyled mb-0">
+          @for (chart of savedCharts(); track trackByChartId($index, chart)) {
+          <li class="saved-chart-item">
+            <div class="saved-chart-info" (click)="loadSavedChartById(chart.chartId)">
+              <div class="saved-chart-name">{{ chart.name }}</div>
+              <div class="saved-chart-meta small text-body-secondary">
+                {{ chart.departmentId }} · {{ chart.createdAt | date:'dd/MM/yyyy HH:mm' }}
+              </div>
+            </div>
+            <div class="saved-chart-actions">
+              <button cButton color="primary" size="sm" variant="outline" class="me-1"
+                (click)="loadSavedChartById(chart.chartId)" title="Tải biểu đồ">
+                <svg cIcon name="cilArrowRight"></svg>
+              </button>
+              <button cButton color="danger" size="sm" variant="outline"
+                (click)="deleteChart(chart, $event)" title="Xóa biểu đồ">
+                <svg cIcon name="cilTrash"></svg>
+              </button>
+            </div>
+          </li>
+          }
+        </ul>
+        }
+      </c-card-body>
+    </c-card>
+  </div>
+  }
 
   <!-- Edit Mode Banner -->
   @if (isEditMode()) {

@@ -107,6 +107,8 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
   // Edit mode & layout
   readonly isEditMode = signal(false);
   readonly showChartPicker = signal(false);
+  readonly showSavedChartsPanel = signal(false);
+  private _hasLoadedSavedChart = false;
 
   readonly gridsterStorageKey = 'ai_chart_grid_layout';
   readonly hiddenChartsStorageKey = 'ai_chart_hidden_charts';
@@ -420,14 +422,16 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
     // Match ```json ... ``` blocks
     const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
     let match;
+    let foundBlock = false;
     while ((match = jsonBlockRegex.exec(content)) !== null) {
       const jsonStr = match[1].trim();
       if (jsonStr) {
+        foundBlock = true;
         this.onChartSpecGenerated(jsonStr);
       }
     }
     // Also try to parse a top-level chart object if no block found
-    if (!jsonBlockRegex.test(content)) {
+    if (!foundBlock) {
       try {
         const parsed = JSON.parse(content);
         if (parsed && parsed.type && parsed.data) {
@@ -533,7 +537,7 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
           .toPromise();
         alert('Đã lưu dashboard thành công!');
         this.loadSavedCharts();
-      } catch {
+      } catch (err: any) {
         alert('Không thể lưu. Vui lòng thử lại.');
       }
     }
@@ -559,7 +563,7 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
         .toPromise();
       alert('Đã lưu biểu đồ!');
       this.loadSavedCharts();
-    } catch {
+    } catch (err: any) {
       alert('Không thể lưu. Vui lòng thử lại.');
     }
   }
@@ -568,8 +572,15 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
     this.aiChartService.getSavedCharts(this.currentDeptId).subscribe({
       next: (charts) => {
         this.savedCharts.set(charts);
+        // Auto-load most recent chart on page init
+        if (charts.length > 0 && !this._hasLoadedSavedChart) {
+          this._hasLoadedSavedChart = true;
+          this.loadSavedChartById(charts[0].chartId);
+        }
       },
-      error: () => {},
+      error: (err) => {
+        // Silent fail for saved charts load
+      },
     });
   }
 
@@ -624,6 +635,7 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
           ),
         );
       }
+      this.showSavedChartsPanel.set(false);
     } catch {
       alert('Không thể tải biểu đồ này.');
     }
@@ -710,6 +722,10 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
   toggleChartPicker(event?: Event): void {
     event?.stopPropagation();
     this.showChartPicker.update((v) => !v);
+  }
+
+  toggleSavedChartsPanel(): void {
+    this.showSavedChartsPanel.update((v) => !v);
   }
 
   @HostListener('document:click')

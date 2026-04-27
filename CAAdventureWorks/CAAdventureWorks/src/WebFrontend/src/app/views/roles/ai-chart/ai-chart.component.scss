@@ -77,6 +77,21 @@
       border-color: #f9b115;
     }
   }
+
+  &.info-btn {
+    border-color: rgba(50, 31, 219, 0.4);
+    color: #321fdb;
+
+    &:hover {
+      background: rgba(50, 31, 219, 0.06);
+      border-color: #321fdb;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 5px;
+    }
+  }
 }
 
 // ============================================
@@ -412,6 +427,12 @@ c-chart {
 // ============================================
 // Saved Charts List
 // ============================================
+
+.saved-charts-panel {
+  c-card {
+    border-color: rgba(50, 31, 219, 0.2);
+  }
+}
 
 .saved-charts-list {
   max-height: 300px;
