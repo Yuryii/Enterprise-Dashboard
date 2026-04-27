@@ -1,0 +1,610 @@
+// ============================================
+// AI Chart Page - Full Dashboard Design
+// ============================================
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+// ============================================
+// Page Layout
+// ============================================
+
+.ai-chart-page {
+  padding: 20px 24px;
+  width: 100%;
+}
+
+.page-header {
+  margin-bottom: 16px;
+
+  h4 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--cui-body-color, #212529);
+  }
+}
+
+// ============================================
+// Action Buttons
+// ============================================
+
+.action-btn {
+  font-size: 13px;
+  padding: 6px 12px;
+
+  .button-icon {
+    display: inline-block;
+    font-size: 14px;
+  }
+}
+
+.light-btn {
+  background: transparent;
+  border: 1px solid;
+
+  &.secondary-btn {
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #6c757d;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  &.success-btn {
+    border-color: rgba(47, 184, 92, 0.4);
+    color: #2eb85c;
+
+    &:hover {
+      background: rgba(47, 184, 92, 0.06);
+      border-color: #2eb85c;
+    }
+  }
+
+  &.warning-btn {
+    border-color: rgba(249, 177, 21, 0.4);
+    color: #e69a00;
+
+    &:hover {
+      background: rgba(249, 177, 21, 0.06);
+      border-color: #f9b115;
+    }
+  }
+}
+
+// ============================================
+// Card Styles
+// ============================================
+
+c-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+
+  c-card-header {
+    background-color: var(--cui-card-cap-bg, #fff);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 10px 14px;
+
+    strong {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    small {
+      font-size: 11px;
+    }
+  }
+
+  c-card-body {
+    padding: 14px;
+  }
+}
+
+// ============================================
+// Chat Message Styles
+// ============================================
+
+.message-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+  }
+}
+
+.message-item {
+  display: flex;
+  margin-bottom: 10px;
+  animation: fadeIn 0.2s ease;
+
+  &.user-message {
+    justify-content: flex-end;
+
+    .message-bubble {
+      background: linear-gradient(135deg, #321fdb 0%, #1f1498 100%);
+      color: #fff;
+      border-radius: 16px 4px 16px 16px;
+      max-width: 90%;
+      padding: 8px 12px;
+    }
+
+    .message-time {
+      color: rgba(255, 255, 255, 0.7);
+      text-align: right;
+    }
+  }
+
+  &.assistant-message {
+    justify-content: flex-start;
+
+    .message-bubble {
+      background: #fff;
+      color: #212529;
+      border-radius: 4px 16px 16px 16px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      max-width: 90%;
+      padding: 8px 12px;
+    }
+
+    .message-time {
+      color: #adb5bd;
+    }
+  }
+}
+
+.message-bubble {
+  .message-text {
+    font-size: 13px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+
+  .message-time {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+}
+
+// ============================================
+// Typing Indicator
+// ============================================
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+
+  span {
+    width: 6px;
+    height: 6px;
+    background: #6c757d;
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out;
+
+    &:nth-child(1) {
+      animation-delay: 0s;
+    }
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+@keyframes typingBounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================
+// Chat Input
+// ============================================
+
+.chat-input-area {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 10px;
+
+  textarea {
+    resize: none;
+    font-size: 13px;
+    border-radius: 8px;
+    line-height: 1.4;
+
+    &:focus {
+      box-shadow: 0 0 0 0.15rem rgba(50, 31, 219, 0.15);
+    }
+  }
+}
+
+// ============================================
+// Suggested Prompts
+// ============================================
+
+.suggestion-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #495057;
+  text-align: left;
+  transition: all 0.15s ease;
+
+  svg {
+    color: #321fdb;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: rgba(50, 31, 219, 0.06);
+    color: #321fdb;
+  }
+}
+
+.suggestion-chip-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #321fdb;
+  border-color: rgba(50, 31, 219, 0.3);
+
+  &:hover {
+    background: rgba(50, 31, 219, 0.08);
+    border-color: #321fdb;
+    color: #1f1498;
+  }
+}
+
+// ============================================
+// Gridster Container
+// ============================================
+
+.gridster-container {
+  min-height: 2000 px;
+  height: calc(100vh - 80px);
+  overflow: auto;
+  border-radius: 8px;
+}
+
+// ============================================
+// Gridster Dashboard
+// ============================================
+
+.ai-chart-gridster {
+  background: transparent;
+
+  ::ng-deep {
+    gridster {
+      background: transparent;
+    }
+
+    gridster-item {
+      border-radius: 8px;
+      overflow: hidden;
+
+      .gridster-item-resizable-handler {
+        &.handle-se {
+          bottom: 0;
+          right: 0;
+          width: 20px;
+          height: 20px;
+          background: none;
+
+          &::after {
+            content: "";
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 10px;
+            height: 10px;
+            border-right: 2px solid rgba(50, 31, 219, 0.5);
+            border-bottom: 2px solid rgba(50, 31, 219, 0.5);
+          }
+        }
+      }
+    }
+
+    .gridster-preview-inner {
+      background: rgba(50, 31, 219, 0.05);
+      border: 2px dashed rgba(50, 31, 219, 0.3);
+      border-radius: 8px;
+    }
+  }
+}
+
+// ============================================
+// Chart Card Header
+// ============================================
+
+.chart-card-header {
+  background: var(--cui-card-cap-bg, #fff) !important;
+
+  .chart-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .chart-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+
+    button {
+      color: #6c757d;
+
+      &:hover {
+        color: #212529;
+      }
+    }
+  }
+}
+
+c-card:hover .chart-header-actions {
+  opacity: 1;
+}
+
+// ============================================
+// Chart Canvas
+// ============================================
+
+c-chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  canvas {
+    max-height: none;
+  }
+}
+
+// ============================================
+// Saved Charts List
+// ============================================
+
+.saved-charts-list {
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+  }
+}
+
+.saved-chart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba(50, 31, 219, 0.04);
+  }
+
+  .saved-chart-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .saved-chart-name {
+    font-size: 14px;
+    color: #212529;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+
+  .saved-chart-meta {
+    font-size: 12px;
+  }
+
+  .btn-link.text-danger {
+    opacity: 0.6;
+    transition: opacity 0.15s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// ============================================
+// Edit Mode Banner
+// ============================================
+
+.gridster-edit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #f9b115 0%, #e69a00 100%);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(249, 177, 21, 0.3);
+
+  .banner-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .banner-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .reset-btn {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #fff;
+    font-size: 12px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #fff;
+    }
+
+    .button-icon {
+      font-size: 13px;
+    }
+  }
+}
+
+// ============================================
+// Chart Picker Dropdown
+// ============================================
+
+.chart-picker-wrapper {
+  position: relative;
+
+  .chart-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 8px 0;
+    z-index: 1000;
+
+    .picker-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #adb5bd;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 12px 6px;
+    }
+
+    .picker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+      font-size: 13px;
+      color: #212529;
+
+      input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+      }
+
+      .picker-label {
+        flex: 1;
+      }
+
+      &:hover {
+        background: rgba(50, 31, 219, 0.04);
+      }
+
+      &.hidden-chart-item {
+        .picker-label {
+          color: #adb5bd;
+        }
+      }
+    }
+
+    .add-chart-btn {
+      font-size: 11px;
+      padding: 2px 6px;
+    }
+  }
+}
+
+// ============================================
+// Responsive
+// ============================================
+
+@media (max-width: 768px) {
+  .ai-chart-page {
+    padding: 12px 16px;
+  }
+
+  c-card {
+    c-card-header {
+      padding: 8px 12px;
+    }
+
+    c-card-body {
+      padding: 10px;
+    }
+  }
+
+  c-chart canvas {
+    max-height: 250px;
+  }
+}

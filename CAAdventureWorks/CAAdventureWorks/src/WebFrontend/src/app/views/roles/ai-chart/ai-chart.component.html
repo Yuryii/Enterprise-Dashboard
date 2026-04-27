@@ -1,0 +1,244 @@
+<div class="ai-chart-page">
+  <!-- Chat Modal -->
+  <c-modal [visible]="chatModalVisible()" (visibleChange)="chatModalVisible.set($event)" size="xl" [backdrop]="true">
+    <c-modal-header>
+      <h5 cModalTitle>Tạo biểu đồ với AI</h5>
+      <button type="button" class="btn-close" aria-label="Đóng" (click)="chatModalVisible.set(false)"></button>
+    </c-modal-header>
+    <c-modal-body class="p-0">
+      <c-card class="mb-0 h-100 border-0 rounded-0">
+        <c-card-body class="d-flex flex-column" style="height: 70vh">
+          <!-- Messages -->
+          <div #messageContainer class="message-container flex-grow-1 overflow-auto px-3 py-2">
+            @if (messages().length === 0) {
+            <div class="text-center text-body-secondary py-5">
+              <svg cIcon name="cilChartLine" size="3xl" class="mb-2 opacity-25"></svg>
+              <div class="small">Nhập yêu cầu biểu đồ để bắt đầu</div>
+            </div>
+            }
+            @for (msg of messages(); track trackByMessageId($index, msg)) {
+            <div class="message-item" [class.user-message]="msg.role === 'User'"
+              [class.assistant-message]="msg.role === 'Assistant'">
+              <div class="message-bubble">
+                <div class="message-text" [innerHTML]="formatMessage(msg.content)"></div>
+                <div class="message-time small text-body-secondary mt-1">
+                  {{ msg.createdAt | date:'HH:mm' }}
+                </div>
+              </div>
+            </div>
+            }
+            @if (isGenerating()) {
+            <div class="message-item assistant-message">
+              <div class="message-bubble">
+                <div class="typing-indicator">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+
+          <!-- Suggested Prompts -->
+          @if (messages().length === 0 && !isGenerating()) {
+          <div class="suggestion-chips px-3 pb-2 pt-1">
+            <small class="text-body-secondary small mb-1 d-block">Gợi ý nhanh:</small>
+            <div class="d-flex flex-wrap gap-1">
+              @for (prompt of suggestedPrompts; track prompt) {
+              <button cButton color="light" size="sm" variant="outline"
+                class="suggestion-chip-btn" (click)="suggestedPromptClick(prompt)">
+                {{ prompt }}
+              </button>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Input Area -->
+          <div class="chat-input-area px-3 pb-3 pt-2 border-top">
+            @if (connectionError()) {
+            <div class="alert alert-danger py-1 px-2 small mb-2">
+              {{ connectionError() }}
+              <button class="btn btn-sm btn-link p-0 ms-1" (click)="connect()">Thử lại</button>
+            </div>
+            }
+            <div class="d-flex gap-2">
+              <textarea cFormControl placeholder="VD: Ve bieu do doanh thu theo thang..." rows="2"
+                [value]="inputForm.value.message || ''" (input)="onInput($event)" (keydown)="onKeyDown($event)"
+                class="flex-grow-1"></textarea>
+              <button cButton color="primary" (click)="generateChart()" [disabled]="isGenerating() || !isConnected()"
+                class="align-self-end mb-0">
+                @if (isGenerating()) {
+                <span class="spinner-border spinner-border-sm"></span>
+                } @else {
+                <svg cIcon name="cilSend"></svg>
+                }
+              </button>
+            </div>
+          </div>
+        </c-card-body>
+      </c-card>
+    </c-modal-body>
+  </c-modal>
+
+  <!-- Page Header -->
+  <div class="page-header mb-3">
+    <div>
+      <h4 class="mb-0">{{ title }}</h4>
+      <small class="text-body-secondary">{{ subtitle }}</small>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mb-3 d-flex gap-2 justify-content-end">
+    <button cButton color="primary" variant="outline" type="button" class="action-btn"
+      (click)="openChatModal()">
+      @if (isGenerating()) {
+      <span class="spinner-border spinner-border-sm me-1"></span>
+      Đang tải biểu đồ
+      } @else {
+      <svg cIcon name="cilChatBubble" class="me-1"></svg>
+      Tạo biểu đồ
+      }
+    </button>
+    <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
+      (click)="customizeLayout()">
+      <svg cIcon name="cilSettings" class="me-1"></svg>
+      Tùy chỉnh bố cục
+    </button>
+    <button cButton color="success" variant="outline" type="button" class="action-btn light-btn success-btn"
+      (click)="saveChart()">
+      <svg cIcon name="cilSave" class="me-1"></svg>
+      Lưu biểu đồ
+    </button>
+    <button cButton color="warning" variant="outline" type="button" class="action-btn light-btn warning-btn"
+      (click)="clearAllCharts()">
+      <span class="button-icon me-1">↻</span>
+      Xóa tất cả
+    </button>
+  </div>
+
+  <!-- Edit Mode Banner -->
+  @if (isEditMode()) {
+  <div class="gridster-edit-banner">
+    <span class="banner-text">
+      <svg cIcon name="cilOptions" class="banner-icon"></svg>
+      Đang chỉnh sửa bố cục — Kéo thả và resize để tùy chỉnh
+    </span>
+    <div class="banner-actions">
+      <button cButton color="warning" size="sm" variant="outline" class="reset-btn" (click)="resetLayout()">
+        <span class="button-icon me-1">↻</span>
+        Đặt lại
+      </button>
+      <button cButton color="primary" size="sm" (click)="toggleEditMode()">
+        <svg cIcon name="cilCheck" class="me-1"></svg>
+        Lưu &amp; thoát
+      </button>
+      <div class="chart-picker-wrapper">
+        <button cButton color="light" size="sm" variant="outline" (click)="toggleChartPicker($event)">
+          <svg cIcon name="cilChartBar" class="me-1"></svg>
+          Chọn biểu đồ để hiển thị
+        </button>
+        @if (showChartPicker()) {
+        <div class="chart-picker-dropdown" (click)="onPickerClick($event)">
+          <div class="picker-section-title">Biểu đồ đang hiển thị</div>
+          @for (chart of availableCharts; track chart.id) {
+          @if (isChartVisible(chart.id)) {
+          <label class="picker-item">
+            <input type="checkbox" [checked]="true" (change)="toggleChartVisibility(chart.id)" />
+            <span class="picker-label">{{ chart.label }}</span>
+          </label>
+          }
+          }
+          @if (hiddenChartIds().size > 0) {
+          <div class="picker-section-title mt-2">Biểu đồ đang ẩn</div>
+          @for (chart of availableCharts; track chart.id) {
+          @if (!isChartVisible(chart.id)) {
+          <label class="picker-item hidden-chart-item">
+            <span class="picker-label">{{ chart.label }}</span>
+            <button cButton color="primary" size="xs" variant="outline" class="add-chart-btn"
+              (click)="addChartToGrid(chart.id)">
+              <svg cIcon name="cilPlus"></svg>
+              Thêm
+            </button>
+          </label>
+          }
+          }
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Gridster Dashboard -->
+  <div class="gridster-container">
+    <gridster [options]="gridsterOptions()" class="ai-chart-gridster">
+
+    <!-- Chart Slots -->
+    @for (slot of chartSlots(); track slot.id) {
+    @if (isChartVisible(slot.id)) {
+    <gridster-item [item]="getItem(slot.id)!">
+      <c-card class="mb-0 h-100">
+        <c-card-header class="chart-card-header">
+          <div class="chart-header-content">
+            <div>
+              <strong>{{ slot.name || ('Biểu đồ AI #' + slot.id.split('-')[1]) }}</strong>
+              <small class="text-body-secondary ms-2">{{ getChartTypeLabel(slot.type) }}</small>
+            </div>
+            <div class="chart-header-actions">
+              <button class="btn btn-sm btn-link p-0 me-2" (click)="exportChart(slot)" title="Xuất PNG">
+                <svg cIcon name="cilCloudDownload"></svg>
+              </button>
+              @if (isEditMode()) {
+              <button class="btn btn-sm btn-link p-0 text-danger" (click)="removeChartSlot(slot.id)" title="Xóa">
+                <svg cIcon name="cilX"></svg>
+              </button>
+              }
+            </div>
+          </div>
+        </c-card-header>
+        <c-card-body>
+          @if (!slot.spec) {
+          <div class="text-center text-body-secondary py-5" style="min-height: 600px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <svg cIcon name="cilChartLine" size="5xl" class="mb-2 opacity-25"></svg>
+            <div>Chưa có biểu đồ</div>
+            <small class="text-body-secondary">Yêu cầu AI tạo biểu đồ ở khung chat</small>
+          </div>
+          } @else {
+          <div style="height: 100%; min-height: 600px; position: relative;">
+            <c-chart [type]="$any(slot.type)" [data]="slot.spec!" [options]="slot.options || {}" style="height: 100%">
+            </c-chart>
+          </div>
+          }
+        </c-card-body>
+      </c-card>
+    </gridster-item>
+    }
+    }
+
+    <!-- Empty State when no chart slots are visible -->
+    @if (!isChartVisible('chart-1') && !isChartVisible('chart-2') && !isChartVisible('chart-3') && !isChartVisible('chart-4')) {
+    <gridster-item [item]="getItem('chart-1')!">
+      <c-card class="mb-0 h-100">
+        <c-card-header class="chart-card-header">
+          <div class="chart-header-content">
+            <div>
+              <strong>Biểu đồ AI #1</strong>
+              <small class="text-body-secondary ms-2">Chưa có dữ liệu</small>
+            </div>
+          </div>
+        </c-card-header>
+        <c-card-body>
+          <div class="text-center text-body-secondary py-5" style="min-height: 600px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <svg cIcon name="cilChartLine" size="5xl" class="mb-2 opacity-25"></svg>
+            <div>Bấm "Chọn biểu đồ để hiển thị" để thêm slot</div>
+            <small class="text-body-secondary">Hoặc bật chế độ chỉnh sửa để kéo thả</small>
+          </div>
+        </c-card-body>
+      </c-card>
+    </gridster-item>
+    }
+
+  </gridster>
+</div>

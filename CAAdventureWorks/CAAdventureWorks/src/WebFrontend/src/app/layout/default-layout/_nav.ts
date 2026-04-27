@@ -106,4 +106,10 @@ export const navItems: INavData[] = [
     iconComponent: { name: 'cil-truck' },
     roles: ['Shipping-and-Receiving'],
   } as NavRole,
+  {
+    name: 'AI Chart',
+    url: '/roles/ai-chart',
+    iconComponent: { name: 'cil-chart-line' },
+    roles: ['Sales', 'Executive'],
+  } as NavRole,
 ];

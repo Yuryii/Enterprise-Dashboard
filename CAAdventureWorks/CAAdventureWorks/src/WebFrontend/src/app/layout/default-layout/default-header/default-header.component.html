@@ -18,13 +18,8 @@
         >
       </c-nav-item>
       <c-nav-item>
-        <a cNavLink routerLink="/roles/ai-assistant" routerLinkActive="active"
-          >Trợ lý ảo</a
-        >
-      </c-nav-item>
-      <c-nav-item>
         <a cNavLink routerLink="/roles/ai-chart" routerLinkActive="active"
-          >Biểu đồ được tạo từ AI</a
+          >Thống Kê AI</a
         >
       </c-nav-item>
     </c-header-nav>
@@ -45,7 +40,15 @@
           @if (unreadAlertCount() > 0) {
             <span
               class="position-absolute badge rounded-pill bg-danger"
-              style="font-size: 0.6rem; top: 4px; right: 2px; line-height: 1; padding: 1px 4px; min-width: 16px; text-align: center"
+              style="
+                font-size: 0.6rem;
+                top: 4px;
+                right: 2px;
+                line-height: 1;
+                padding: 1px 4px;
+                min-width: 16px;
+                text-align: center;
+              "
             >
               {{ unreadAlertCount() > 99 ? "99+" : unreadAlertCount() }}
             </span>
