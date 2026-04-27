@@ -31,6 +31,13 @@ export const routes: Routes = [
     data: { title: 'Tài chính' }
   },
   {
+    path: 'data-management',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./data-management/data-management.component').then((m) => m.DataManagementComponent),
+    data: { title: 'Quản lý dữ liệu' }
+  },
+  {
     path: 'information-services',
     canActivate: [roleGuard(['Information-Services', 'Executive'])],
     loadComponent: () =>
