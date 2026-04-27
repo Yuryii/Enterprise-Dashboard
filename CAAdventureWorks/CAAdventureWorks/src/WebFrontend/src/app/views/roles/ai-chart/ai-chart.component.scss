@@ -303,7 +303,7 @@ c-card {
 // ============================================
 
 .gridster-container {
-  min-height: 2000 px;
+  min-height: 2000px;
   height: calc(100vh - 80px);
   overflow: auto;
   border-radius: 8px;
@@ -324,6 +324,11 @@ c-card {
     gridster-item {
       border-radius: 8px;
       overflow: hidden;
+
+      c-card-body {
+        height: 100%;
+        overflow: hidden;
+      }
 
       .gridster-item-resizable-handler {
         &.handle-se {
@@ -400,7 +405,7 @@ c-chart {
   height: 100%;
 
   canvas {
-    max-height: none;
+    max-height: 100%;
   }
 }
 

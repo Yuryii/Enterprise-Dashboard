@@ -206,7 +206,7 @@
             <small class="text-body-secondary">Yêu cầu AI tạo biểu đồ ở khung chat</small>
           </div>
           } @else {
-          <div style="height: 100%; min-height: 600px; position: relative;">
+          <div style="height: 100%; overflow: hidden; position: relative;">
             <c-chart [type]="$any(slot.type)" [data]="slot.spec!" [options]="slot.options || {}" style="height: 100%">
             </c-chart>
           </div>
