@@ -117,7 +117,7 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
     pushItems: true,
     minCols: 48,
     maxCols: 48,
-    minRows: 16,
+    minRows: 24,
     fixedRowHeight: 150,
     keepFixedHeightInMobile: false,
     keepFixedWidthInMobile: false,
@@ -135,6 +135,8 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
     { id: 'chart-2', label: 'Biểu đồ #2' },
     { id: 'chart-3', label: 'Biểu đồ #3' },
     { id: 'chart-4', label: 'Biểu đồ #4' },
+    { id: 'chart-5', label: 'Biểu đồ #5' },
+    { id: 'chart-6', label: 'Biểu đồ #6' },
   ];
 
   readonly hiddenChartIds = signal<Set<string>>(
@@ -147,6 +149,8 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
     { id: 'chart-2', name: '', type: 'bar', spec: null, options: null },
     { id: 'chart-3', name: '', type: 'bar', spec: null, options: null },
     { id: 'chart-4', name: '', type: 'bar', spec: null, options: null },
+    { id: 'chart-5', name: '', type: 'bar', spec: null, options: null },
+    { id: 'chart-6', name: '', type: 'bar', spec: null, options: null },
   ]);
 
   readonly inputForm = this.fb.group({
@@ -370,20 +374,46 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
   onTokenComplete(): void {
     const content = this.streamingContent();
     if (content) {
-      this.addMessage({
-        messageId: crypto.randomUUID(),
-        sessionId: '',
-        role: 'Assistant',
-        content,
-        createdAt: new Date(),
-      });
-      this.streamingContent.set('');
+      const hasChartSpec = this.containsChartSpec(content);
 
-      // Parse chart JSON blocks from AI response
-      this.parseChartSpecsFromContent(content);
+      if (hasChartSpec) {
+        this.addMessage({
+          messageId: crypto.randomUUID(),
+          sessionId: '',
+          role: 'Assistant',
+          content: 'Biểu đồ đã được tạo thành công',
+          createdAt: new Date(),
+        });
+        this.parseChartSpecsFromContent(content);
+      } else {
+        this.addMessage({
+          messageId: crypto.randomUUID(),
+          sessionId: '',
+          role: 'Assistant',
+          content,
+          createdAt: new Date(),
+        });
+      }
+
+      this.streamingContent.set('');
     }
     this.isGenerating.set(false);
     this.shouldScrollToBottom = true;
+  }
+
+  private containsChartSpec(content: string): boolean {
+    const jsonBlockRegex = /```json\s*[\s\S]*?```/g;
+    if (jsonBlockRegex.test(content)) return true;
+
+    const jsonObjRegex = /^\s*\{[\s\S]*?"type"\s*:/m;
+    if (jsonObjRegex.test(content)) return true;
+
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.type && parsed.data) return true;
+    } catch {}
+
+    return false;
   }
 
   private parseChartSpecsFromContent(content: string): void {
@@ -646,6 +676,8 @@ export class AiChartComponent implements OnInit, AfterViewChecked {
       { id: 'chart-2', cols: 24, rows: 8, x: 24, y: 0 },
       { id: 'chart-3', cols: 24, rows: 8, x: 0,  y: 8 },
       { id: 'chart-4', cols: 24, rows: 8, x: 24, y: 8 },
+      { id: 'chart-5', cols: 24, rows: 8, x: 0,  y: 16 },
+      { id: 'chart-6', cols: 24, rows: 8, x: 24, y: 16 },
     ];
   }
 
