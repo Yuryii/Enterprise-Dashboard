@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     data: {
-      title: 'Buttons'
+      title: 'Nút bấm'
     },
     children: [
       {
@@ -16,21 +16,21 @@ export const routes: Routes = [
         path: 'buttons',
         loadComponent: () => import('./buttons/buttons.component').then(m => m.ButtonsComponent),
         data: {
-          title: 'Buttons'
+          title: 'Nút bấm'
         }
       },
       {
         path: 'button-groups',
         loadComponent: () => import('./button-groups/button-groups.component').then(m => m.ButtonGroupsComponent),
         data: {
-          title: 'Button groups'
+          title: 'Nhóm nút bấm'
         }
       },
       {
         path: 'dropdowns',
         loadComponent: () => import('./dropdowns/dropdowns.component').then(m => m.DropdownsComponent),
         data: {
-          title: 'Dropdowns'
+          title: 'Menu thả xuống'
         }
       },
     ]

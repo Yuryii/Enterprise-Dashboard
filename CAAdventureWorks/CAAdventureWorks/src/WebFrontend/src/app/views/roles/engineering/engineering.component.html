@@ -277,11 +277,10 @@
         </c-card>
       </gridster-item>
       }
-    </gridster>
-
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
+      <!-- BOM Hierarchy -->
+      @if (isChartVisible('bom-hierarchy')) {
+      <gridster-item [item]="getItem('bom-hierarchy')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>BOM Hierarchy</strong>
             <small class="text-body-secondary ms-2">Cấu trúc assembly - component</small>
@@ -311,10 +310,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="5">
-        <c-card class="mb-3">
+      <!-- Model thiếu bản vẽ / mô tả -->
+      @if (isChartVisible('missing-drawings')) {
+      <gridster-item [item]="getItem('missing-drawings')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Model thiếu bản vẽ / mô tả</strong>
             <small class="text-body-secondary ms-2">R&D backlog</small>
@@ -336,12 +338,14 @@
                     <td>{{ item.model }}</td>
                     <td>{{ item.skuCount | number:'1.0-0' }}</td>
                     <td>
-                      <span class="badge" [class.bg-success]="item.hasIllustration" [class.bg-danger]="!item.hasIllustration">
+                      <span class="badge" [class.bg-success]="item.hasIllustration"
+                        [class.bg-danger]="!item.hasIllustration">
                         {{ item.hasIllustration ? 'Đủ' : 'Thiếu' }}
                       </span>
                     </td>
                     <td>
-                      <span class="badge" [class.bg-success]="item.catalogReady" [class.bg-warning]="!item.catalogReady">
+                      <span class="badge" [class.bg-success]="item.catalogReady"
+                        [class.bg-warning]="!item.catalogReady">
                         {{ item.catalogReady ? 'Sẵn sàng' : 'Cần bổ sung' }}
                       </span>
                     </td>
@@ -352,7 +356,9 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
   </div>
 </div>

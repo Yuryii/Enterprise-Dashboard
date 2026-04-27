@@ -277,8 +277,8 @@ export class ProductionDashboardService {
     private readonly productionControlApiUrl = `${environment.apiUrl}/api/productiondashboard/exceptions`;
     private readonly dashboardCache = new Map<string, ProductionDashboardResponseDto>();
     private readonly productionControlCache = new Map<string, ProductionControlExceptionsResponseDto>();
-    private readonly sessionStorageKey = 'production-dashboard-cache';
-    private readonly productionControlSessionStorageKey = 'production-control-dashboard-cache';
+    private readonly sessionStorageKey = 'production-dashboard-cache-v2';
+    private readonly productionControlSessionStorageKey = 'production-control-dashboard-cache-v2';
 
     constructor() {
         this.restoreDashboardCacheFromSessionStorage();

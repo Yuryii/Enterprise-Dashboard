@@ -38,21 +38,21 @@
       </button>
     </div>
 
-    <c-card class="mb-3">
+    <c-card class="mb-3 doc-filter-card">
       <c-card-body>
-        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
-          <c-row class="align-items-end g-3">
-            <c-col md="3">
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()" class="doc-filter-form">
+          <div class="doc-filter-grid">
+            <div class="doc-filter-field">
               <label cLabel for="startDate" class="small">Từ ngày</label>
               <input cFormControl type="date" formControlName="startDate" id="startDate" />
-            </c-col>
+            </div>
 
-            <c-col md="3">
+            <div class="doc-filter-field">
               <label cLabel for="endDate" class="small">Đến ngày</label>
               <input cFormControl type="date" formControlName="endDate" id="endDate" />
-            </c-col>
+            </div>
 
-            <c-col md="2">
+            <div class="doc-filter-field">
               <label cLabel for="status" class="small">Trạng thái</label>
               <select cSelect formControlName="status" id="status">
                 <option [ngValue]="null">Tất cả</option>
@@ -60,9 +60,9 @@
                 <option [ngValue]="status.id">{{ status.name }}</option>
                 }
               </select>
-            </c-col>
+            </div>
 
-            <c-col md="2">
+            <div class="doc-filter-field">
               <label cLabel for="fileExtension" class="small">Loại file</label>
               <select cSelect formControlName="fileExtension" id="fileExtension">
                 <option [ngValue]="null">Tất cả</option>
@@ -70,15 +70,15 @@
                 <option [ngValue]="ext.name">{{ ext.name }}</option>
                 }
               </select>
-            </c-col>
+            </div>
 
-            <c-col md="2">
-              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+            <div class="doc-filter-action">
+              <button cButton type="submit" color="primary" class="apply-btn">
                 <span class="button-icon me-1" aria-hidden="true">⌕</span>
                 Áp dụng
               </button>
-            </c-col>
-          </c-row>
+            </div>
+          </div>
         </form>
       </c-card-body>
     </c-card>
@@ -315,12 +315,10 @@
         </c-card>
       </gridster-item>
       }
-    </gridster>
-
-    <!-- Non-chart content: Tables -->
-    <c-row>
-      <c-col md="6">
-        <c-card class="mb-3">
+      <!-- Sửa đổi gần đây -->
+      @if (isChartVisible('recent-revisions')) {
+      <gridster-item [item]="getItem('recent-revisions')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Sửa đổi gần đây</strong>
             <small class="text-body-secondary ms-2">10 mới nhất</small>
@@ -355,10 +353,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="6">
-        <c-card class="mb-3">
+      <!-- Chờ phê duyệt -->
+      @if (isChartVisible('pending-approvals')) {
+      <gridster-item [item]="getItem('pending-approvals')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Chờ phê duyệt</strong>
             <small class="text-body-secondary ms-2">Cần xử lý</small>
@@ -393,12 +394,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col xs="12">
-        <c-card class="mb-3">
+      <!-- Sản phẩm thiếu tài liệu -->
+      @if (isChartVisible('missing-documents')) {
+      <gridster-item [item]="getItem('missing-documents')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Sản phẩm thiếu tài liệu</strong>
             <small class="text-body-secondary ms-2">Cần bổ sung</small>
@@ -433,8 +435,10 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
     }
   </div>
 </div>

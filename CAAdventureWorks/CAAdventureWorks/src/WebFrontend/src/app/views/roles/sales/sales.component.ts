@@ -19,9 +19,11 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
-import { SalesDashboardService } from './sales-dashboard.service';
+import { SalesDashboardResponseDto, SalesDashboardService } from './sales-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -88,7 +90,8 @@ export class SalesComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
-  private readonly gridsterStorageKey = 'sales_grid_layout';
+  private readonly savedFilterStorageKey = 'sales_saved_filter';
+  readonly gridsterStorageKey = 'sales_grid_layout';
   private readonly hiddenChartsStorageKey = 'sales_hidden_charts';
 
   readonly isEditMode = signal(false);
@@ -521,6 +524,7 @@ export class SalesComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -543,15 +547,8 @@ export class SalesComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: '2013-01-01',
-      endDate: '2014-12-31',
-      territoryId: null,
-      salesPersonId: null,
-      productCategoryId: null,
-      onlineOrderFlag: null
-    });
-
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2013-01-01', endDate: '2014-12-31', territoryId: null, salesPersonId: null, productCategoryId: null, onlineOrderFlag: null });
     this.loadDashboard();
   }
 
@@ -567,10 +564,107 @@ export class SalesComponent implements OnInit {
     return Math.min(Math.max(rate * 100, 0), 100);
   }
 
-  exportPDF(): void {
-    console.log('Exporting dashboard to PDF...');
-    // TODO: Implement PDF export functionality
-    alert('Chức năng xuất PDF đang được phát triển');
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as SalesDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo Sales.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'SalesDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: [
+          { label: 'Tỷ lệ online', value: currentDashboard.overview.onlineOrderRate, type: 'percent', note: 'Theo bộ lọc hiện tại' },
+          { label: 'Tỷ lệ hủy', value: currentDashboard.overview.cancellationRate, type: 'percent', note: 'Theo bộ lọc hiện tại' },
+          { label: 'Giao đúng hạn', value: currentDashboard.overview.onTimeShippingRate, type: 'percent', note: 'Theo bộ lọc hiện tại' },
+          { label: 'Freight/Revenue', value: currentDashboard.overview.freightRatio, type: 'percent', note: 'Theo bộ lọc hiện tại' }
+        ],
+        filters: this.describeSalesFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Xu hướng doanh thu theo bộ lọc',
+            subtitle: 'Doanh thu và số đơn theo từng kỳ trong phạm vi đang chọn.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Doanh thu', 'Đơn hàng'],
+            rows: currentDashboard.revenueTrend.slice(0, 12).map(item => [item.period, item.year, item.month, this.formatCurrency(item.revenue), item.orders]),
+            widths: ['*', 45, 45, 85, 55]
+          },
+          {
+            title: '02. Doanh số theo nhân viên',
+            subtitle: 'Hiệu suất sales person sau khi áp dụng bộ lọc hiện tại.',
+            headers: ['Nhân viên', 'Nhóm', 'Doanh thu', 'Đơn hàng', 'Đạt chỉ tiêu'],
+            rows: currentDashboard.salesByPerson.slice(0, 10).map(item => [item.name, item.group ?? 'N/A', this.formatCurrency(item.revenue), item.orders, this.formatPercent(item.achievementRate)]),
+            widths: ['*', 55, 85, 50, 65]
+          },
+          {
+            title: '03. Doanh số theo vùng',
+            subtitle: 'Các vùng doanh thu chính theo bộ lọc hiện tại.',
+            headers: ['Vùng', 'Nhóm', 'Doanh thu', 'Đơn hàng'],
+            rows: currentDashboard.salesByTerritory.slice(0, 10).map(item => [item.name, item.group ?? 'N/A', this.formatCurrency(item.revenue), item.orders]),
+            widths: ['*', 65, 90, 55]
+          },
+          {
+            title: '04. Top sản phẩm bán chạy',
+            subtitle: 'Sản phẩm có doanh thu cao trong dữ liệu đã lọc.',
+            headers: ['Sản phẩm', 'Danh mục', 'Doanh thu', 'SL bán', 'Giảm giá'],
+            rows: currentDashboard.topProducts.slice(0, 10).map(item => [item.productName, item.category, this.formatCurrency(item.revenue), item.unitsSold, this.formatCurrency(item.discountAmount)]),
+            widths: ['*', 70, 80, 50, 70]
+          },
+          {
+            title: '05. Phân khúc khách hàng',
+            subtitle: 'Cơ cấu doanh thu theo phân khúc khách hàng.',
+            headers: ['Phân khúc', 'Doanh thu', 'Đơn hàng', 'Khách hàng'],
+            rows: currentDashboard.customerSegments.map(item => [item.segment, this.formatCurrency(item.revenue), item.orders, item.customers]),
+            widths: ['*', 90, 55, 65]
+          },
+          {
+            title: '06. Lý do bán hàng',
+            subtitle: 'Sales reason đóng góp doanh thu trong bộ lọc hiện tại.',
+            headers: ['Lý do', 'Loại', 'Doanh thu', 'Đơn hàng'],
+            rows: currentDashboard.salesReasons.slice(0, 10).map(item => [item.name, item.reasonType, this.formatCurrency(item.revenue), item.orders]),
+            widths: ['*', 65, 90, 55]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard Sales', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeSalesFilters(dashboard: SalesDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const territory = dashboard.filterOptions.territories.find(item => item.id === filters.territoryId)?.name ?? 'Tất cả';
+    const salesPerson = dashboard.filterOptions.salesPeople.find(item => item.id === filters.salesPersonId)?.name ?? 'Tất cả';
+    const category = dashboard.filterOptions.categories.find(item => item.id === filters.productCategoryId)?.name ?? 'Tất cả';
+    const onlineOrder = filters.onlineOrderFlag == null ? 'Tất cả' : filters.onlineOrderFlag ? 'Online' : 'Offline';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Vùng: ${territory}`,
+      `Nhân viên bán hàng: ${salesPerson}`,
+      `Danh mục sản phẩm: ${category}`,
+      `Kênh đơn hàng: ${onlineOrder}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(numericValue > 1 ? numericValue / 100 : numericValue);
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   getItem(id: string): GridsterItemConfig | undefined {
@@ -647,8 +741,11 @@ export class SalesComponent implements OnInit {
   }
 
   saveFilter(): void {
-    console.log('Saving current filter settings...');
-    // TODO: Implement filter save functionality
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2013-01-01', endDate: '2014-12-31', territoryId: null, salesPersonId: null, productCategoryId: null, onlineOrderFlag: null }));
+  }
+
 }

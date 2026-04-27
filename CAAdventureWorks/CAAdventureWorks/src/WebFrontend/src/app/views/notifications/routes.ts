@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     data: {
-      title: 'Notifications'
+      title: 'Thông báo'
     },
     children: [
       {
@@ -16,28 +16,28 @@ export const routes: Routes = [
         path: 'alerts',
         loadComponent: () => import('./alerts/alerts.component').then(m => m.AlertsComponent),
         data: {
-          title: 'Alerts'
+          title: 'Cảnh báo'
         }
       },
       {
         path: 'badges',
         loadComponent: () => import('./badges/badges.component').then(m => m.BadgesComponent),
         data: {
-          title: 'Badges'
+          title: 'Huy hiệu'
         }
       },
       {
         path: 'modal',
         loadComponent: () => import('./modals/modals.component').then(m => m.ModalsComponent),
         data: {
-          title: 'Modal'
+          title: 'Hộp thoại'
         }
       },
       {
         path: 'toasts',
         loadComponent: () => import('./toasters/toasters.component').then(m => m.ToastersComponent),
         data: {
-          title: 'Toasts'
+          title: 'Thông báo nhanh'
         }
       }
     ]

@@ -19,22 +19,22 @@ import { DocsComponentsComponent, DocsExampleComponent } from '@docs-components/
 export class BreadcrumbsComponent implements OnInit {
   public breadcrumbItems = signal<any>([]);
 
-  constructor() {}
+  constructor() { }
 
   ngOnInit(): void {
     this.breadcrumbItems.set([
-      { label: 'Home', url: '/', attributes: { title: 'Home' } },
-      { label: 'Library', url: '/' },
-      { label: 'Data', url: '/dashboard/' },
+      { label: 'Trang chủ', url: '/', attributes: { title: 'Trang chủ' } },
+      { label: 'Thư viện', url: '/' },
+      { label: 'Dữ liệu', url: '/dashboard/' },
       { label: 'CoreUI', url: '/' }
     ]);
 
     setTimeout(() => {
       this.breadcrumbItems.set([
         { label: 'CoreUI', url: '/' },
-        { label: 'Data', url: '/dashboard/' },
-        { label: 'Library', url: '/' },
-        { label: 'Home', url: '/', attributes: { title: 'Home' } }
+        { label: 'Dữ liệu', url: '/dashboard/' },
+        { label: 'Thư viện', url: '/' },
+        { label: 'Trang chủ', url: '/', attributes: { title: 'Trang chủ' } }
       ]);
     }, 5000);
   }

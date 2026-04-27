@@ -7,6 +7,7 @@ import { ButtonDirective, CardBodyComponent, CardComponent, CardHeaderComponent,
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import {
+  QualityAssuranceDashboardResponseDto,
   QualityAssuranceDashboardService,
   QualityCategoryItemDto,
   QualityDepartmentItemDto,
@@ -17,6 +18,8 @@ import {
 } from './quality-assurance-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -86,6 +89,7 @@ export class QualityAssuranceComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
+  readonly savedFilterStorageKey = 'quality_assurance_saved_filter';
   readonly gridsterStorageKey = 'qa_grid_layout';
   readonly hiddenChartsStorageKey = 'qa_hidden_charts';
 
@@ -503,6 +507,7 @@ export class QualityAssuranceComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -525,20 +530,119 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: '2013-01-01',
-      endDate: '2014-12-31',
-      scrapReasonId: null,
-      productCategoryId: null,
-      locationId: null,
-      vendorId: null,
-      currentInspectorsOnly: true
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2013-01-01', endDate: '2014-12-31', scrapReasonId: null, productCategoryId: null, locationId: null, vendorId: null, currentInspectorsOnly: true });
     this.loadDashboard();
   }
 
-  exportPDF(): void {
-    console.log('Export quality assurance PDF');
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as QualityAssuranceDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo đảm bảo chất lượng.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'QualityAssuranceDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.healthCards(),
+        filters: this.describeQualityFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Xu hướng phế phẩm theo bộ lọc',
+            subtitle: 'Work order, số lượng phế phẩm và tỷ lệ phế phẩm theo từng kỳ.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'WO', 'SL phế phẩm', 'Tỷ lệ'],
+            rows: currentDashboard.defectTrend.slice(0, 12).map(item => [item.period, item.year, item.month, item.workOrders, item.scrappedQty, this.formatPercent(item.scrapRate)]),
+            widths: ['*', 40, 40, 45, 70, 55]
+          },
+          {
+            title: '02. Top lý do scrap',
+            subtitle: 'Nguyên nhân scrap phát sinh nhiều nhất theo bộ lọc hiện tại.',
+            headers: ['Lý do scrap', 'Work orders', 'SL phế phẩm'],
+            rows: currentDashboard.topScrapReasons.slice(0, 10).map(item => [item.scrapReasonName, item.workOrders, item.scrappedQty]),
+            widths: ['*', 70, 75]
+          },
+          {
+            title: '03. Top sản phẩm lỗi',
+            subtitle: 'Sản phẩm có lượng phế phẩm cao trong phạm vi đã lọc.',
+            headers: ['Sản phẩm', 'Danh mục', 'WO', 'Phế phẩm', 'Tỷ lệ'],
+            rows: currentDashboard.topDefectProducts.slice(0, 10).map(item => [item.productName, item.productCategoryName, item.workOrders, item.scrappedQty, this.formatPercent(item.scrapRate)]),
+            widths: ['*', 70, 45, 60, 55]
+          },
+          {
+            title: '04. Phân tích theo danh mục',
+            subtitle: 'Tỷ lệ và số lượng phế phẩm theo product category.',
+            headers: ['Danh mục', 'WO', 'Phế phẩm', 'Tỷ lệ'],
+            rows: currentDashboard.defectsByCategory.slice(0, 10).map(item => [item.productCategoryName, item.workOrders, item.scrappedQty, this.formatPercent(item.scrapRate)]),
+            widths: ['*', 55, 65, 55]
+          },
+          {
+            title: '05. Chi phí lỗi theo khu vực',
+            subtitle: 'Chi phí kế hoạch, thực tế và giờ tài nguyên theo location.',
+            headers: ['Khu vực', 'Chi phí KH', 'Chi phí TT', 'Giờ', 'WO'],
+            rows: currentDashboard.defectsByLocation.slice(0, 10).map(item => [item.locationName, this.formatCurrency(item.plannedCost), this.formatCurrency(item.actualCost), item.actualResourceHours, item.workOrders]),
+            widths: ['*', 75, 75, 45, 45]
+          },
+          {
+            title: '06. Reject nhà cung cấp',
+            subtitle: 'Số lượng nhận, từ chối và tỷ lệ reject theo vendor.',
+            headers: ['Nhà cung cấp', 'SL nhận', 'SL từ chối', 'Tỷ lệ reject'],
+            rows: currentDashboard.vendorRejectRates.slice(0, 10).map(item => [item.vendorName, item.receivedQty, item.rejectedQty, this.formatPercent(item.rejectRate)]),
+            widths: ['*', 65, 70, 70]
+          },
+          {
+            title: '07. Nhân sự kiểm soát chất lượng',
+            subtitle: 'Headcount QA theo phòng ban/nhóm.',
+            headers: ['Phòng ban', 'Nhóm', 'Headcount'],
+            rows: currentDashboard.inspectorHeadcount.map(item => [this.translateDepartmentName(item.departmentName), item.groupName, item.headcount]),
+            widths: ['*', '*', 65]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard đảm bảo chất lượng', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeQualityFilters(dashboard: QualityAssuranceDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const scrapReason = dashboard.filterOptions.scrapReasons.find(item => item.id === filters.scrapReasonId)?.name ?? 'Tất cả';
+    const category = dashboard.filterOptions.productCategories.find(item => item.id === filters.productCategoryId)?.name ?? 'Tất cả';
+    const location = dashboard.filterOptions.locations.find(item => item.id === filters.locationId)?.name ?? 'Tất cả';
+    const vendor = dashboard.filterOptions.vendors.find(item => item.id === filters.vendorId)?.name ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Lý do scrap: ${scrapReason}`,
+      `Danh mục: ${category}`,
+      `Khu vực: ${location}`,
+      `Nhà cung cấp: ${vendor}`,
+      `Chỉ inspector hiện hành: ${this.formatBooleanFilter(filters.currentInspectorsOnly)}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(numericValue > 1 ? numericValue / 100 : numericValue);
+  }
+
+  private formatBooleanFilter(value: boolean | null | undefined): string {
+    return value == null ? 'Tất cả' : value ? 'Có' : 'Không';
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void {
@@ -546,7 +650,8 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   saveFilter(): void {
-    console.log('Save quality assurance filter');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
 
   private translateDepartmentName(name: string): string {
@@ -561,4 +666,8 @@ export class QualityAssuranceComponent implements OnInit {
         return name;
     }
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2013-01-01', endDate: '2014-12-31', scrapReasonId: null, productCategoryId: null, locationId: null, vendorId: null, currentInspectorsOnly: true }));
+  }
+
 }

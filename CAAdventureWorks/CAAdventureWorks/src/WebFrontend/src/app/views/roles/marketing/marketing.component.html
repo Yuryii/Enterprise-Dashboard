@@ -26,7 +26,7 @@
       <c-card-body>
         <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
           <c-row class="align-items-end g-3">
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="campaignType" class="small">Loại chiến dịch</label>
               <select cSelect formControlName="campaignType" id="campaignType">
                 <option value="All">Tất cả chiến dịch</option>
@@ -37,7 +37,7 @@
               </select>
             </c-col>
 
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="reviewSentiment" class="small">Tình trạng phản hồi</label>
               <select cSelect formControlName="reviewSentiment" id="reviewSentiment">
                 <option value="All">Tất cả</option>
@@ -47,7 +47,7 @@
               </select>
             </c-col>
 
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="targetSegment" class="small">Phân khúc mục tiêu</label>
               <select cSelect formControlName="targetSegment" id="targetSegment">
                 <option value="All">Toàn bộ phân khúc</option>
@@ -57,10 +57,10 @@
               </select>
             </c-col>
 
-            <c-col md="12">
+            <c-col md="3">
               <button cButton type="submit" color="primary" class="w-100 apply-btn">
                 <span class="button-icon me-1" aria-hidden="true">⌕</span>
-                Áp dụng bộ lọc Marketing
+                Áp dụng
               </button>
             </c-col>
           </c-row>
@@ -194,7 +194,8 @@
             </div>
           </c-card-header>
           <c-card-body>
-            <c-chart type="bar" [data]="campaignRevenueByTypeChartData()" [options]="campaignRevenueByTypeOptions"></c-chart>
+            <c-chart type="bar" [data]="campaignRevenueByTypeChartData()"
+              [options]="campaignRevenueByTypeOptions"></c-chart>
           </c-card-body>
         </c-card>
       </gridster-item>
@@ -275,11 +276,10 @@
         </c-card>
       </gridster-item>
       }
-    </gridster>
-
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
+      <!-- Top campaign mang lại doanh thu -->
+      @if (isChartVisible('top-campaigns')) {
+      <gridster-item [item]="getItem('top-campaigns')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Top campaign mang lại doanh thu</strong>
             <small class="text-body-secondary ms-2">Campaign ROI</small>
@@ -314,10 +314,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="5">
-        <c-card class="mb-3">
+      <!-- Review 1-2 sao cần xử lý -->
+      @if (isChartVisible('low-rating-reviews')) {
+      <gridster-item [item]="getItem('low-rating-reviews')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Review 1-2 sao cần xử lý</strong>
             <small class="text-body-secondary ms-2">Khủng hoảng thương hiệu</small>
@@ -347,12 +350,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
+      <!-- Danh sách cửa hàng mục tiêu -->
+      @if (isChartVisible('target-stores')) {
+      <gridster-item [item]="getItem('target-stores')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Danh sách cửa hàng mục tiêu</strong>
             <small class="text-body-secondary ms-2">Demographics & segmentation</small>
@@ -387,10 +391,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="5">
-        <c-card class="mb-3">
+      <!-- Data list remarketing -->
+      @if (isChartVisible('remarketing-list')) {
+      <gridster-item [item]="getItem('remarketing-list')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Data list remarketing</strong>
             <small class="text-body-secondary ms-2">Email marketing / CRM</small>
@@ -421,7 +428,9 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+
+    </gridster>
   </div>
 </div>

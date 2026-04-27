@@ -18,9 +18,11 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
-import { FinanceDashboardService } from './finance-dashboard.service';
+import { FinanceDashboardResponseDto, FinanceDashboardService } from './finance-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -73,6 +75,7 @@ export class FinanceComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
+  readonly savedFilterStorageKey = 'finance_saved_filter';
   readonly gridsterStorageKey = 'finance_grid_layout';
   readonly hiddenChartsStorageKey = 'finance_hidden_charts';
 
@@ -451,6 +454,7 @@ export class FinanceComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -480,11 +484,8 @@ export class FinanceComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.patchValue({
-      startDate: '2011-01-01',
-      endDate: '2014-12-31',
-      territoryId: null
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2011-01-01', endDate: '2014-12-31', territoryId: null });
     this.loadDashboard();
   }
 
@@ -495,15 +496,119 @@ export class FinanceComponent implements OnInit {
     }).format(value);
   }
 
-  exportPDF(): void {
-    console.log('Exporting dashboard to PDF...');
-    alert('Chức năng xuất PDF đang được phát triển');
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as FinanceDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo tài chính.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        title: 'Tài chính',
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'FinanceDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: [
+          { label: 'Tổng thuế', value: currentDashboard.overview.totalTax, format: 'currency', note: 'Theo bộ lọc hiện tại' },
+          { label: 'Thuế TB', value: currentDashboard.overview.averageTaxRate, format: 'percent', note: 'Average tax rate' },
+          { label: 'Dòng tiền', value: currentDashboard.overview.cashFlow, format: 'currency', note: 'Net cash flow' },
+          { label: 'Tổng đơn hàng', value: currentDashboard.overview.totalOrders, format: 'number', note: 'Theo bộ lọc hiện tại' }
+        ],
+        filters: this.describeFinanceFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Xu hướng doanh thu theo bộ lọc',
+            subtitle: 'Doanh thu theo từng kỳ trong phạm vi ngày, vùng và tiền tệ đang chọn.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Doanh thu', 'Số đơn'],
+            rows: currentDashboard.revenueTrend.slice(0, 12).map(item => [item.period, item.year, item.month, this.formatCurrency(item.amount), item.count]),
+            widths: ['*', 45, 45, 85, 55]
+          },
+          {
+            title: '02. Xu hướng chi phí theo bộ lọc',
+            subtitle: 'Chi phí phát sinh theo kỳ sau khi áp dụng bộ lọc.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Chi phí', 'Số dòng'],
+            rows: currentDashboard.expenseTrend.slice(0, 12).map(item => [item.period, item.year, item.month, this.formatCurrency(item.amount), item.count]),
+            widths: ['*', 45, 45, 85, 55]
+          },
+          {
+            title: '03. Xu hướng lợi nhuận theo bộ lọc',
+            subtitle: 'Lợi nhuận gộp theo từng kỳ tương ứng với bộ lọc hiện tại.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Lợi nhuận', 'Số dòng'],
+            rows: currentDashboard.profitTrend.slice(0, 12).map(item => [item.period, item.year, item.month, this.formatCurrency(item.amount), item.count]),
+            widths: ['*', 45, 45, 85, 55]
+          },
+          {
+            title: '04. Dòng tiền',
+            subtitle: 'Cash in, cash out và net cash flow trong phạm vi đã lọc.',
+            headers: ['Kỳ', 'Thu', 'Chi', 'Dòng tiền ròng'],
+            rows: currentDashboard.cashFlow.slice(0, 12).map(item => [item.period, this.formatCurrency(item.cashIn), this.formatCurrency(item.cashOut), this.formatCurrency(item.netCashFlow)]),
+            widths: ['*', 85, 85, 90]
+          },
+          {
+            title: '05. Thuế theo vùng',
+            subtitle: 'Các vùng có tổng thuế và thuế suất trung bình theo bộ lọc.',
+            headers: ['Vùng', 'Tổng thuế', 'Thuế suất TB', 'Số đơn'],
+            rows: currentDashboard.taxByRegion.slice(0, 10).map(item => [item.stateProvinceName, this.formatCurrency(item.totalTax), this.formatPercent(item.averageTaxRate), item.orderCount]),
+            widths: ['*', 85, 75, 55]
+          },
+          {
+            title: '06. Doanh thu theo tiền tệ',
+            subtitle: 'Cơ cấu doanh thu theo currency code trong dữ liệu đã lọc.',
+            headers: ['Mã tiền tệ', 'Tên tiền tệ', 'Doanh thu', 'Số đơn', 'Tỷ lệ'],
+            rows: currentDashboard.revenueByCurrency.map(item => [item.currencyCode, item.currencyName, this.formatCurrency(item.totalRevenue), item.orderCount, this.formatPercent(item.percentage)]),
+            widths: [60, '*', 80, 50, 55]
+          },
+          {
+            title: '07. Phương thức thanh toán',
+            subtitle: 'Tổng tiền và tỷ trọng theo phương thức thanh toán trong bộ lọc.',
+            headers: ['Phương thức', 'Tổng tiền', 'Số đơn', 'Tỷ lệ'],
+            rows: currentDashboard.paymentMethods.map(item => [item.paymentMethod, this.formatCurrency(item.totalAmount), item.orderCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 85, 55, 55]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard tài chính', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeFinanceFilters(dashboard: FinanceDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const territory = dashboard.filterOptions.territories.find(item => item.id === filters.territoryId)?.name ?? 'Tất cả';
+    const currency = dashboard.filterOptions.currencies.find(item => item.name === filters.currencyCode)?.name ?? filters.currencyCode ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Vùng: ${territory}`,
+      `Tiền tệ: ${currency}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Number(value ?? 0));
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void { this.toggleEditMode(); }
 
   saveFilter(): void {
-    console.log('Saving current filter settings...');
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2011-01-01', endDate: '2014-12-31', territoryId: null }));
+  }
+
 }

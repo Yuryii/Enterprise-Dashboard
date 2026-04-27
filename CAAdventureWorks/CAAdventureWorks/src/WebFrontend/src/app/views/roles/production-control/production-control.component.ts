@@ -23,6 +23,8 @@ import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 import {
   ProductionControlExceptionsResponseDto,
   ProductionControlSafetyStockExceptionItemDto,
@@ -99,7 +101,8 @@ export class ProductionControlComponent implements OnInit {
     this.productionDashboardService.getCachedProductionControlExceptions(this.defaultFilter)
   );
 
-  private readonly gridsterStorageKey = 'prod_control_grid_layout';
+  private readonly savedFilterStorageKey = 'production_control_saved_filter';
+  readonly gridsterStorageKey = 'prod_control_grid_layout';
   private readonly hiddenChartsStorageKey = 'prod_control_hidden_charts';
 
   readonly isEditMode = signal(false);
@@ -575,6 +578,7 @@ export class ProductionControlComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -607,12 +611,102 @@ export class ProductionControlComponent implements OnInit {
   }
 
   resetFilters(): void {
+    clearDashboardFilter(this.savedFilterStorageKey);
     this.filterForm.reset(this.defaultFilter);
     this.loadDashboard(true);
   }
 
-  exportPDF(): void {
-    alert('Chức năng xuất PDF đang được phát triển');
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.controlDashboard();
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo kiểm soát sản xuất.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'ProductionControlDashboard',
+        metrics: this.summaryCards(),
+        secondaryMetrics: [],
+        filters: this.describeProductionControlFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Lệnh sản xuất đang mở',
+            subtitle: 'Danh sách work order đang mở sau khi áp dụng bộ lọc hiện tại.',
+            headers: ['WO', 'Sản phẩm', 'Danh mục', 'SL', 'Hoàn thành', 'Khu vực'],
+            rows: currentDashboard.openWorkOrders.slice(0, 12).map(item => [item.workOrderId, item.productName, item.productCategoryName, item.orderQty, this.formatPercent(item.completionRate), item.locationNames]),
+            widths: [40, '*', 70, 45, 60, 70]
+          },
+          {
+            title: '02. Lệnh trễ hạn',
+            subtitle: 'Work order trễ tiến độ cần ưu tiên xử lý trong bộ lọc hiện tại.',
+            headers: ['WO', 'Sản phẩm', 'Due date', 'Trễ', 'Scrap', 'Chênh lệch CP'],
+            rows: currentDashboard.delayedWorkOrders.slice(0, 12).map(item => [item.workOrderId, item.productName, this.formatReportDate(item.dueDate), `${item.delayDays} ngày`, this.formatPercent(item.scrapRate), this.formatCurrency(item.costVariance)]),
+            widths: [40, '*', 65, 50, 55, 75]
+          },
+          {
+            title: '03. Lệnh scrap cao',
+            subtitle: 'Work order có tỷ lệ scrap cao trong phạm vi đang lọc.',
+            headers: ['WO', 'Sản phẩm', 'Phế phẩm', 'Scrap', 'Lý do', 'Khu vực'],
+            rows: currentDashboard.highScrapWorkOrders.slice(0, 12).map(item => [item.workOrderId, item.productName, item.scrappedQty, this.formatPercent(item.scrapRate), item.scrapReasonName ?? 'N/A', item.locationNames]),
+            widths: [40, '*', 55, 55, 70, 70]
+          },
+          {
+            title: '04. Cảnh báo safety stock',
+            subtitle: 'Sản phẩm thiếu hụt tồn kho theo bộ lọc hiện tại.',
+            headers: ['Sản phẩm', 'Danh mục', 'Tồn kho', 'Safety stock', 'Reorder', 'Thiếu'],
+            rows: currentDashboard.safetyStockAlerts.slice(0, 12).map(item => [item.productName, item.productCategoryName, item.inventoryQty, item.safetyStockLevel, item.reorderPoint, item.shortageQty]),
+            widths: ['*', 70, 50, 65, 55, 50]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard kiểm soát sản xuất', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeProductionControlFilters(dashboard: ProductionControlExceptionsResponseDto): string[] {
+    const filters = dashboard.filters;
+    const product = dashboard.filterOptions.products.find(item => item.id === filters.productId)?.name ?? 'Tất cả';
+    const category = dashboard.filterOptions.productCategories.find(item => item.id === filters.productCategoryId)?.name ?? 'Tất cả';
+    const location = dashboard.filterOptions.locations.find(item => item.id === filters.locationId)?.name ?? 'Tất cả';
+    const scrapReason = dashboard.filterOptions.scrapReasons.find(item => item.id === filters.scrapReasonId)?.name ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Sản phẩm: ${product}`,
+      `Danh mục: ${category}`,
+      `Khu vực: ${location}`,
+      `Lý do scrap: ${scrapReason}`,
+      `Make only: ${this.formatBooleanFilter(filters.makeOnly)}`,
+      `Finished goods: ${this.formatBooleanFilter(filters.finishedGoodsOnly)}`,
+      `Open only: ${this.formatBooleanFilter(filters.openOnly)}`,
+      `Delayed only: ${this.formatBooleanFilter(filters.delayedOnly)}`,
+      `Safety stock only: ${this.formatBooleanFilter(filters.safetyStockOnly)}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(numericValue > 1 ? numericValue / 100 : numericValue);
+  }
+
+  private formatBooleanFilter(value: boolean | null | undefined): string {
+    return value == null ? 'Tất cả' : value ? 'Có' : 'Không';
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void {
@@ -620,7 +714,8 @@ export class ProductionControlComponent implements OnInit {
   }
 
   saveFilter(): void {
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard(true);
   }
 
   private buildWidgetChartData(values: number[], color: string, type: 'line' | 'bar'): ChartData<'line' | 'bar'> {
@@ -705,4 +800,8 @@ export class ProductionControlComponent implements OnInit {
   trackByProduct(_: number, item: ProductionControlSafetyStockExceptionItemDto): number {
     return item.productId;
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, this.defaultFilter));
+  }
+
 }

@@ -8,6 +8,40 @@
   @extend .sales-content;
 }
 
+c-widget-stat-a {
+  display: block;
+  height: 100%;
+
+  ::ng-deep {
+    .card {
+      height: 100%;
+      min-height: 108px;
+      overflow: hidden;
+    }
+
+    .card-body {
+      overflow: hidden;
+      padding-bottom: 0.25rem !important;
+    }
+
+    .chart-wrapper,
+    c-chart {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 54px !important;
+      min-height: 54px !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      overflow: hidden;
+    }
+
+    canvas {
+      max-width: 100% !important;
+      max-height: 54px !important;
+    }
+  }
+}
+
 .metric-mini-card {
   border: 1px solid rgba(59, 130, 246, 0.1);
   border-radius: 10px;
@@ -114,6 +148,24 @@
 }
 
 @media (max-width: 992px) {
+  c-widget-stat-a {
+    ::ng-deep {
+      .card {
+        min-height: 116px;
+      }
+
+      .chart-wrapper,
+      c-chart {
+        height: 48px !important;
+        min-height: 48px !important;
+      }
+
+      canvas {
+        max-height: 48px !important;
+      }
+    }
+  }
+
   .region-grid {
     flex-direction: column;
     min-height: auto;

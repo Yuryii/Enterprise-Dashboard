@@ -8,6 +8,40 @@
   @extend .sales-content;
 }
 
+c-widget-stat-a {
+  display: block;
+  height: 100%;
+
+  ::ng-deep {
+    .card {
+      height: 100%;
+      min-height: 100px;
+      overflow: hidden;
+    }
+
+    .card-body {
+      overflow: hidden;
+      padding-bottom: 0.25rem !important;
+    }
+
+    .chart-wrapper,
+    c-chart {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 56px !important;
+      min-height: 56px !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      overflow: hidden;
+    }
+
+    canvas {
+      max-width: 100% !important;
+      max-height: 56px !important;
+    }
+  }
+}
+
 .metric-mini-card {
   border: 1px solid rgba(124, 92, 255, 0.08);
   border-radius: 10px;

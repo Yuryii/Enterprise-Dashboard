@@ -8,6 +8,129 @@
   @extend .sales-content;
 }
 
+c-widget-stat-a {
+  display: block;
+  height: 100%;
+
+  ::ng-deep {
+    .card {
+      height: 100%;
+      min-height: 108px;
+      overflow: hidden;
+    }
+
+    .card-body {
+      overflow: hidden;
+      padding-bottom: 0.25rem !important;
+    }
+
+    .chart-wrapper,
+    c-chart {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 54px !important;
+      min-height: 54px !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      overflow: hidden;
+    }
+
+    canvas {
+      max-width: 100% !important;
+      max-height: 54px !important;
+    }
+  }
+}
+
+.doc-filter-card {
+  border: 1px solid var(--cui-border-color, rgba(15, 23, 42, 0.08));
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  background: var(--cui-card-bg, var(--cui-body-bg, #ffffff));
+
+  c-card-body {
+    padding: 16px 20px;
+  }
+}
+
+.doc-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, 0.8fr);
+  gap: 16px 24px;
+  align-items: end;
+}
+
+.doc-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  label {
+    margin-bottom: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--cui-body-color, #1f2937);
+  }
+
+  input,
+  select {
+    min-height: 38px;
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: var(--cui-body-bg, #ffffff);
+    border-color: var(--cui-border-color, #d8dbe0);
+    color: var(--cui-body-color, #1f2937);
+  }
+
+  input[type='date'] {
+    padding: 6px 10px;
+  }
+
+  select {
+    padding: 6px 34px 6px 12px;
+  }
+}
+
+.doc-filter-action {
+  display: flex;
+  align-items: end;
+  min-width: 0;
+
+  .apply-btn {
+    width: 100%;
+    min-height: 38px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 6px 14px rgba(79, 70, 201, 0.22);
+  }
+}
+
+:host-context([data-coreui-theme='dark']),
+:host-context([data-bs-theme='dark']),
+:host-context(.dark-theme) {
+  .doc-filter-card {
+    background: var(--cui-card-bg, #1f2937);
+    border-color: rgba(148, 163, 184, 0.24);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  }
+
+  .doc-filter-field {
+    label {
+      color: var(--cui-body-color, #f3f4f6);
+    }
+
+    input,
+    select {
+      background-color: var(--cui-body-bg, #111827);
+      border-color: rgba(148, 163, 184, 0.32);
+      color: var(--cui-body-color, #f3f4f6);
+    }
+  }
+}
+
 // ============================================
 // Gridster Styles
 // ============================================
@@ -301,7 +424,45 @@
   }
 }
 
+@media (max-width: 1200px) {
+  .doc-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .doc-filter-action {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 992px) {
+  c-widget-stat-a {
+    ::ng-deep {
+      .card {
+        min-height: 116px;
+      }
+
+      .chart-wrapper,
+      c-chart {
+        height: 48px !important;
+        min-height: 48px !important;
+      }
+
+      canvas {
+        max-height: 48px !important;
+      }
+    }
+  }
+}
+
 @media (max-width: 768px) {
+  .doc-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-filter-action {
+    grid-column: auto;
+  }
+
   .metric-mini-value {
     font-size: 1.2rem;
   }

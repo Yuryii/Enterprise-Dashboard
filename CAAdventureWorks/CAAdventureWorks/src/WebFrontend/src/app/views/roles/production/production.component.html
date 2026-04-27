@@ -508,45 +508,6 @@
 
     <!-- BOM Section (outside gridster) -->
     <c-row class="g-4">
-      <c-col xs="12">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Tóm tắt cấu trúc BOM</strong>
-            <small class="text-body-secondary ms-2">Top cụm lắp ráp theo số lượng thành phần</small>
-          </c-card-header>
-          <c-card-body>
-            <div class="bom-grid">
-              @for (item of bomSummaryRows(); track item.productAssemblyId) {
-              <div class="bom-item">
-                <div class="bom-item__header">
-                  <div class="bom-item__heading">
-                    <div class="bom-item__title">{{ item.assemblyName }}</div>
-                    <div class="bom-item__meta-row">
-                      <span class="bom-item__meta-chip">{{ bomLevelLabel(item) }}</span>
-                      <span class="bom-item__meta-chip bom-item__meta-chip--muted">Cụm lắp ráp chính</span>
-                    </div>
-                  </div>
-                  <span class="bom-item__badge">{{ item.components }} thành phần</span>
-                </div>
-
-                <div class="bom-item__stats">
-                  <div class="bom-item__stat">
-                    <span class="bom-stat-label">Tổng định mức</span>
-                    <div class="bom-item__stat-value">{{ item.totalPerAssemblyQty | number:'1.0-2' }}</div>
-                    <small class="bom-item__stat-note">Tổng số lượng linh kiện cần dùng cho một cụm lắp ráp</small>
-                  </div>
-                  <div class="bom-item__stat">
-                    <span class="bom-stat-label">Mức BOM tối đa</span>
-                    <div class="bom-item__stat-value">{{ item.maxBomLevel }}</div>
-                    <small class="bom-item__stat-note">Số cấp sâu nhất trong cấu trúc vật tư của sản phẩm</small>
-                  </div>
-                </div>
-              </div>
-              }
-            </div>
-          </c-card-body>
-        </c-card>
-      </c-col>
     </c-row>
     }
   </div>

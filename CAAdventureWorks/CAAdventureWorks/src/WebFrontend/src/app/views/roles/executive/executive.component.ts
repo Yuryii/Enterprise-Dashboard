@@ -28,6 +28,7 @@ import {
 } from './executive-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
 
 export interface ChartDef {
   id: string;
@@ -93,6 +94,7 @@ export class ExecutiveComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<ExecutiveDashboardResponseDto | null>(null);
 
+  readonly savedFilterStorageKey = 'executive_saved_filter';
   readonly gridsterStorageKey = 'executive_grid_layout';
   readonly hiddenChartsStorageKey = 'executive_hidden_charts';
 
@@ -223,6 +225,14 @@ export class ExecutiveComponent implements OnInit {
   private saveHiddenChartsToStorage(): void {
     const arr = Array.from(this.hiddenChartIds());
     localStorage.setItem(this.hiddenChartsStorageKey, JSON.stringify(arr));
+  }
+
+  getItem(id: string): GridsterItemConfig | undefined {
+    return this.gridsterItems().find(item => item['id'] === id);
+  }
+
+  isChartVisible(chartId: string): boolean {
+    return !this.hiddenChartIds().has(chartId);
   }
 
   toggleEditMode(): void {
@@ -532,6 +542,7 @@ export class ExecutiveComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -554,17 +565,8 @@ export class ExecutiveComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: '2013-01-01',
-      endDate: '2014-12-31',
-      territoryId: null,
-      salesPersonId: null,
-      vendorId: null,
-      departmentId: null,
-      productCategoryId: null,
-      currentEmployeesOnly: true
-    });
-
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2013-01-01', endDate: '2014-12-31', territoryId: null, salesPersonId: null, vendorId: null, departmentId: null, productCategoryId: null, currentEmployeesOnly: true });
     this.loadDashboard();
   }
 
@@ -639,15 +641,390 @@ export class ExecutiveComponent implements OnInit {
     return translations[name] ?? name;
   }
 
-  exportPDF(): void { alert('Chức năng xuất PDF đang được phát triển'); }
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard();
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo ban điều hành.');
+      return;
+    }
+
+    const generatedAt = new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date());
+
+    try {
+      const [pdfMakeModule, pdfFontsModule] = await Promise.all([
+        import('pdfmake/build/pdfmake' as string),
+        import('pdfmake/build/vfs_fonts' as string)
+      ]);
+      const pdfMake = (pdfMakeModule as any).default ?? pdfMakeModule;
+      const pdfFonts = (pdfFontsModule as any).default ?? pdfFontsModule;
+      const vfs = pdfFonts.vfs ?? pdfFonts.pdfMake?.vfs ?? pdfFonts;
+
+      if (typeof pdfMake.addVirtualFileSystem === 'function') {
+        pdfMake.addVirtualFileSystem(vfs);
+      } else {
+        pdfMake.vfs = vfs;
+      }
+
+      pdfMake
+        .createPdf(this.buildExecutivePdfDefinition(currentDashboard, this.filterForm.getRawValue(), generatedAt))
+        .download(`ExecutiveDashboard_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`);
+    } catch (error) {
+      console.error('Không thể tạo PDF ban điều hành', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private buildExecutivePdfDefinition(
+    dashboard: ExecutiveDashboardResponseDto,
+    filter: ReturnType<typeof this.filterForm.getRawValue>,
+    generatedAt: string
+  ): any {
+    const overview = dashboard.overview;
+    const periodText = `${this.formatReportDate(filter.startDate)} - ${this.formatReportDate(filter.endDate)}`;
+    const operatingStatus = overview.operatingGap >= 0 ? 'Biên dương' : 'Cần kiểm soát';
+    const productionStatus = overview.productionCompletionRate >= 0.9 ? 'Ổn định' : 'Theo dõi tiến độ';
+    const scrapStatus = overview.productionScrapRate > 0.05 ? 'Cần kiểm soát' : 'Trong ngưỡng';
+
+    return {
+      pageSize: 'A4',
+      pageMargins: [30, 34, 30, 42],
+      info: {
+        title: 'Báo cáo Ban điều hành',
+        author: 'Enterprise Operations Hub',
+        subject: 'Executive Dashboard'
+      },
+      footer: (currentPage: number, pageCount: number) => ({
+        columns: [
+          { text: 'Dashboard-X | Enterprise Operations Hub | Confidential', alignment: 'left' },
+          { text: `Trang ${currentPage} / ${pageCount}`, alignment: 'right' }
+        ],
+        margin: [30, 0],
+        fontSize: 8,
+        color: '#64748b'
+      }),
+      content: [
+        {
+          table: {
+            widths: ['*', 150],
+            body: [[
+              {
+                stack: [
+                  { text: 'BÁO CÁO BAN ĐIỀU HÀNH', style: 'reportTitle' },
+                  { text: 'Executive Revenue, Spend, Workforce & Operations Report', style: 'reportSubtitle' },
+                  { text: 'Enterprise Operations Hub', style: 'orgText', margin: [0, 8, 0, 0] }
+                ],
+                border: [false, false, false, false],
+                fillColor: '#0f172a',
+                margin: [14, 14, 14, 14]
+              },
+              {
+                stack: [
+                  { text: 'KỲ BÁO CÁO', style: 'coverLabel' },
+                  { text: periodText, style: 'coverValue' },
+                  { text: 'NGÀY XUẤT', style: 'coverLabel', margin: [0, 10, 0, 0] },
+                  { text: generatedAt, style: 'coverValue' }
+                ],
+                border: [false, false, false, false],
+                fillColor: '#2563eb',
+                margin: [12, 14, 12, 14]
+              }
+            ]]
+          },
+          layout: 'noBorders',
+          margin: [0, 0, 0, 14]
+        },
+        {
+          table: {
+            widths: ['*'],
+            body: [[{
+              stack: [
+                { text: 'Tóm tắt điều hành', style: 'sectionTitle', margin: [0, 0, 0, 6] },
+                {
+                  columns: [
+                    this.buildExecutiveMetric('Biên vận hành', operatingStatus, this.formatCurrency(overview.operatingGap), overview.operatingGap >= 0 ? '#059669' : '#dc2626'),
+                    this.buildExecutiveMetric('Sản xuất', productionStatus, this.formatPercent(overview.productionCompletionRate), overview.productionCompletionRate >= 0.9 ? '#0f766e' : '#f59e0b'),
+                    this.buildExecutiveMetric('Chất lượng', scrapStatus, this.formatPercent(overview.productionScrapRate), overview.productionScrapRate > 0.05 ? '#dc2626' : '#059669')
+                  ],
+                  columnGap: 8
+                }
+              ],
+              margin: [10, 10, 10, 10]
+            }]]
+          },
+          layout: this.cardLayout('#dbe4f0'),
+          margin: [0, 0, 0, 12]
+        },
+        this.buildFilterSummary(this.describeExecutiveFilters(filter, dashboard)),
+        {
+          columns: [
+            this.buildKpiPdfCard('Tổng doanh thu', this.formatCurrency(overview.totalRevenue), `${this.formatNumber(overview.salesOrders)} đơn bán`, '#2563eb'),
+            this.buildKpiPdfCard('Tổng chi mua', this.formatCurrency(overview.totalSpend), `${this.formatNumber(overview.purchaseOrders)} đơn mua`, '#f97316'),
+            this.buildKpiPdfCard('Biên vận hành', this.formatCurrency(overview.operatingGap), 'Doanh thu - chi mua', overview.operatingGap >= 0 ? '#059669' : '#dc2626'),
+            this.buildKpiPdfCard('Nhân sự hoạt động', this.formatNumber(overview.activeEmployees), 'Theo bộ lọc hiện tại', '#8b5cf6')
+          ],
+          columnGap: 8,
+          margin: [0, 0, 0, 8]
+        },
+        {
+          columns: [
+            this.buildKpiPdfCard('Lệnh sản xuất', this.formatNumber(overview.workOrders), 'Work orders', '#0ea5e9'),
+            this.buildKpiPdfCard('Hoàn thành SX', this.formatPercent(overview.productionCompletionRate), 'Completion rate', '#14b8a6'),
+            this.buildKpiPdfCard('Tỷ lệ phế phẩm', this.formatPercent(overview.productionScrapRate), 'Scrap rate', '#ef4444'),
+            this.buildKpiPdfCard('Đơn tổng hợp', this.formatNumber(overview.salesOrders + overview.purchaseOrders), 'Sales + Purchase orders', '#64748b')
+          ],
+          columnGap: 8,
+          margin: [0, 0, 0, 14]
+        },
+        this.buildPdfSection(
+          '01. Xu hướng doanh thu, chi mua và biên vận hành',
+          'Theo dõi hiệu quả tài chính cấp điều hành theo từng kỳ.',
+          ['Kỳ', 'Doanh thu', 'Chi mua', 'Biên vận hành'],
+          dashboard.revenueVsSpendTrend.slice(0, 12).map(item => [item.period, this.formatCurrency(item.revenue), this.formatCurrency(item.spend), this.formatCurrency(item.operatingGap)]),
+          ['*', 85, 85, 85]
+        ),
+        this.buildPdfSection(
+          '02. Doanh thu theo vùng',
+          'Các vùng đóng góp doanh thu cao trong bộ lọc hiện tại.',
+          ['Vùng', 'Nhóm vùng', 'Doanh thu', 'Đơn hàng'],
+          dashboard.revenueByTerritory.slice(0, 10).map(item => [item.territoryName, item.territoryGroup, this.formatCurrency(item.revenue), this.formatNumber(item.orders)]),
+          ['*', 90, 90, 55]
+        ),
+        this.buildPdfSection(
+          '03. Top nhân viên kinh doanh',
+          'Hiệu suất doanh thu theo nhân viên kinh doanh.',
+          ['Nhân viên', 'Vùng', 'Doanh thu', 'Đơn hàng', 'Đạt quota'],
+          dashboard.topSalesPeople.slice(0, 10).map(item => [item.salesPersonName, item.territoryName, this.formatCurrency(item.revenue), this.formatNumber(item.orders), item.achievementRate == null ? 'N/A' : this.formatPercent(item.achievementRate)]),
+          ['*', 80, 80, 45, 60]
+        ),
+        { text: '', pageBreak: 'before' },
+        this.buildPdfSection(
+          '04. Nhân sự theo phòng ban',
+          'Cơ cấu headcount phục vụ điều hành nguồn lực.',
+          ['Phòng ban', 'Nhóm', 'Headcount'],
+          dashboard.headcountByDepartment.slice(0, 12).map(item => [this.translateDepartmentName(item.departmentName), this.translateGroupName(item.groupName), this.formatNumber(item.headcount)]),
+          ['*', 150, 65]
+        ),
+        this.buildPdfSection(
+          '05. Top nhà cung cấp theo chi mua',
+          'Nhà cung cấp có mức spend cao cần theo dõi.',
+          ['Nhà cung cấp', 'Chi mua', 'Đơn mua', 'Giá trị TB'],
+          dashboard.topVendors.slice(0, 10).map(item => [item.vendorName, this.formatCurrency(item.totalSpend), this.formatNumber(item.orders), this.formatCurrency(item.averageOrderValue)]),
+          ['*', 85, 55, 85]
+        ),
+        this.buildPdfSection(
+          '06. Tỷ lệ nhận hàng nhà cung cấp',
+          'So sánh số lượng nhận so với số lượng đặt.',
+          ['Nhà cung cấp', 'Tỷ lệ nhận', 'Đã nhận', 'Đã đặt'],
+          dashboard.vendorReceivingRates.slice(0, 10).map(item => [item.vendorName, this.formatPercent(item.receivingRate), this.formatNumber(item.receivedQty), this.formatNumber(item.orderedQty)]),
+          ['*', 70, 70, 70]
+        ),
+        this.buildPdfSection(
+          '07. Hiệu suất sản xuất theo ngành hàng',
+          'Tổng hợp work orders, stocked quantity và scrap theo ngành hàng.',
+          ['Ngành hàng', 'Lệnh SX', 'SL đặt', 'Nhập kho', 'Scrap %'],
+          dashboard.productionByCategory.slice(0, 10).map(item => [item.productCategoryName, this.formatNumber(item.workOrders), this.formatNumber(item.orderQty), this.formatNumber(item.stockedQty), this.formatPercent(item.scrapRate)]),
+          ['*', 55, 65, 65, 55]
+        ),
+        {
+          text: 'Ghi chú: Báo cáo được tạo tự động từ Executive Dashboard theo bộ lọc đang áp dụng tại thời điểm xuất. Các chỉ số tiền tệ sử dụng USD theo dữ liệu AdventureWorks.',
+          style: 'note',
+          margin: [0, 12, 0, 0]
+        }
+      ],
+      styles: {
+        reportTitle: { fontSize: 22, bold: true, color: '#ffffff', characterSpacing: 0.5 },
+        reportSubtitle: { fontSize: 9, color: '#bfdbfe', margin: [0, 4, 0, 0] },
+        orgText: { fontSize: 9, color: '#e0f2fe', bold: true },
+        coverLabel: { fontSize: 7, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
+        coverValue: { fontSize: 10, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
+        sectionTitle: { fontSize: 12, bold: true, color: '#0f172a' },
+        sectionSubtitle: { fontSize: 8, color: '#64748b', margin: [0, 2, 0, 6] },
+        tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 8 },
+        tableCell: { fontSize: 8, color: '#111827' },
+        kpiLabel: { fontSize: 7, color: '#64748b', bold: true, characterSpacing: 0.3 },
+        kpiValue: { fontSize: 13, color: '#0f172a', bold: true },
+        kpiNote: { fontSize: 7, color: '#475569' },
+        metricLabel: { fontSize: 7, color: '#64748b', bold: true },
+        metricValue: { fontSize: 11, bold: true, color: '#0f172a' },
+        note: { fontSize: 8, italics: true, color: '#64748b' }
+      },
+      defaultStyle: {
+        fontSize: 9,
+        color: '#111827'
+      }
+    };
+  }
+
+  private describeExecutiveFilters(filter: ReturnType<typeof this.filterForm.getRawValue>, dashboard: ExecutiveDashboardResponseDto): string[] {
+    const options = dashboard.filterOptions;
+    const findName = (items: Array<{ id: number; name: string }>, id: number | null | undefined) => items.find(item => item.id === id)?.name ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filter.startDate)} - ${this.formatReportDate(filter.endDate)}`,
+      `Vùng: ${findName(options.territories, filter.territoryId)}`,
+      `Nhân viên kinh doanh: ${findName(options.salesPeople, filter.salesPersonId)}`,
+      `Nhà cung cấp: ${findName(options.vendors, filter.vendorId)}`,
+      `Phòng ban: ${findName(options.departments, filter.departmentId)}`,
+      `Ngành hàng: ${findName(options.productCategories, filter.productCategoryId)}`,
+      `Nhân sự: ${filter.currentEmployeesOnly ? 'Chỉ nhân sự hiện hành' : 'Tất cả lịch sử'}`
+    ];
+  }
+
+  private buildFilterSummary(filters: string[]): any {
+    const pairs = filters.map(item => {
+      const separatorIndex = item.indexOf(':');
+      return separatorIndex >= 0
+        ? [item.slice(0, separatorIndex), item.slice(separatorIndex + 1).trim()]
+        : ['Bộ lọc', item];
+    });
+
+    return {
+      table: {
+        widths: ['*', '*', '*'],
+        body: [
+          [{ text: 'BỘ LỌC ĐANG ÁP DỤNG', colSpan: 3, style: 'tableHeader', fillColor: '#eef2ff' }, {}, {}],
+          ...Array.from({ length: Math.ceil(pairs.length / 3) }, (_, rowIndex) => {
+            const row = pairs.slice(rowIndex * 3, rowIndex * 3 + 3).map(([label, value]) => ({
+              stack: [
+                { text: label.toUpperCase(), fontSize: 6, bold: true, color: '#64748b' },
+                { text: value || 'Tất cả', fontSize: 8, color: '#0f172a', margin: [0, 2, 0, 0] }
+              ],
+              margin: [6, 4, 6, 4]
+            }) as any);
+
+            while (row.length < 3) {
+              row.push({ text: '' } as any);
+            }
+
+            return row;
+          })
+        ]
+      },
+      layout: this.cardLayout('#c7d2fe'),
+      margin: [0, 0, 0, 12]
+    };
+  }
+
+  private buildExecutiveMetric(label: string, value: string, note: string, color: string): any {
+    return {
+      table: {
+        widths: [4, '*'],
+        body: [[
+          { text: '', fillColor: color, border: [false, false, false, false] },
+          {
+            stack: [
+              { text: label, style: 'metricLabel' },
+              { text: value, style: 'metricValue', margin: [0, 2, 0, 1] },
+              { text: note, fontSize: 7, color }
+            ],
+            margin: [6, 5, 6, 5]
+          }
+        ]]
+      },
+      layout: this.cardLayout('#e5e7eb')
+    };
+  }
+
+  private buildKpiPdfCard(label: string, value: string, note: string, color: string): any {
+    return {
+      table: {
+        widths: [4, '*'],
+        body: [[
+          { text: '', fillColor: color, border: [false, false, false, false] },
+          {
+            stack: [
+              { text: label.toUpperCase(), style: 'kpiLabel' },
+              { text: value, style: 'kpiValue', margin: [0, 3, 0, 2] },
+              { text: note, style: 'kpiNote' }
+            ],
+            margin: [6, 6, 6, 6]
+          }
+        ]]
+      },
+      layout: this.cardLayout('#dbe4f0')
+    };
+  }
+
+  private buildPdfSection(title: string, subtitle: string, headers: string[], rows: string[][], widths: any[]): any {
+    if (!rows.length) {
+      return [
+        { text: title, style: 'sectionTitle' },
+        { text: subtitle, style: 'sectionSubtitle' },
+        { text: 'Không có dữ liệu trong bộ lọc hiện tại.', color: '#64748b', fontSize: 9, margin: [0, 0, 0, 8] }
+      ];
+    }
+
+    return [
+      { text: title, style: 'sectionTitle' },
+      { text: subtitle, style: 'sectionSubtitle' },
+      {
+        table: {
+          headerRows: 1,
+          widths,
+          body: [
+            headers.map(header => ({ text: header, style: 'tableHeader', margin: [3, 4, 3, 4] })),
+            ...rows.map(row => row.map((cell, index) => ({
+              text: cell,
+              style: 'tableCell',
+              alignment: index === 0 || index === 1 ? 'left' : 'right',
+              margin: [3, 4, 3, 4]
+            })))
+          ]
+        },
+        layout: {
+          hLineWidth: (i: number) => i === 0 || i === 1 ? 0.8 : 0.4,
+          vLineWidth: () => 0.3,
+          hLineColor: () => '#cbd5e1',
+          vLineColor: () => '#e2e8f0',
+          fillColor: (rowIndex: number) => rowIndex === 0 ? '#dbeafe' : rowIndex % 2 === 0 ? '#f8fafc' : null
+        },
+        margin: [0, 0, 0, 10]
+      }
+    ];
+  }
+
+  private cardLayout(lineColor: string): any {
+    return {
+      hLineColor: () => lineColor,
+      vLineColor: () => lineColor,
+      hLineWidth: () => 0.6,
+      vLineWidth: () => 0.6,
+      paddingLeft: () => 0,
+      paddingRight: () => 0,
+      paddingTop: () => 0,
+      paddingBottom: () => 0
+    };
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatNumber(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Number(value ?? 0));
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+  }
   customizeLayout(): void { this.toggleEditMode(); }
-  saveFilter(): void { alert('Chức năng lưu bộ lọc đang được phát triển'); }
-
-  getItem(id: string): GridsterItemConfig | undefined {
-    return this.gridsterItems().find(item => item['id'] === id);
+  saveFilter(): void {
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
 
-  isChartVisible(chartId: string): boolean {
-    return !this.hiddenChartIds().has(chartId);
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2013-01-01', endDate: '2014-12-31', territoryId: null, salesPersonId: null, vendorId: null, departmentId: null, productCategoryId: null, currentEmployeesOnly: true }));
   }
+
 }

@@ -19,9 +19,11 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
-import { DocumentControlDashboardService } from './document-control-dashboard.service';
+import { DocumentControlDashboardResponseDto, DocumentControlDashboardService } from './document-control-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -77,7 +79,8 @@ export class DocumentControlComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
-  private readonly gridsterStorageKey = 'doc_control_grid_layout';
+  private readonly savedFilterStorageKey = 'document_control_saved_filter';
+  readonly gridsterStorageKey = 'doc_control_grid_layout';
   private readonly hiddenChartsStorageKey = 'doc_control_hidden_charts';
 
   readonly isEditMode = signal(false);
@@ -88,7 +91,7 @@ export class DocumentControlComponent implements OnInit {
     pushItems: true,
     minCols: 12,
     maxCols: 12,
-    minRows: 20,
+    minRows: 26,
     fixedRowHeight: 80,
     keepFixedHeightInMobile: false,
     keepFixedWidthInMobile: false,
@@ -107,7 +110,10 @@ export class DocumentControlComponent implements OnInit {
     { id: 'file-type-distribution', label: 'Phân bổ theo loại file' },
     { id: 'top-products', label: 'Top sản phẩm' },
     { id: 'top-owners', label: 'Top chủ sở hữu' },
-    { id: 'coverage-trend', label: 'Xu hướng coverage' }
+    { id: 'coverage-trend', label: 'Xu hướng coverage' },
+    { id: 'recent-revisions', label: 'Sửa đổi gần đây' },
+    { id: 'pending-approvals', label: 'Chờ phê duyệt' },
+    { id: 'missing-documents', label: 'Sản phẩm thiếu tài liệu' }
   ];
 
   readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
@@ -154,7 +160,10 @@ export class DocumentControlComponent implements OnInit {
       { id: 'file-type-distribution', cols: 4, rows: 5, x: 4, y: 0 },
       { id: 'coverage-trend', cols: 4, rows: 5, x: 8, y: 0 },
       { id: 'top-products', cols: 6, rows: 5, x: 0, y: 5 },
-      { id: 'top-owners', cols: 6, rows: 5, x: 6, y: 5 }
+      { id: 'top-owners', cols: 6, rows: 5, x: 6, y: 5 },
+      { id: 'recent-revisions', cols: 6, rows: 5, x: 0, y: 10 },
+      { id: 'pending-approvals', cols: 6, rows: 5, x: 6, y: 10 },
+      { id: 'missing-documents', cols: 12, rows: 5, x: 0, y: 15 }
     ];
   }
 
@@ -439,6 +448,7 @@ export class DocumentControlComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -461,13 +471,8 @@ export class DocumentControlComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: '2013-01-01',
-      endDate: '2014-12-31',
-      status: null,
-      fileExtension: null
-    });
-
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2013-01-01', endDate: '2014-12-31', status: null, fileExtension: null });
     this.loadDashboard();
   }
 
@@ -475,9 +480,101 @@ export class DocumentControlComponent implements OnInit {
     return new Date(dateString).toLocaleDateString('vi-VN');
   }
 
-  exportPDF(): void {
-    console.log('Exporting Document Control dashboard to PDF...');
-    alert('Chức năng xuất PDF đang được phát triển');
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as DocumentControlDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo kiểm soát tài liệu.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'DocumentControlDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.summaryCards(),
+        filters: this.describeDocumentFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Trạng thái tài liệu theo bộ lọc',
+            subtitle: 'Số lượng và tỷ trọng tài liệu theo trạng thái hiện tại.',
+            headers: ['Mã', 'Trạng thái', 'Số tài liệu', 'Tỷ lệ'],
+            rows: currentDashboard.documentsByStatus.map(item => [item.status, item.statusLabel, item.documentCount, this.formatPercent(item.percentage)]),
+            widths: [45, '*', 75, 60]
+          },
+          {
+            title: '02. Phân bổ loại file',
+            subtitle: 'Cơ cấu tài liệu theo phần mở rộng file sau khi lọc.',
+            headers: ['Loại file', 'Số tài liệu', 'Tỷ lệ'],
+            rows: currentDashboard.documentsByFileType.map(item => [item.fileExtension || 'Unknown', item.documentCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 75, 60]
+          },
+          {
+            title: '03. Top sản phẩm có tài liệu',
+            subtitle: 'Sản phẩm có nhiều tài liệu liên quan nhất trong phạm vi lọc.',
+            headers: ['Sản phẩm', 'Mã SP', 'Số tài liệu'],
+            rows: currentDashboard.topProductsWithDocuments.slice(0, 10).map(item => [item.productName, item.productNumber, item.documentCount]),
+            widths: ['*', 75, 70]
+          },
+          {
+            title: '04. Chủ sở hữu tài liệu',
+            subtitle: 'Người sở hữu nhiều tài liệu nhất theo bộ lọc hiện tại.',
+            headers: ['Chủ sở hữu', 'Chức danh', 'Số tài liệu'],
+            rows: currentDashboard.topDocumentOwners.slice(0, 10).map(item => [item.ownerName, item.jobTitle, item.documentCount]),
+            widths: ['*', '*', 70]
+          },
+          {
+            title: '05. Sửa đổi gần đây',
+            subtitle: 'Các tài liệu có thay đổi gần nhất trong phạm vi đã lọc.',
+            headers: ['Tiêu đề', 'Revision', 'Chủ sở hữu', 'Ngày sửa'],
+            rows: currentDashboard.recentRevisions.slice(0, 10).map(item => [item.title, item.revision, item.ownerName, this.formatReportDate(item.modifiedDate)]),
+            widths: ['*', 55, 80, 70]
+          },
+          {
+            title: '06. Chờ phê duyệt',
+            subtitle: 'Danh sách tài liệu đang chờ xử lý theo bộ lọc hiện tại.',
+            headers: ['Tiêu đề', 'File', 'Revision', 'Chủ sở hữu'],
+            rows: currentDashboard.pendingApprovals.slice(0, 10).map(item => [item.title, item.fileName, item.revision, item.ownerName]),
+            widths: ['*', 80, 55, 80]
+          },
+          {
+            title: '07. Sản phẩm thiếu tài liệu',
+            subtitle: 'Sản phẩm chưa có tài liệu tương ứng trong dữ liệu đã lọc.',
+            headers: ['Sản phẩm', 'Mã SP', 'Có ngày bán'],
+            rows: currentDashboard.productsWithoutDocuments.slice(0, 12).map(item => [item.productName, item.productNumber, item.sellStartDate ? 'Có' : 'Không']),
+            widths: ['*', 80, 65]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard kiểm soát tài liệu', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeDocumentFilters(dashboard: DocumentControlDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const status = dashboard.filterOptions.statuses.find(item => item.id === filters.status)?.name ?? 'Tất cả';
+    const fileExtension = dashboard.filterOptions.fileExtensions.find(item => item.name === filters.fileExtension)?.name ?? filters.fileExtension ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Trạng thái: ${status}`,
+      `Loại file: ${fileExtension}`
+    ];
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(numericValue > 1 ? numericValue / 100 : numericValue);
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void {
@@ -485,7 +582,11 @@ export class DocumentControlComponent implements OnInit {
   }
 
   saveFilter(): void {
-    console.log('Saving Document Control dashboard filters...');
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2013-01-01', endDate: '2014-12-31', status: null, fileExtension: null }));
+  }
+
 }

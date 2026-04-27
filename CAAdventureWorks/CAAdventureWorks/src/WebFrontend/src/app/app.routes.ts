@@ -13,7 +13,7 @@ export const routes: Routes = [
       import('./layout').then((m) => m.DefaultLayoutComponent),
     canActivate: [authGuard],
     data: {
-      title: 'Home',
+      title: 'Trang chủ',
     },
     children: [
       {
@@ -74,7 +74,7 @@ export const routes: Routes = [
         (m) => m.Page404Component,
       ),
     data: {
-      title: 'Page 404',
+      title: 'Trang 404',
     },
   },
   {
@@ -84,7 +84,7 @@ export const routes: Routes = [
         (m) => m.Page500Component,
       ),
     data: {
-      title: 'Page 500',
+      title: 'Trang 500',
     },
   },
   {
@@ -94,7 +94,7 @@ export const routes: Routes = [
         (m) => m.LoginComponent,
       ),
     data: {
-      title: 'Login Page',
+      title: 'Trang đăng nhập',
     },
   },
   {

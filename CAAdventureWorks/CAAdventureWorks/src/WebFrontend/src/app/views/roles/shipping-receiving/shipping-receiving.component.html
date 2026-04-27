@@ -26,7 +26,7 @@
       <c-card-body>
         <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
           <c-row class="align-items-end g-3">
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="flowType" class="small">Luồng logistics</label>
               <select cSelect formControlName="flowType" id="flowType">
                 <option value="All">Tất cả luồng</option>
@@ -35,7 +35,7 @@
               </select>
             </c-col>
 
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="shipMethod" class="small">Phương thức giao hàng</label>
               <select cSelect formControlName="shipMethod" id="shipMethod">
                 <option value="All">Tất cả ShipMethod</option>
@@ -45,7 +45,7 @@
               </select>
             </c-col>
 
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="shipmentStatus" class="small">Trạng thái xử lý</label>
               <select cSelect formControlName="shipmentStatus" id="shipmentStatus">
                 <option value="All">Tất cả trạng thái</option>
@@ -57,10 +57,10 @@
               </select>
             </c-col>
 
-            <c-col md="12">
+            <c-col md="3">
               <button cButton type="submit" color="primary" class="w-100 apply-btn">
                 <span class="button-icon me-1" aria-hidden="true">⌕</span>
-                Áp dụng bộ lọc Shipping & Receiving
+                Áp dụng
               </button>
             </c-col>
           </c-row>
@@ -254,11 +254,11 @@
         </c-card>
       </gridster-item>
       }
-    </gridster>
 
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
+      <!-- Receiving Exception List -->
+      @if (isChartVisible('rejected-inbound')) {
+      <gridster-item [item]="getItem('rejected-inbound')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>PO có hàng lỗi / cần đền bù</strong>
             <small class="text-body-secondary ms-2">Receiving exception list</small>
@@ -288,7 +288,8 @@
                     <td>{{ item.rejectedQty | number:'1.0-0' }}</td>
                     <td>{{ item.stockedQty | number:'1.0-0' }}</td>
                     <td>
-                      <span class="badge" [class.bg-danger]="item.status === 'Rejected Items'" [class.bg-warning]="item.status === 'Review'" [class.bg-success]="item.status === 'Accepted'">
+                      <span class="badge" [class.bg-danger]="item.status === 'Rejected Items'"
+                        [class.bg-warning]="item.status === 'Review'" [class.bg-success]="item.status === 'Accepted'">
                         {{ item.status }}
                       </span>
                     </td>
@@ -299,10 +300,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="5">
-        <c-card class="mb-3">
+      <!-- Pending Shipment & Routing -->
+      @if (isChartVisible('pending-outbound')) {
+      <gridster-item [item]="getItem('pending-outbound')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Đơn outbound đang xử lý</strong>
             <small class="text-body-secondary ms-2">Pending shipment & routing</small>
@@ -330,7 +334,8 @@
                     <td>{{ item.city }}, {{ item.state }}</td>
                     <td>{{ item.leadTime | number:'1.0-0' }} ngày</td>
                     <td>
-                      <span class="badge" [class.bg-warning]="item.status === 'Pending'" [class.bg-success]="item.status === 'Shipped'">
+                      <span class="badge" [class.bg-warning]="item.status === 'Pending'"
+                        [class.bg-success]="item.status === 'Shipped'">
                         {{ item.status }}
                       </span>
                     </td>
@@ -341,12 +346,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col md="12">
-        <c-card class="mb-3">
+      <!-- Freight Hotspot by State / City -->
+      @if (isChartVisible('freight-region')) {
+      <gridster-item [item]="getItem('freight-region')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Chi phí logistics theo khu vực giao hàng</strong>
             <small class="text-body-secondary ms-2">Freight hotspot by state / city</small>
@@ -364,7 +370,8 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+    </gridster>
   </div>
 </div>

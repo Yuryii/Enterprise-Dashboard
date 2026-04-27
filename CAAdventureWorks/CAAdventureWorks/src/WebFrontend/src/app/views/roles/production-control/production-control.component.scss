@@ -879,3 +879,113 @@ gridster-item {
         }
     }
 }
+
+:host-context([data-coreui-theme='dark']),
+:host-context([data-bs-theme='dark']),
+:host-context(.dark-theme) {
+    .purchasing-app {
+        background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+        color: var(--cui-body-color, #e5e7eb);
+    }
+
+    .error-overlay {
+        background: rgba(17, 24, 39, .95);
+    }
+
+    c-card {
+        background: var(--cui-card-bg, #1f2937);
+        border-color: rgba(148, 163, 184, .25);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, .24);
+    }
+
+    c-card c-card-header,
+    gridster-item c-card c-card-header {
+        background-color: rgba(31, 41, 55, .96);
+        border-bottom-color: rgba(148, 163, 184, .22);
+    }
+
+    c-card c-card-header strong,
+    gridster-item c-card c-card-header strong,
+    .health-metric-value,
+    .priority-card__value,
+    .exception-item__title,
+    .stock-alert-item__title,
+    .scrap-card__title {
+        color: var(--cui-body-color, #f3f4f6);
+    }
+
+    c-card c-card-header small,
+    gridster-item c-card c-card-header small,
+    .small,
+    .health-metric-label,
+    .priority-card__title,
+    .priority-card__note,
+    .ops-focus-item__label,
+    .exception-item__subtitle,
+    .stock-alert-item__subtitle,
+    .scrap-card__subtitle,
+    .empty-state-inline {
+        color: var(--cui-secondary-color, #cbd5e1);
+    }
+
+    .sales-action-buttons .action-btn,
+    .sales-action-buttons .light-btn {
+        background: rgba(31, 41, 55, .92);
+        border-color: rgba(148, 163, 184, .28);
+        color: var(--cui-body-color, #f3f4f6);
+    }
+
+    .sales-action-buttons .warning-btn {
+        color: var(--cui-body-color, #f3f4f6) !important;
+    }
+
+    input[cFormControl],
+    select[cSelect] {
+        background-color: var(--cui-body-bg, #111827);
+        border-color: rgba(148, 163, 184, .36);
+        color: var(--cui-body-color, #f3f4f6);
+    }
+
+    .priority-card,
+    .health-metric-card,
+    .ops-focus-item,
+    .exception-item,
+    .stock-alert-item,
+    .scrap-card,
+    .empty-state-inline {
+        background: rgba(31, 41, 55, .88);
+        border-color: rgba(148, 163, 184, .26);
+    }
+
+    .exception-item--alert {
+        background: rgba(127, 29, 29, .22);
+        border-color: rgba(248, 113, 113, .38);
+    }
+
+    .health-metric-progress {
+        background: rgba(148, 163, 184, .28);
+    }
+
+    .chart-picker-dropdown {
+        background: #1f2937;
+        border-color: rgba(148, 163, 184, .28);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
+
+        .picker-section-title {
+            color: #94a3b8;
+        }
+
+        .picker-item {
+            color: #e5e7eb;
+
+            &:hover {
+                background-color: rgba(148, 163, 184, .16);
+            }
+
+            &.hidden-chart-item {
+                background-color: rgba(15, 23, 42, .62);
+                border-color: rgba(148, 163, 184, .32);
+            }
+        }
+    }
+}

@@ -40,38 +40,37 @@
     </div>
 
     <!-- Filters Card -->
-    <c-card class="mb-3">
+    <c-card class="mb-3 finance-filter-card">
       <c-card-body>
-        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
-          <!-- Filter Row -->
-          <c-row class="align-items-end">
-            <c-col md="3">
-              <label cLabel for="startDate" class="small">Từ ngày</label>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()" class="finance-filter-form">
+          <div class="finance-filter-grid">
+            <div class="finance-filter-field">
+              <label cLabel for="startDate">Từ ngày</label>
               <input cFormControl type="date" formControlName="startDate" id="startDate" />
-            </c-col>
+            </div>
 
-            <c-col md="3">
-              <label cLabel for="endDate" class="small">Đến ngày</label>
+            <div class="finance-filter-field">
+              <label cLabel for="endDate">Đến ngày</label>
               <input cFormControl type="date" formControlName="endDate" id="endDate" />
-            </c-col>
+            </div>
 
-            <c-col md="3">
-              <label cLabel for="territoryId" class="small">Vùng</label>
+            <div class="finance-filter-field finance-filter-region">
+              <label cLabel for="territoryId">Vùng</label>
               <select cSelect formControlName="territoryId" id="territoryId">
                 <option [ngValue]="null">Tất cả vùng</option>
                 @for (territory of dashboard()?.filterOptions?.territories; track territory.id) {
                 <option [ngValue]="territory.id">{{ territory.name }}</option>
                 }
               </select>
-            </c-col>
+            </div>
 
-            <c-col md="3">
-              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+            <div class="finance-filter-action">
+              <button cButton type="submit" color="primary" class="apply-btn">
                 <span class="button-icon me-1" aria-hidden="true">⌕</span>
                 Áp dụng
               </button>
-            </c-col>
-          </c-row>
+            </div>
+          </div>
         </form>
       </c-card-body>
     </c-card>
@@ -146,6 +145,42 @@
         </c-widget-stat-a>
       </c-col>
       }
+    </c-row>
+
+    <!-- Financial Summary Cards -->
+    <c-row class="finance-summary-row g-4 mb-4">
+      <c-col md="3" sm="6">
+        <c-card class="finance-summary-card text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Tổng thuế</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalTax | currency:'USD':'symbol':'1.0-0' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3" sm="6">
+        <c-card class="finance-summary-card text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Thuế suất TB</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.averageTaxRate | number:'1.1-1' }}%</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3" sm="6">
+        <c-card class="finance-summary-card text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Dòng tiền ròng</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.cashFlow | currency:'USD':'symbol':'1.0-0' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+      <c-col md="3" sm="6">
+        <c-card class="finance-summary-card text-center">
+          <c-card-body>
+            <div class="text-body-secondary small mb-1">Tổng đơn hàng</div>
+            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalOrders | number:'1.0-0' }}</div>
+          </c-card-body>
+        </c-card>
+      </c-col>
     </c-row>
 
     <!-- Edit Mode Banner -->
@@ -339,42 +374,6 @@
       }
 
     </gridster>
-
-    <!-- Row 5: Financial Summary Cards -->
-    <c-row>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Tổng thuế</div>
-            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalTax | currency:'USD':'symbol':'1.0-0' }}</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Thuế suất TB</div>
-            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.averageTaxRate | number:'1.1-1' }}%</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Dòng tiền ròng</div>
-            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.cashFlow | currency:'USD':'symbol':'1.0-0' }}</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Tổng đơn hàng</div>
-            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalOrders | number:'1.0-0' }}</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
 
     }
 

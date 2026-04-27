@@ -1,12 +1,5 @@
 <div class="sales-app hr-app">
   <div class="sales-content hr-content">
-    @if (loading()) {
-    <div class="loading-overlay">
-      <div class="spinner"></div>
-      <p>Loading HR dashboard...</p>
-    </div>
-    }
-
     @if (errorMessage()) {
     <div class="error-overlay">
       <svg cIcon name="cilWarning" class="error-icon"></svg>
@@ -15,7 +8,7 @@
     </div>
     }
 
-    @if (!loading() && !errorMessage() && dashboard()) {
+    @if (!errorMessage()) {
     <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
       <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
         <svg cIcon name="cilCloudDownload" class="me-1"></svg>
@@ -166,14 +159,19 @@
     </c-row>
 
     <!-- Health Metric Cards -->
-    <c-row class="mb-3">
-      @for (item of healthCards(); track item.label) {
-      <c-col md="3">
-        <c-card class="metric-mini-card mb-3">
+    <c-row class="mb-3 g-4">
+      @for (item of healthCards(); track item.label; let i = $index) {
+      <c-col xl="3" md="6" sm="6">
+        <c-card class="health-metric-card mb-0">
           <c-card-body>
-            <div class="metric-mini-label">{{ item.label }}</div>
-            <div class="metric-mini-value">
-              {{ item.value | number:'1.0-1' }}{{ item.suffix || '' }}
+            <div class="health-metric-value">
+              {{ item.value | number:item.digits }}{{ item.suffix }}
+            </div>
+            <div class="health-metric-label">{{ item.label }}</div>
+            <div class="health-metric-progress">
+              <div class="health-metric-progress-bar" [class.progress-success]="i === 0" [class.progress-info]="i === 1"
+                [class.progress-warning]="i === 2" [class.progress-primary]="i === 3" [style.width.%]="item.progress">
+              </div>
             </div>
           </c-card-body>
         </c-card>
@@ -251,7 +249,9 @@
             </div>
           </c-card-header>
           <c-card-body>
+            @if (dashboard()?.employeeTrend?.length) {
             <c-chart type="line" [data]="employeeTrendChartData()" [options]="employeeTrendOptions"></c-chart>
+            }
           </c-card-body>
         </c-card>
       </gridster-item>

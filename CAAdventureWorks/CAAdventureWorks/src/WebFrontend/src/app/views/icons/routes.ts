@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     data: {
-      title: 'Icons'
+      title: 'Biểu tượng'
     },
     children: [
       {
@@ -16,21 +16,21 @@ export const routes: Routes = [
         path: 'coreui-icons',
         loadComponent: () => import('./coreui-icons.component').then(m => m.CoreUIIconsComponent),
         data: {
-          title: 'CoreUI Icons'
+          title: 'Biểu tượng CoreUI'
         }
       },
       {
         path: 'brands',
         loadComponent: () => import('./coreui-icons.component').then(m => m.CoreUIIconsComponent),
         data: {
-          title: 'Brands'
+          title: 'Thương hiệu'
         }
       },
       {
         path: 'flags',
         loadComponent: () => import('./coreui-icons.component').then(m => m.CoreUIIconsComponent),
         data: {
-          title: 'Flags'
+          title: 'Cờ'
         }
       }
     ]
