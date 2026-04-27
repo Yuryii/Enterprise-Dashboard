@@ -17,12 +17,6 @@ export const routes: Routes = [
     },
     children: [
       {
-        path: 'dashboard',
-        loadChildren: () =>
-          import('./views/dashboard/routes').then((m) => m.routes),
-        canActivate: [authGuard],
-      },
-      {
         path: 'theme',
         loadChildren: () =>
           import('./views/theme/routes').then((m) => m.routes),
@@ -108,5 +102,5 @@ export const routes: Routes = [
     redirectTo: 'login',
     pathMatch: 'full',
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: 'roles' },
 ];

@@ -47,12 +47,12 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   });
 
   suggestedQuestions = computed(() => {
-    const questions: Record<string, string[]> = {
+    const questions: Record<string, { text: string; icon: string }[]> = {
       sales: [
-        'Doanh thu tháng này?',
-        'Top 5 sản phẩm bán chạy?',
-        'Đơn hàng gần đây?',
-        'Khách hàng tiềm năng?',
+        { text: 'Doanh thu tháng này?', icon: 'chart' },
+        { text: 'Top 5 sản phẩm bán chạy?', icon: 'star' },
+        { text: 'Đơn hàng gần đây?', icon: 'cart' },
+        { text: 'Khách hàng tiềm năng?', icon: 'users' },
       ],
       production: [],
       purchasing: [],

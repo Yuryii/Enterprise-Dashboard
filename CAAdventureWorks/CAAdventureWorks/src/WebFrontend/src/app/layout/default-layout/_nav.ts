@@ -73,7 +73,7 @@ export const navItems: INavData[] = [
   {
     name: 'Mua Hàng',
     url: '/roles/purchasing',
-    iconComponent: { name: 'cil-package' },
+    iconComponent: { name: 'cil-basket' },
     roles: ['Purchasing'],
   } as NavRole,
   {

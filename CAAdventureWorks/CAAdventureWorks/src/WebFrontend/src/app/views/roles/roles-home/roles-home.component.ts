@@ -36,7 +36,7 @@ export class RolesHomeComponent implements OnInit {
 
     const target = userRoles
       .map(r => departmentRouteMap[r])
-      .find(route => !!route) ?? '/dashboard';
+      .find(route => !!route) ?? '/roles';
 
     this.router.navigate([target]);
   }
