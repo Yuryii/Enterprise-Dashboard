@@ -138,7 +138,8 @@ export class DebtOptimizationComponent implements OnInit {
       recipients: draft.recipients,
       cc: draft.cc,
       subject: draft.subject,
-      body: draft.body
+      body: draft.body,
+      deferredVendorIds: result.deferredDebts.map(d => d.id)
     };
 
     this.sendingEmail.set(true);

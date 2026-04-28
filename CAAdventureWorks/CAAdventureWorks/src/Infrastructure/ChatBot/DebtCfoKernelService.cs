@@ -36,10 +36,9 @@ public sealed class DebtCfoKernelService : IDebtCfoKernelService
 
         Format trả lời CHÍNH XÁC như sau (không thêm hay bớt):
         SUBJECT: <tiêu đề email ngắn gọn, chuyên nghiệp>
-        TO: <danh sách email của các vendor bị hoãn, comma-separated, mỗi email một dòng>
         CC: cfo@adventureworks.com
         BODY:
-        <nội dung email bắt đầu ngay sau dòng BODY:, không có dòng trống>
+        <nội dung email bắt đầu ngay sau dòng BODY:, không có dòng trống, KÍNH GỬI CÁC QUÝ ĐỐI TÁC trong danh sách bên trên>
         """;
 
     public DebtCfoKernelService(

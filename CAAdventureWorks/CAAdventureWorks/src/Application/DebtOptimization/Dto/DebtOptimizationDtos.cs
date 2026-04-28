@@ -43,7 +43,8 @@ public sealed record EmailSendRequestDto(
     List<string> Recipients,
     List<string>? Cc,
     string Subject,
-    string Body
+    string Body,
+    List<int>? DeferredVendorIds
 );
 
 public sealed record EmailSendResultDto(

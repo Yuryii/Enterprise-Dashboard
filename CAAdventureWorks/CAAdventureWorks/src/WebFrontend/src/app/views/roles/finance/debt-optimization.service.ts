@@ -54,6 +54,7 @@ export interface EmailSendRequest {
   cc: string[] | null;
   subject: string;
   body: string;
+  deferredVendorIds: number[];
 }
 
 export interface EmailSendResultDto {

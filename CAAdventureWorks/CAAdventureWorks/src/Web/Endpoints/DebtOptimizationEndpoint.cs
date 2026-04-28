@@ -77,7 +77,7 @@ public sealed class DebtOptimizationEndpoint : IEndpointGroup
         CancellationToken ct)
     {
         var result = await sender.Send(
-            new SendDebtEmailCommand(request.Recipients, request.Cc, request.Subject, request.Body),
+            new SendDebtEmailCommand(request.Recipients, request.Cc, request.Subject, request.Body, request.DeferredVendorIds),
             ct);
         return TypedResults.Ok(result);
     }
