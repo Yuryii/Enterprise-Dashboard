@@ -134,6 +134,14 @@ export class ChatbotService {
     }));
   }
 
+  async generateChart(deptId: string, message: string): Promise<void> {
+    if (!this.hub || this.hub.state !== HubConnectionState.Connected) {
+      throw new Error('Hub not connected');
+    }
+    const session = await this.hub.invoke<ChatSession>('CreateSession', deptId);
+    await this.hub.invoke('SendMessage', deptId, session.sessionId, message);
+  }
+
   async disconnect(): Promise<void> {
     if (this.hub) {
       try { await this.hub.stop(); } catch { /* ignore */ }

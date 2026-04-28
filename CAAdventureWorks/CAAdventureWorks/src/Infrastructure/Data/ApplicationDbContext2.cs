@@ -13,6 +13,7 @@ public class ApplicationDbContext2 : DbContext, IChatBotDbContext
 
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<SavedChart> SavedCharts => Set<SavedChart>();
     public DbSet<AlertDefinition> AlertDefinitions => Set<AlertDefinition>();
     public DbSet<AlertConfiguration> AlertConfigurations => Set<AlertConfiguration>();
     public DbSet<AlertHistory> AlertHistories => Set<AlertHistory>();
@@ -34,6 +35,14 @@ public class ApplicationDbContext2 : DbContext, IChatBotDbContext
             entity.Property(e => e.MessageId).ValueGeneratedOnAdd();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             entity.Property(e => e.Role).HasConversion<byte>();
+        });
+
+        modelBuilder.Entity<SavedChart>(entity =>
+        {
+            entity.Property(e => e.ChartId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.DepartmentId);
         });
 
         modelBuilder.Entity<AlertDefinition>(entity =>

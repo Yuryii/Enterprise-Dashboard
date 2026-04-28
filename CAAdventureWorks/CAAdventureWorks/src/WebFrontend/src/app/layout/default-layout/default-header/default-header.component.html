@@ -10,13 +10,9 @@
         <a cNavLink routerLink="/roles/alerts" routerLinkActive="active">Cảnh báo</a>
       </c-nav-item>
       <c-nav-item>
-        <a cNavLink routerLink="/roles/data-management" routerLinkActive="active">Quản lý dữ liệu</a>
-      </c-nav-item>
-      <c-nav-item>
-        <a cNavLink routerLink="/roles/ai-assistant" routerLinkActive="active">Trợ lý ảo</a>
-      </c-nav-item>
-      <c-nav-item>
-        <a cNavLink routerLink="/roles/ai-chart" routerLinkActive="active">Dashboard phân tích</a>
+        <a cNavLink routerLink="/roles/ai-chart" routerLinkActive="active"
+          >Thống Kê AI</a
+        >
       </c-nav-item>
     </c-header-nav>
 
@@ -26,10 +22,20 @@
           (click)="onAlertDropdownOpen()">
           <svg cIcon class="my-1" name="cilBell" size="lg"></svg>
           @if (unreadAlertCount() > 0) {
-          <span class="position-absolute badge rounded-pill bg-danger"
-            style="font-size: 0.6rem; top: 4px; right: 2px; line-height: 1; padding: 1px 4px; min-width: 16px; text-align: center">
-            {{ unreadAlertCount() > 99 ? "99+" : unreadAlertCount() }}
-          </span>
+            <span
+              class="position-absolute badge rounded-pill bg-danger"
+              style="
+                font-size: 0.6rem;
+                top: 4px;
+                right: 2px;
+                line-height: 1;
+                padding: 1px 4px;
+                min-width: 16px;
+                text-align: center;
+              "
+            >
+              {{ unreadAlertCount() > 99 ? "99+" : unreadAlertCount() }}
+            </span>
           }
         </button>
         <div cDropdownMenu class="pt-0" style="min-width: 340px; max-width: 420px">

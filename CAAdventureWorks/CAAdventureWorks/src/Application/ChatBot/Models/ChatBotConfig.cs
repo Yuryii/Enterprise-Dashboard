@@ -13,6 +13,6 @@ public class DepartmentConfig
 {
     public string DisplayName { get; set; } = null!;
     public List<string> AllowedTables { get; set; } = new();
-    public string ChartEndpoint { get; set; } = null!;
+    public string? ChartEndpoint { get; set; }
     public string SystemPromptFile { get; set; } = null!;
 }

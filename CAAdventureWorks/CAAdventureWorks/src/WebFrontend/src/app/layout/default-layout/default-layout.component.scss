@@ -13,9 +13,11 @@
     min-height: 100%;
   }
 
-  //.sidebar-nav {
-  //  scrollbar-color: var(--cui-gray-500, #444) transparent;
-  //}
+  .ai-chart-container {
+    max-width: none;
+    width: 100%;
+    flex: 1;
+  }
 }
 
 // ng-scrollbar css variables

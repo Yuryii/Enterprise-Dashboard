@@ -11,7 +11,10 @@ import {
   AfterViewChecked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { ChatbotService, ChatMessage } from '../../../core/services/chatbot.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-chatbot',
@@ -26,6 +29,8 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
   private chatbotService = inject(ChatbotService);
   private destroyRef = inject(DestroyRef);
+  private router = inject(Router);
+  private authService = inject(AuthService);
 
   isOpen = signal(false);
   isLoading = signal(false);
@@ -33,15 +38,60 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   isConnecting = signal(false);
   connectionError = signal<string | null>(null);
 
-  currentDeptId = signal('sales');
+  currentDeptId = signal<string>('sales');
   currentSessionId = signal('');
+
+  private readonly routeToDeptId: Record<string, string> = {
+    'sales': 'sales',
+    'production': 'production',
+    'production-control': 'productioncontrol',
+    'marketing': 'marketing',
+    'purchasing': 'purchasing',
+    'human-resources': 'humanresources',
+    'finance': 'finance',
+    'quality-assurance': 'qualityassurance',
+    'document-control': 'documentcontrol',
+    'engineering': 'engineering',
+    'tool-design': 'tooldesign',
+    'shipping-receiving': 'shippingreceiving',
+    'information-services': 'informationservices',
+    'facilities': 'facilities',
+    'executive': 'sales',
+  };
+
+  private readonly roleToDeptId: Record<string, string> = {
+    'Sales': 'sales',
+    'Production': 'production',
+    'Production-Control': 'productioncontrol',
+    'Marketing': 'marketing',
+    'Purchasing': 'purchasing',
+    'HumanResources': 'humanresources',
+    'Finance': 'finance',
+    'Quality-Assurance': 'qualityassurance',
+    'Document-Control': 'documentcontrol',
+    'Engineering': 'engineering',
+    'Tool-Design': 'tooldesign',
+    'Shipping-and-Receiving': 'shippingreceiving',
+    'Information-Services': 'informationservices',
+    'Facilities-And-Maintenance': 'facilities',
+  };
 
   currentDeptName = computed(() => {
     const deptNames: Record<string, string> = {
       sales: 'Phòng Kinh Doanh',
       production: 'Phòng Sản Xuất',
+      productioncontrol: 'Phòng Kiểm Soát Sản Xuất',
+      marketing: 'Phòng Marketing',
       purchasing: 'Phòng Mua Hàng',
-      quality: 'Phòng QA',
+      humanresources: 'Phòng Nhân Sự',
+      finance: 'Phòng Tài Chính',
+      qualityassurance: 'Phòng QA',
+      documentcontrol: 'Phòng Kiểm Soát Tài Liệu',
+      engineering: 'Phòng Kỹ Thuật',
+      tooldesign: 'Phòng Thiết Kế Dụng Cụ',
+      shippingreceiving: 'Phòng Vận Chuyển & Nhận Hàng',
+      informationservices: 'Phòng Dịch Vụ Thông Tin',
+      facilities: 'Phòng Cơ Sở Vật Chất',
     };
     return deptNames[this.currentDeptId()] || 'Chatbot';
   });
@@ -54,9 +104,66 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
         { text: 'Đơn hàng gần đây?', icon: 'cart' },
         { text: 'Khách hàng tiềm năng?', icon: 'users' },
       ],
-      production: [],
-      purchasing: [],
-      quality: [],
+      production: [
+        { text: 'Tồn kho sản phẩm?', icon: 'box' },
+        { text: 'Work orders đang chờ?', icon: 'list' },
+        { text: 'Công suất sản xuất?', icon: 'chart' },
+      ],
+      productioncontrol: [
+        { text: 'Work orders đang xử lý?', icon: 'list' },
+        { text: 'Tiến độ sản xuất?', icon: 'chart' },
+        { text: 'Scrap rate gần đây?', icon: 'warning' },
+      ],
+      marketing: [
+        { text: 'Xu hướng doanh thu?', icon: 'chart' },
+        { text: 'Top sản phẩm bán chạy?', icon: 'star' },
+        { text: 'Khách hàng theo vùng?', icon: 'map' },
+      ],
+      purchasing: [
+        { text: 'Vendor hàng đầu?', icon: 'star' },
+        { text: 'PO gần đây?', icon: 'cart' },
+        { text: 'Chi phí mua hàng?', icon: 'chart' },
+      ],
+      humanresources: [
+        { text: 'Nhân viên theo phòng ban?', icon: 'users' },
+        { text: 'Các ca làm việc?', icon: 'clock' },
+        { text: 'Ứng viên gần đây?', icon: 'person' },
+      ],
+      finance: [
+        { text: 'Doanh thu theo tháng?', icon: 'chart' },
+        { text: 'Chi phí mua hàng?', icon: 'cart' },
+        { text: 'Tổng kết tài chính?', icon: 'briefcase' },
+      ],
+      qualityassurance: [
+        { text: 'Scrap reason phổ biến?', icon: 'warning' },
+        { text: 'Work orders có lỗi?', icon: 'bug' },
+        { text: 'Tỷ lệ lỗi theo sản phẩm?', icon: 'chart' },
+      ],
+      documentcontrol: [
+        { text: 'Tài liệu theo sản phẩm?', icon: 'folder' },
+        { text: 'Danh sách tài liệu?', icon: 'list' },
+      ],
+      engineering: [
+        { text: 'Bill of Materials?', icon: 'list' },
+        { text: 'Sản phẩm theo danh mục?', icon: 'grid' },
+      ],
+      tooldesign: [
+        { text: 'Bill of Materials?', icon: 'list' },
+        { text: 'Sản phẩm và cấu trúc?', icon: 'grid' },
+      ],
+      shippingreceiving: [
+        { text: 'Đơn hàng cần ship?', icon: 'truck' },
+        { text: 'PO chưa nhận?', icon: 'download' },
+        { text: 'Ship method phổ biến?', icon: 'map' },
+      ],
+      informationservices: [
+        { text: 'Nhân sự theo vùng?', icon: 'map' },
+        { text: 'Sản phẩm theo danh mục?', icon: 'grid' },
+      ],
+      facilities: [
+        { text: 'Location và tồn kho?', icon: 'map' },
+        { text: 'Vendor cung cấp?', icon: 'star' },
+      ],
     };
     return questions[this.currentDeptId()] || [];
   });
@@ -66,6 +173,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   streamingContent = signal('');
 
   private shouldScrollToBottom = false;
+  private currentRoute = '';
 
   ngOnInit(): void {
     this.chatbotService.tokens$
@@ -102,6 +210,38 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
           createdAt: new Date(),
         });
       });
+
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((event) => {
+        if (event.url !== this.currentRoute) {
+          this.currentRoute = event.url;
+          this.updateDeptIdFromRoute(event.url);
+        }
+      });
+
+    this.updateDeptIdFromRoute(this.router.url);
+  }
+
+  private async updateDeptIdFromRoute(url: string): Promise<void> {
+    const segment = url.split('/').filter(Boolean).pop() || '';
+    const deptId = this.routeToDeptId[segment];
+
+    if (deptId) {
+      this.currentDeptId.set(deptId);
+    } else {
+      const roles = await this.authService.getRoles();
+      for (const role of roles) {
+        const mapped = this.roleToDeptId[role];
+        if (mapped) {
+          this.currentDeptId.set(mapped);
+          break;
+        }
+      }
+    }
   }
 
   ngAfterViewChecked(): void {

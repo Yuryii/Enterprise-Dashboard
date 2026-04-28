@@ -25,11 +25,14 @@
 <!--main-->
 <div class="wrapper d-flex flex-column min-vh-100">
   <!--app-header-->
-  <app-default-header [cShadowOnScroll]="'sm'" class="mb-4 d-print-none header header-sticky p-0 shadow-sm"
-    position="sticky" sidebarId="sidebar1" />
-  <!--app-body-->
-  <div class="body flex-grow-1">
-    <c-container breakpoint="lg" class="h-auto px-4">
+  <app-default-header
+    [cShadowOnScroll]="'sm'"
+    class="mb-4 d-print-none header header-sticky p-0 shadow-sm"
+    position="sticky"
+    sidebarId="sidebar1"
+  />
+   <div class="body flex-grow-1">
+    <c-container class="h-auto px-4 ai-chart-container">
       <router-outlet />
     </c-container>
   </div>

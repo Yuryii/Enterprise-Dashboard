@@ -126,6 +126,13 @@ export const routes: Routes = [
     canActivate: [roleGuard(['Shipping-and-Receiving', 'Executive'])],
     loadComponent: () =>
       import('./shipping-receiving/shipping-receiving.component').then((m) => m.ShippingReceivingComponent),
-    data: { title: 'Giao nhận' }
+    data: { title: 'Shipping & Receiving' }
+  },
+  {
+    path: 'ai-chart',
+    canActivate: [roleGuard(['Sales', 'Executive'])],
+    loadComponent: () =>
+      import('./ai-chart/ai-chart.component').then((m) => m.AiChartComponent),
+    data: { title: 'AI Chart' }
   }
 ];
