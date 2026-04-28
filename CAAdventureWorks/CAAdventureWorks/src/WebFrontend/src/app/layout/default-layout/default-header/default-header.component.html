@@ -1,21 +1,13 @@
 <!--<c-header class="mb-4 d-print-none" position="sticky">-->
 <ng-container>
   <c-container [fluid]="true" class="border-bottom px-4">
-    <button
-      [cSidebarToggle]="sidebarId()"
-      cHeaderToggler
-      class="btn"
-      toggle="visible"
-      style="margin-inline-start: -14px"
-      aria-label="Toggle sidebar navigation"
-    >
+    <button [cSidebarToggle]="sidebarId()" cHeaderToggler class="btn" toggle="visible"
+      style="margin-inline-start: -14px" aria-label="Toggle sidebar navigation">
       <svg cIcon name="cilMenu" size="lg"></svg>
     </button>
     <c-header-nav class="d-none d-md-flex">
       <c-nav-item>
-        <a cNavLink routerLink="/roles/alerts" routerLinkActive="active"
-          >Cảnh báo</a
-        >
+        <a cNavLink routerLink="/roles/alerts" routerLinkActive="active">Cảnh báo</a>
       </c-nav-item>
       <c-nav-item>
         <a cNavLink routerLink="/roles/ai-chart" routerLinkActive="active"
@@ -25,17 +17,9 @@
     </c-header-nav>
 
     <c-header-nav class="d-none d-md-flex ms-auto">
-      <c-dropdown
-        [popperOptions]="{ placement: 'bottom-end' }"
-        variant="nav-item"
-      >
-        <button
-          [caret]="false"
-          cDropdownToggle
-          class="position-relative btn"
-          aria-label="Notifications"
-          (click)="onAlertDropdownOpen()"
-        >
+      <c-dropdown [popperOptions]="{ placement: 'bottom-end' }" variant="nav-item">
+        <button [caret]="false" cDropdownToggle class="position-relative btn" aria-label="Notifications"
+          (click)="onAlertDropdownOpen()">
           <svg cIcon class="my-1" name="cilBell" size="lg"></svg>
           @if (unreadAlertCount() > 0) {
             <span
@@ -54,76 +38,49 @@
             </span>
           }
         </button>
-        <div
-          cDropdownMenu
-          class="pt-0"
-          style="min-width: 340px; max-width: 420px"
-        >
-          <div
-            cDropdownHeader
-            class="bg-body-secondary fw-semibold d-flex justify-content-between align-items-center py-2 px-3"
-          >
+        <div cDropdownMenu class="pt-0" style="min-width: 340px; max-width: 420px">
+          <div cDropdownHeader
+            class="bg-body-secondary fw-semibold d-flex justify-content-between align-items-center py-2 px-3">
             <span>Thông báo</span>
             @if (unreadAlertCount() > 0) {
-              <button
-                class="btn btn-sm btn-link text-decoration-none p-0"
-                (click)="onMarkAllRead($event)"
-              >
-                Đánh dấu tất cả đã đọc
-              </button>
+            <button class="btn btn-sm btn-link text-decoration-none p-0" (click)="onMarkAllRead($event)">
+              Đánh dấu tất cả đã đọc
+            </button>
             }
           </div>
           @if (unreadAlerts().length === 0) {
-            <div class="text-center text-body-secondary py-4">
-              <svg
-                cIcon
-                name="cilBell"
-                size="2xl"
-                class="mb-2 opacity-25"
-              ></svg>
-              <div class="small">Không có thông báo mới</div>
-            </div>
+          <div class="text-center text-body-secondary py-4">
+            <svg cIcon name="cilBell" size="2xl" class="mb-2 opacity-25"></svg>
+            <div class="small">Không có thông báo mới</div>
+          </div>
           } @else {
-            @for (alert of unreadAlerts().slice(0, 5); track alert.id) {
-              <li>
-                <button
-                  cDropdownItem
-                  class="d-flex align-items-start gap-2 py-2 px-3 text-start"
-                  style="white-space: normal"
-                  (click)="onAlertClick($event, alert)"
-                >
-                  <svg
-                    cIcon
-                    name="cilWarning"
-                    class="text-warning flex-shrink-0 mt-1"
-                  ></svg>
-                  <div class="flex-grow-1 overflow-hidden">
-                    <div class="fw-semibold text-truncate small">
-                      {{ alert.alertName }}
-                    </div>
-                    <div
-                      class="text-body-secondary small text-truncate"
-                      style="max-width: 280px"
-                    >
-                      {{ alert.message }}
-                    </div>
-                    <div class="text-body-secondary small">
-                      {{ formatRelativeTime(alert.triggeredAt) }}
-                    </div>
-                  </div>
-                </button>
-              </li>
-            }
-            <li><hr cDropdownDivider /></li>
-            <li>
-              <a
-                cDropdownItem
-                routerLink="/roles/alerts"
-                class="text-center fw-semibold small"
-              >
-                Xem tất cả cảnh báo
-              </a>
-            </li>
+          @for (alert of unreadAlerts().slice(0, 5); track alert.id) {
+          <li>
+            <button cDropdownItem class="d-flex align-items-start gap-2 py-2 px-3 text-start"
+              style="white-space: normal" (click)="onAlertClick($event, alert)">
+              <svg cIcon name="cilWarning" class="text-warning flex-shrink-0 mt-1"></svg>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="fw-semibold text-truncate small">
+                  {{ alert.alertName }}
+                </div>
+                <div class="text-body-secondary small text-truncate" style="max-width: 280px">
+                  {{ alert.message }}
+                </div>
+                <div class="text-body-secondary small">
+                  {{ formatRelativeTime(alert.triggeredAt) }}
+                </div>
+              </div>
+            </button>
+          </li>
+          }
+          <li>
+            <hr cDropdownDivider />
+          </li>
+          <li>
+            <a cDropdownItem routerLink="/roles/alerts" class="text-center fw-semibold small">
+              Xem tất cả cảnh báo
+            </a>
+          </li>
           }
         </div>
       </c-dropdown>
@@ -150,86 +107,64 @@
 <!--</c-header>-->
 
 <ng-template #userDropdown>
-  <c-dropdown
-    [popperOptions]="{ placement: 'bottom-start' }"
-    variant="nav-item"
-  >
-    <button
-      [caret]="false"
-      cDropdownToggle
-      class="py-0 pe-0"
-      aria-label="Open user menu"
-    >
+  <c-dropdown [popperOptions]="{ placement: 'bottom-start' }" variant="nav-item">
+    <button [caret]="false" cDropdownToggle class="py-0 pe-0" aria-label="Mở menu người dùng">
       @if (user$ | async; as user) {
-        <c-avatar
-          shape="rounded-1"
-          size="md"
-          [src]="user.picture || './assets/images/avatars/8.jpg'"
-          status="success"
-          textColor="primary"
-          [alt]="getUserName(user)"
-        />
+      <span class="user-header-avatar" aria-hidden="true">
+        <img src="assets/images/avatars/user.jpg" [alt]="getUserName(user)" />
+        <span class="user-header-avatar__status"></span>
+      </span>
       } @else {
-        <c-avatar
-          shape="rounded-1"
-          size="md"
-          src="./assets/images/avatars/8.jpg"
-          status="success"
-          textColor="primary"
-          alt="User avatar"
-        />
+      <span class="user-header-avatar" aria-hidden="true">
+        <img src="assets/images/avatars/user.jpg" alt="User avatar" />
+        <span class="user-header-avatar__status"></span>
+      </span>
       }
     </button>
     <ul cDropdownMenu class="pt-0 w-auto">
       <li>
-        <h6
-          cDropdownHeader
-          class="bg-body-secondary text-body-secondary fw-semibold py-2 rounded-top"
-        >
+        <h6 cDropdownHeader class="bg-body-secondary text-body-secondary fw-semibold py-2 rounded-top">
           @if (user$ | async; as user) {
-            {{ getUserName(user) }}
+          {{ getUserName(user) }}
           } @else {
-            Account
+          Tài khoản
           }
         </h6>
       </li>
       @if (user$ | async; as user) {
-        @if (getUserEmail(user)) {
-          <li>
-            <span cDropdownItem class="text-body-secondary small">
-              {{ getUserEmail(user) }}
-            </span>
-          </li>
-        }
-        @if (roles$ | async; as roles) {
-          @if (roles.length > 0) {
-            <li>
-              <span cDropdownItem class="text-body-secondary small">
-                Roles: {{ roles.join(", ") }}
-              </span>
-            </li>
-          }
-        }
+      @if (getUserEmail(user)) {
+      <li>
+        <span cDropdownItem class="text-body-secondary small">
+          {{ getUserEmail(user) }}
+        </span>
+      </li>
+      }
+      @if (roles$ | async; as roles) {
+      @if (roles.length > 0) {
+      <li>
+        <span cDropdownItem class="text-body-secondary small">
+          Vai trò: {{ roles.join(", ") }}
+        </span>
+      </li>
+      }
+      }
       }
       <li>
-        <h6
-          cDropdownHeader
-          class="bg-body-secondary text-body-secondary fw-semibold py-2"
-        >
-          Settings
+        <h6 cDropdownHeader class="bg-body-secondary text-body-secondary fw-semibold py-2">
+          Cài đặt
         </h6>
       </li>
       <li></li>
       <li>
         <a cDropdownItem routerLink="">
           <svg cIcon class="me-2" name="cilUser"></svg>
-          Profile
+          Hồ sơ
         </a>
       </li>
       <li>
         <a cDropdownItem routerLink="">
           <svg cIcon class="me-2" name="cilSettings"></svg>
-          Settings
+          Cài đặt
         </a>
       </li>
       <li>
@@ -238,7 +173,7 @@
       <li>
         <button cDropdownItem (click)="logout()">
           <svg cIcon class="me-2" name="cilAccountLogout"></svg>
-          Logout
+          Đăng xuất
         </button>
       </li>
     </ul>
@@ -252,15 +187,11 @@
     </button>
     <div cDropdownMenu>
       @for (mode of colorModes; track mode.name) {
-        <button
-          (click)="colorMode.set(mode.name)"
-          [active]="colorMode() === mode.name"
-          cDropdownItem
-          class="d-flex align-items-center"
-        >
-          <svg cIcon class="me-2" [name]="mode.icon" size="lg"></svg>
-          {{ mode.text }}
-        </button>
+      <button (click)="colorMode.set(mode.name)" [active]="colorMode() === mode.name" cDropdownItem
+        class="d-flex align-items-center">
+        <svg cIcon class="me-2" [name]="mode.icon" size="lg"></svg>
+        {{ mode.text }}
+      </button>
       }
     </div>
   </c-dropdown>

@@ -20,6 +20,8 @@ import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -55,6 +57,11 @@ export interface ChartDef {
 export class ShippingReceivingComponent {
   private readonly fb = new FormBuilder();
 
+  constructor() {
+    this.restoreSavedFilter();
+    this.applyFilters();
+  }
+
   private readonly widgetChartPalette = {
     primary: getStyle('--cui-primary') ?? '#5856d6',
     info: getStyle('--cui-info') ?? '#39f',
@@ -66,13 +73,18 @@ export class ShippingReceivingComponent {
   readonly title = 'Shipping & Receiving';
   readonly subtitle = 'Dashboard';
 
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
+
+
   readonly appliedFilters = signal({
     flowType: 'All',
     shipMethod: 'All',
     shipmentStatus: 'All'
   });
 
-  private readonly gridsterStorageKey = 'shipping_grid_layout';
+  private readonly savedFilterStorageKey = 'shipping_receiving_saved_filter';
+  readonly gridsterStorageKey = 'shipping_grid_layout';
   private readonly hiddenChartsStorageKey = 'shipping_hidden_charts';
 
   readonly isEditMode = signal(false);
@@ -83,7 +95,7 @@ export class ShippingReceivingComponent {
     pushItems: true,
     minCols: 12,
     maxCols: 12,
-    minRows: 20,
+    minRows: 28,
     fixedRowHeight: 80,
     keepFixedHeightInMobile: false,
     keepFixedWidthInMobile: false,
@@ -101,7 +113,10 @@ export class ShippingReceivingComponent {
     { id: 'inbound-qc', label: 'Inbound QC' },
     { id: 'ship-method-mix', label: 'Ship method mix' },
     { id: 'outbound-trend', label: 'Outbound trend' },
-    { id: 'freight-stacked', label: 'Freight stacked' }
+    { id: 'freight-stacked', label: 'Freight stacked' },
+    { id: 'rejected-inbound', label: 'PO có hàng lỗi / cần đền bù' },
+    { id: 'pending-outbound', label: 'Đơn outbound đang xử lý' },
+    { id: 'freight-region', label: 'Chi phí logistics theo khu vực giao hàng' }
   ];
 
   readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
@@ -147,7 +162,10 @@ export class ShippingReceivingComponent {
       { id: 'inbound-qc', cols: 6, rows: 6, x: 0, y: 0 },
       { id: 'ship-method-mix', cols: 6, rows: 6, x: 6, y: 0 },
       { id: 'outbound-trend', cols: 6, rows: 6, x: 0, y: 6 },
-      { id: 'freight-stacked', cols: 6, rows: 6, x: 6, y: 6 }
+      { id: 'freight-stacked', cols: 6, rows: 6, x: 6, y: 6 },
+      { id: 'rejected-inbound', cols: 7, rows: 5, x: 0, y: 12 },
+      { id: 'pending-outbound', cols: 5, rows: 5, x: 7, y: 12 },
+      { id: 'freight-region', cols: 12, rows: 5, x: 0, y: 17 }
     ];
   }
 
@@ -459,19 +477,105 @@ export class ShippingReceivingComponent {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      flowType: 'All',
-      shipMethod: 'All',
-      shipmentStatus: 'All'
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ flowType: 'All', shipMethod: 'All', shipmentStatus: 'All' });
     this.applyFilters();
   }
 
-  exportPDF(): void {
-    alert('Chức năng xuất PDF cho dashboard Shipping & Receiving đang được phát triển');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.logisticsCards(),
+      filters: this.filterForm.getRawValue(),
+      inboundOrders: this.filteredInboundOrders(),
+      outboundOrders: this.filteredOutboundOrders(),
+      shipMethodMix: this.shipMethodMix(),
+      freightByRegion: this.freightByRegion()
+    };
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'shipping-receiving', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'ShippingReceivingDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.logisticsCards(),
+        filters: this.describeShippingFilters(),
+        sections: [
+          {
+            title: '01. Inbound QC theo bộ lọc',
+            subtitle: 'PO nhập hàng và kết quả QC sau khi áp dụng bộ lọc hiện tại.',
+            headers: ['PO', 'Vendor', 'Nhận', 'Từ chối', 'Nhập kho', 'Trạng thái'],
+            rows: this.filteredInboundOrders().map(item => [item.purchaseOrderId, item.vendor, item.receivedQty, item.rejectedQty, item.stockedQty, item.status]),
+            widths: [45, '*', 45, 55, 55, 70]
+          },
+          {
+            title: '02. PO có hàng lỗi / cần đền bù',
+            subtitle: 'Danh sách inbound có rejected quantity lớn hơn 0.',
+            headers: ['PO', 'Vendor', 'Rejected', 'Dock', 'Tháng'],
+            rows: this.rejectedInboundRows().map(item => [item.purchaseOrderId, item.vendor, item.rejectedQty, item.dock, item.month]),
+            widths: [45, '*', 60, 70, 45]
+          },
+          {
+            title: '03. Outbound theo bộ lọc',
+            subtitle: 'Đơn outbound theo luồng, ship method và trạng thái đang chọn.',
+            headers: ['SO', 'Ship method', 'Ngày đặt', 'Ngày giao', 'Freight', 'Trạng thái'],
+            rows: this.filteredOutboundOrders().map(item => [item.salesOrderId, item.shipMethod, this.formatReportDate(item.orderDate), this.formatReportDate(item.shipDate), this.formatCurrency(item.freight), item.status]),
+            widths: [45, '*', 65, 65, 65, 65]
+          },
+          {
+            title: '04. Ship method mix',
+            subtitle: 'Số đơn và chi phí theo phương thức vận chuyển.',
+            headers: ['Phương thức', 'Đơn hàng', 'Base cost', 'Variable cost'],
+            rows: this.shipMethodMix().map(item => [item.name, item.orders, this.formatCurrency(item.baseCost), this.formatCurrency(item.variableCost)]),
+            widths: ['*', 60, 80, 80]
+          },
+          {
+            title: '05. Chi phí logistics theo khu vực',
+            subtitle: 'Freight hotspot by state/city trong dữ liệu hiện tại.',
+            headers: ['State', 'City', 'Freight', 'Volume'],
+            rows: this.freightRegionRows().map(item => [item.state, item.city, this.formatCurrency(item.freight), item.volume]),
+            widths: ['*', '*', 75, 55]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard Shipping & Receiving', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeShippingFilters(): string[] {
+    const filters = this.appliedFilters();
+    return [
+      `Luồng logistics: ${filters.flowType === 'All' ? 'Tất cả' : filters.flowType}`,
+      `Phương thức giao hàng: ${filters.shipMethod === 'All' ? 'Tất cả' : filters.shipMethod}`,
+      `Trạng thái xử lý: ${filters.shipmentStatus === 'All' ? 'Tất cả' : filters.shipmentStatus}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   saveFilter(): void {
-    alert('Chức năng lưu bộ lọc Shipping & Receiving đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.applyFilters();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { flowType: 'All', shipMethod: 'All', shipmentStatus: 'All' }));
+  }
+
 }

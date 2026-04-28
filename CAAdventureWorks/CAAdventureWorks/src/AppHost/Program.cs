@@ -8,8 +8,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WithEnvironment("KC_BOOTSTRAP_ADMIN_USERNAME", "admin")
     .WithEnvironment("KC_BOOTSTRAP_ADMIN_PASSWORD", "admin")
-    .WithRealmImport("keycloak/realm-export.json")
-    .WithDataVolume();
+    .WithEnvironment("KC_SPI_THEME_CACHE_THEMES", "false")
+    .WithEnvironment("KC_SPI_THEME_CACHE_TEMPLATES", "false")
+    .WithBindMount("keycloak/themes", "/opt/keycloak/themes")
+    .WithRealmImport("keycloak/realm-export.json");
 
 // Web API - connects to Keycloak managed by Aspire
 var web = builder.AddProject<Projects.Web>(Services.WebApi)

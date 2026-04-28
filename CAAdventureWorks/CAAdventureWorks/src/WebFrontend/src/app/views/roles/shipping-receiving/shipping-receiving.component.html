@@ -1,9 +1,18 @@
 <div class="sales-app shipping-app">
   <div class="sales-content shipping-content">
     <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
-      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+      <div class="ai-pdf-toggle" [class.ai-pdf-toggle-active]="includeAiAssessment()">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch"
+            [checked]="includeAiAssessment()" [disabled]="aiAssessmentLoading()"
+            (change)="toggleAiAssessment($any($event.target).checked)" />
+          <label class="form-check-label">Đánh giá AI</label>
+        </div>
+      </div>
+<button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()"
+        [disabled]="aiAssessmentLoading()">
         <svg cIcon name="cilCloudDownload" class="me-1"></svg>
-        Xuất PDF
+        {{ aiAssessmentLoading() ? 'AI đang xử lý...' : 'Xuất PDF' }}
       </button>
       <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
         (click)="customizeLayout()">
@@ -26,7 +35,7 @@
       <c-card-body>
         <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
           <c-row class="align-items-end g-3">
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="flowType" class="small">Luồng logistics</label>
               <select cSelect formControlName="flowType" id="flowType">
                 <option value="All">Tất cả luồng</option>
@@ -35,7 +44,7 @@
               </select>
             </c-col>
 
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="shipMethod" class="small">Phương thức giao hàng</label>
               <select cSelect formControlName="shipMethod" id="shipMethod">
                 <option value="All">Tất cả ShipMethod</option>
@@ -45,7 +54,7 @@
               </select>
             </c-col>
 
-            <c-col md="4">
+            <c-col md="3">
               <label cLabel for="shipmentStatus" class="small">Trạng thái xử lý</label>
               <select cSelect formControlName="shipmentStatus" id="shipmentStatus">
                 <option value="All">Tất cả trạng thái</option>
@@ -57,10 +66,10 @@
               </select>
             </c-col>
 
-            <c-col md="12">
+            <c-col md="3">
               <button cButton type="submit" color="primary" class="w-100 apply-btn">
                 <span class="button-icon me-1" aria-hidden="true">⌕</span>
-                Áp dụng bộ lọc Shipping & Receiving
+                Áp dụng
               </button>
             </c-col>
           </c-row>
@@ -110,13 +119,17 @@
       }
     </c-row>
 
-    <c-row class="mb-3">
-      @for (item of logisticsCards(); track item.label) {
-      <c-col md="3">
-        <c-card class="metric-mini-card mb-3">
+    <c-row class="g-4 mb-4">
+      @for (item of logisticsCards(); track item.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-card class="health-metric-card shipping-health-card mb-0">
           <c-card-body>
-            <div class="metric-mini-label">{{ item.label }}</div>
-            <div class="metric-mini-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+            <div class="health-metric-value">{{ item.value | number:'1.1-1' }}{{ item.suffix }}</div>
+            <div class="health-metric-label">{{ item.label }}</div>
+            <div class="health-metric-progress">
+              <div class="health-metric-progress-bar" [class.progress-success]="i === 0" [class.progress-info]="i === 1"
+                [class.progress-warning]="i === 2" [class.progress-primary]="i === 3"></div>
+            </div>
           </c-card-body>
         </c-card>
       </c-col>
@@ -254,11 +267,11 @@
         </c-card>
       </gridster-item>
       }
-    </gridster>
 
-    <c-row>
-      <c-col md="7">
-        <c-card class="mb-3">
+      <!-- Receiving Exception List -->
+      @if (isChartVisible('rejected-inbound')) {
+      <gridster-item [item]="getItem('rejected-inbound')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>PO có hàng lỗi / cần đền bù</strong>
             <small class="text-body-secondary ms-2">Receiving exception list</small>
@@ -288,7 +301,8 @@
                     <td>{{ item.rejectedQty | number:'1.0-0' }}</td>
                     <td>{{ item.stockedQty | number:'1.0-0' }}</td>
                     <td>
-                      <span class="badge" [class.bg-danger]="item.status === 'Rejected Items'" [class.bg-warning]="item.status === 'Review'" [class.bg-success]="item.status === 'Accepted'">
+                      <span class="badge" [class.bg-danger]="item.status === 'Rejected Items'"
+                        [class.bg-warning]="item.status === 'Review'" [class.bg-success]="item.status === 'Accepted'">
                         {{ item.status }}
                       </span>
                     </td>
@@ -299,10 +313,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
+      </gridster-item>
+      }
 
-      <c-col md="5">
-        <c-card class="mb-3">
+      <!-- Pending Shipment & Routing -->
+      @if (isChartVisible('pending-outbound')) {
+      <gridster-item [item]="getItem('pending-outbound')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Đơn outbound đang xử lý</strong>
             <small class="text-body-secondary ms-2">Pending shipment & routing</small>
@@ -330,7 +347,8 @@
                     <td>{{ item.city }}, {{ item.state }}</td>
                     <td>{{ item.leadTime | number:'1.0-0' }} ngày</td>
                     <td>
-                      <span class="badge" [class.bg-warning]="item.status === 'Pending'" [class.bg-success]="item.status === 'Shipped'">
+                      <span class="badge" [class.bg-warning]="item.status === 'Pending'"
+                        [class.bg-success]="item.status === 'Shipped'">
                         {{ item.status }}
                       </span>
                     </td>
@@ -341,12 +359,13 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
 
-    <c-row>
-      <c-col md="12">
-        <c-card class="mb-3">
+      <!-- Freight Hotspot by State / City -->
+      @if (isChartVisible('freight-region')) {
+      <gridster-item [item]="getItem('freight-region')!">
+        <c-card class="mb-0 h-100">
           <c-card-header>
             <strong>Chi phí logistics theo khu vực giao hàng</strong>
             <small class="text-body-secondary ms-2">Freight hotspot by state / city</small>
@@ -364,7 +383,8 @@
             </div>
           </c-card-body>
         </c-card>
-      </c-col>
-    </c-row>
+      </gridster-item>
+      }
+    </gridster>
   </div>
 </div>

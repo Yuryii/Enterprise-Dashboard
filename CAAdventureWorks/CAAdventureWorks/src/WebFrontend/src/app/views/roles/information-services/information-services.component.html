@@ -18,9 +18,17 @@
 
     <!-- Action Buttons - No Background -->
     <div class="mb-3 d-flex gap-2 justify-content-end sales-action-buttons">
-      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()">
+      <div class="ai-pdf-toggle" [class.ai-pdf-toggle-active]="includeAiAssessment()">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch" [checked]="includeAiAssessment()"
+            [disabled]="aiAssessmentLoading()" (change)="toggleAiAssessment($any($event.target).checked)" />
+          <label class="form-check-label">Đánh giá AI</label>
+        </div>
+      </div>
+      <button cButton color="danger" type="button" class="action-btn export-btn" (click)="exportPDF()"
+        [disabled]="aiAssessmentLoading()">
         <svg cIcon name="cilCloudDownload" class="me-1"></svg>
-        Xuất PDF
+        {{ aiAssessmentLoading() ? 'AI đang xử lý...' : 'Xuất PDF' }}
       </button>
       <button cButton color="secondary" variant="outline" type="button" class="action-btn light-btn secondary-btn"
         (click)="customizeLayout()">
@@ -40,38 +48,37 @@
     </div>
 
     <!-- Filters Card -->
-    <c-card class="mb-3">
+    <c-card class="mb-3 is-filter-card">
       <c-card-body>
-        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()">
-          <!-- Filter Row -->
-          <c-row class="align-items-end">
-            <c-col md="3">
-              <label cLabel for="startDate" class="small">Từ ngày</label>
+        <form [formGroup]="filterForm" (ngSubmit)="loadDashboard()" class="is-filter-form">
+          <div class="is-filter-grid">
+            <div class="is-filter-field">
+              <label cLabel for="startDate">Từ ngày</label>
               <input cFormControl type="date" formControlName="startDate" id="startDate" />
-            </c-col>
+            </div>
 
-            <c-col md="3">
-              <label cLabel for="endDate" class="small">Đến ngày</label>
+            <div class="is-filter-field">
+              <label cLabel for="endDate">Đến ngày</label>
               <input cFormControl type="date" formControlName="endDate" id="endDate" />
-            </c-col>
+            </div>
 
-            <c-col md="3">
-              <label cLabel for="departmentId" class="small">Phòng ban</label>
+            <div class="is-filter-field is-filter-department">
+              <label cLabel for="departmentId">Phòng ban</label>
               <select cSelect formControlName="departmentId" id="departmentId">
                 <option [ngValue]="null">Tất cả phòng ban</option>
                 @for (dept of dashboard()?.filterOptions?.departments; track dept.id) {
                 <option [ngValue]="dept.id">{{ dept.name }}</option>
                 }
               </select>
-            </c-col>
+            </div>
 
-            <c-col md="3">
-              <button cButton type="submit" color="primary" class="w-100 apply-btn">
+            <div class="is-filter-action">
+              <button cButton type="submit" color="primary" class="apply-btn">
                 <span class="button-icon me-1" aria-hidden="true">⌕</span>
                 Áp dụng
               </button>
-            </c-col>
-          </c-row>
+            </div>
+          </div>
         </form>
       </c-card-body>
     </c-card>
@@ -140,6 +147,136 @@
               [class]="i === 2 ? 'mt-2' : 'mt-2 mx-3'" height="70" [type]="i === 3 ? 'bar' : 'line'"></c-chart>
           </ng-template>
         </c-widget-stat-a>
+      </c-col>
+      }
+    </c-row>
+
+    <!-- Data Tables -->
+    <c-row class="is-top-detail-row g-3 mb-3">
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Người dùng có nhiều lỗi nhất</strong>
+            <small class="text-body-secondary ms-2">Top 10</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive">
+              <table cTable [striped]="true" [hover]="true" class="small">
+                <thead>
+                  <tr>
+                    <th>Tên người dùng</th>
+                    <th class="text-end">Số lỗi</th>
+                    <th class="text-end">Lỗi gần nhất</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (user of dashboard()?.usersWithMostErrors?.slice(0, 10); track user.userName) {
+                  <tr>
+                    <td>{{ user.userName }}</td>
+                    <td class="text-end">{{ user.errorCount }}</td>
+                    <td class="text-end">{{ user.lastError | date:'dd/MM/yyyy HH:mm' }}</td>
+                  </tr>
+                  }
+                  @if (!dashboard()?.usersWithMostErrors?.length) {
+                  <tr>
+                    <td colspan="3" class="text-center text-muted">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+
+      <c-col md="6">
+        <c-card class="mb-3">
+          <c-card-header>
+            <strong>Hoạt động Database gần đây</strong>
+            <small class="text-body-secondary ms-2">Audit trail</small>
+          </c-card-header>
+          <c-card-body>
+            <div class="table-responsive">
+              <table cTable [striped]="true" [hover]="true" class="small">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Sự kiện</th>
+                    <th class="text-end">Số lần</th>
+                    <th class="text-end">Lần cuối</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (activity of dashboard()?.databaseActivity?.slice(0, 10); track activity.databaseUser +
+                  activity.event) {
+                  <tr>
+                    <td>{{ activity.databaseUser }}</td>
+                    <td>{{ activity.event }}</td>
+                    <td class="text-end">{{ activity.activityCount }}</td>
+                    <td class="text-end">{{ activity.lastActivity | date:'dd/MM HH:mm' }}</td>
+                  </tr>
+                  }
+                  @if (!dashboard()?.databaseActivity?.length) {
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">Không có dữ liệu</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+
+    <!-- System Information Cards -->
+    <c-row class="is-system-info-row g-4 mb-4">
+      @for (item of [
+      {
+      label: 'Phòng ban',
+      type: 'number',
+      value: dashboard()?.overview?.totalDepartments
+      },
+      {
+      label: 'Đổi MK gần đây',
+      type: 'number',
+      value: dashboard()?.overview?.recentPasswordChanges
+      },
+      {
+      label: 'Phiên bản DB',
+      type: 'text',
+      value: dashboard()?.overview?.currentDatabaseVersion || 'N/A'
+      },
+      {
+      label: 'Cập nhật lần cuối',
+      type: 'date',
+      value: dashboard()?.overview?.lastDatabaseUpdate
+      }
+      ]; track item.label; let i = $index) {
+      <c-col sm="6" xl="3">
+        <c-card class="health-metric-card is-health-card mb-0">
+          <c-card-body>
+            <div class="health-metric-value"
+              [class.health-metric-value-sm]="item.type === 'text' || item.type === 'date'">
+              @if (item.type === 'date') {
+              @if (item.value) {
+              {{ item.value | date:'dd/MM/yyyy' }}
+              } @else {
+              N/A
+              }
+              } @else if (item.type === 'number') {
+              {{ (item.value || 0) | number:'1.0-0' }}
+              } @else {
+              {{ item.value }}
+              }
+            </div>
+            <div class="health-metric-label">{{ item.label }}</div>
+            <div class="health-metric-progress">
+              <div class="health-metric-progress-bar" [class.progress-success]="i === 0" [class.progress-info]="i === 1"
+                [class.progress-warning]="i === 2" [class.progress-primary]="i === 3"></div>
+            </div>
+          </c-card-body>
+        </c-card>
       </c-col>
       }
     </c-row>
@@ -297,125 +434,6 @@
       }
 
     </gridster>
-
-    <!-- Row 4: Data Tables -->
-    <c-row>
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Người dùng có nhiều lỗi nhất</strong>
-            <small class="text-body-secondary ms-2">Top 10</small>
-          </c-card-header>
-          <c-card-body>
-            <div class="table-responsive">
-              <table cTable [striped]="true" [hover]="true" class="small">
-                <thead>
-                  <tr>
-                    <th>Tên người dùng</th>
-                    <th class="text-end">Số lỗi</th>
-                    <th class="text-end">Lỗi gần nhất</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (user of dashboard()?.usersWithMostErrors?.slice(0, 10); track user.userName) {
-                  <tr>
-                    <td>{{ user.userName }}</td>
-                    <td class="text-end">{{ user.errorCount }}</td>
-                    <td class="text-end">{{ user.lastError | date:'dd/MM/yyyy HH:mm' }}</td>
-                  </tr>
-                  }
-                  @if (!dashboard()?.usersWithMostErrors?.length) {
-                  <tr>
-                    <td colspan="3" class="text-center text-muted">Không có dữ liệu</td>
-                  </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-
-      <c-col md="6">
-        <c-card class="mb-3">
-          <c-card-header>
-            <strong>Hoạt động Database gần đây</strong>
-            <small class="text-body-secondary ms-2">Audit trail</small>
-          </c-card-header>
-          <c-card-body>
-            <div class="table-responsive">
-              <table cTable [striped]="true" [hover]="true" class="small">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Sự kiện</th>
-                    <th class="text-end">Số lần</th>
-                    <th class="text-end">Lần cuối</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (activity of dashboard()?.databaseActivity?.slice(0, 10); track activity.databaseUser + activity.event) {
-                  <tr>
-                    <td>{{ activity.databaseUser }}</td>
-                    <td>{{ activity.event }}</td>
-                    <td class="text-end">{{ activity.activityCount }}</td>
-                    <td class="text-end">{{ activity.lastActivity | date:'dd/MM HH:mm' }}</td>
-                  </tr>
-                  }
-                  @if (!dashboard()?.databaseActivity?.length) {
-                  <tr>
-                    <td colspan="4" class="text-center text-muted">Không có dữ liệu</td>
-                  </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
-
-    <!-- Row 5: System Information Cards -->
-    <c-row>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Phòng ban</div>
-            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.totalDepartments || 0 }}</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Đổi MK gần đây</div>
-            <div class="fs-4 fw-semibold">{{ dashboard()?.overview?.recentPasswordChanges || 0 }}</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Phiên bản DB</div>
-            <div class="fs-6 fw-semibold">{{ dashboard()?.overview?.currentDatabaseVersion || 'N/A' }}</div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-      <c-col md="3">
-        <c-card class="mb-3 text-center">
-          <c-card-body>
-            <div class="text-body-secondary small mb-1">Cập nhật lần cuối</div>
-            <div class="fs-6 fw-semibold">
-              @if (dashboard()?.overview?.lastDatabaseUpdate) {
-                {{ dashboard()?.overview?.lastDatabaseUpdate | date:'dd/MM/yyyy' }}
-              } @else {
-                N/A
-              }
-            </div>
-          </c-card-body>
-        </c-card>
-      </c-col>
-    </c-row>
 
     }
 

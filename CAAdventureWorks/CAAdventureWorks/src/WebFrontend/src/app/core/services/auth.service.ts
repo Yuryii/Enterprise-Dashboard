@@ -14,19 +14,19 @@ export class AuthService {
   isAuthenticated$ = this.useMockAuth
     ? of(true)
     : this.oidcSecurityService.isAuthenticated$.pipe(
-        map((result) => result.isAuthenticated),
-      );
+      map((result) => result.isAuthenticated),
+    );
 
   userData$ = this.useMockAuth
     ? of({ name: 'Mock User', email: 'mock@example.com', preferred_username: 'mockuser' })
     : this.oidcSecurityService.userData$.pipe(
-        map((result) => result.userData as any),
-      );
+      map((result) => result.userData as any),
+    );
 
   accessToken$: Observable<string> = this.useMockAuth
     ? of('mock-access-token')
     : this.oidcSecurityService.getAccessToken();
-    
+
   idToken$: Observable<string> = this.useMockAuth
     ? of('mock-id-token')
     : this.oidcSecurityService.getIdToken();
@@ -36,7 +36,12 @@ export class AuthService {
       console.log('[AuthService] Mock authentication - login bypassed');
       return;
     }
-    this.oidcSecurityService.authorize();
+    this.oidcSecurityService.authorize(undefined, {
+      customParams: {
+        ui_locales: 'vi',
+        kc_locale: 'vi',
+      },
+    });
   }
 
   logout(): void {
@@ -133,7 +138,7 @@ export class AuthService {
     if (this.useMockAuth) {
       return 'Mock User (Development)';
     }
-    
+
     const userData = await firstValueFrom(
       this.oidcSecurityService.getUserData(),
     );
@@ -147,7 +152,7 @@ export class AuthService {
     if (this.useMockAuth) {
       return 'mock@example.com';
     }
-    
+
     const userData = await firstValueFrom(
       this.oidcSecurityService.getUserData(),
     );

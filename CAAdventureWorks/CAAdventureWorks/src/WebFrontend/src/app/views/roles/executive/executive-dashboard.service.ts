@@ -145,6 +145,16 @@ export interface ExecutiveDashboardResponseDto {
     filterOptions: ExecutiveDashboardFilterOptionsDto;
 }
 
+export interface ExecutiveAiAssessmentRequest {
+    dashboard: ExecutiveDashboardResponseDto;
+    filters: ExecutiveDashboardFilter;
+    generatedAt: string;
+}
+
+export interface ExecutiveAiAssessmentResponse {
+    content: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExecutiveDashboardService {
     private readonly http = inject(HttpClient);
@@ -163,5 +173,9 @@ export class ExecutiveDashboardService {
         if (filter.currentEmployeesOnly != null) params = params.set('currentEmployeesOnly', filter.currentEmployeesOnly);
 
         return this.http.get<ExecutiveDashboardResponseDto>(this.apiUrl, { params });
+    }
+
+    getAiAssessment(request: ExecutiveAiAssessmentRequest): Observable<ExecutiveAiAssessmentResponse> {
+        return this.http.post<ExecutiveAiAssessmentResponse>(`${this.apiUrl}/ai-assessment`, request);
     }
 }

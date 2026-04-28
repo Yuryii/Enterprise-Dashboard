@@ -5,6 +5,8 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartData, ChartOptions } from 'chart.js';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 import {
     ButtonDirective,
     CardBodyComponent,
@@ -98,12 +100,15 @@ export class ToolDesignComponent implements OnInit {
     });
 
     readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
     readonly errorMessage = signal<string | null>(null);
     readonly dashboard = signal<ToolDesignDashboardResponseDto | null>(
         this.toolDesignDashboardService.getCachedDashboard(this.defaultFilter)
     );
 
-    private readonly gridsterStorageKey = 'tool_design_grid_layout';
+    private readonly savedFilterStorageKey = 'tool_design_saved_filter';
+    readonly gridsterStorageKey = 'tool_design_grid_layout';
     private readonly hiddenChartsStorageKey = 'tool_design_hidden_charts';
 
     readonly isEditMode = signal(false);
@@ -288,6 +293,7 @@ export class ToolDesignComponent implements OnInit {
     readonly vendorLeadTimes = computed<ToolDesignLeadTimeItemDto[]>(() => this.dashboard()?.vendorLeadTimes ?? []);
 
     ngOnInit(): void {
+        this.restoreSavedFilter();
         this.loadDashboard();
     }
 
@@ -320,12 +326,116 @@ export class ToolDesignComponent implements OnInit {
     }
 
     resetFilters(): void {
+        clearDashboardFilter(this.savedFilterStorageKey);
         this.filterForm.reset(this.defaultFilter);
         this.loadDashboard(true);
     }
 
-    exportPDF(): void {
-        alert('Chức năng xuất PDF đang được phát triển');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+        const currentDashboard = this.dashboard();
+        if (!currentDashboard) {
+            alert('Chưa có dữ liệu để tải báo cáo Tool Design.');
+            return;
+        }
+
+        try {
+            await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'tool-design', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+                title: this.title,
+                subtitle: 'Báo cáo theo bộ lọc hiện tại',
+                filePrefix: 'ToolDesignDashboard',
+                metrics: this.kpiCards(),
+                secondaryMetrics: this.healthCards(),
+                filters: this.describeToolDesignFilters(currentDashboard),
+                sections: [
+                    {
+                        title: '01. Models by product theo bộ lọc',
+                        subtitle: 'Số sản phẩm theo từng product model trong dữ liệu đang lọc.',
+                        headers: ['Model', 'Số sản phẩm'],
+                        rows: currentDashboard.modelsByProductCount.slice(0, 10).map(item => [item.modelName, item.productCount]),
+                        widths: ['*', 70]
+                    },
+                    {
+                        title: '02. Instruction coverage',
+                        subtitle: 'Mức sẵn sàng tài liệu kỹ thuật theo trạng thái model.',
+                        headers: ['Trạng thái', 'Số model'],
+                        rows: currentDashboard.instructionCoverage.map(item => [item.status, item.models]),
+                        widths: ['*', 70]
+                    },
+                    {
+                        title: '03. Model phức tạp cao',
+                        subtitle: 'Top model có days to manufacture cao trong bộ lọc hiện tại.',
+                        headers: ['Model', 'Ngày SX TB', 'Standard cost TB', 'Số sản phẩm'],
+                        rows: currentDashboard.topComplexModels.slice(0, 10).map(item => [item.modelName, item.averageDaysToManufacture, this.formatCurrency(item.averageStandardCost), item.productCount]),
+                        widths: ['*', 70, 85, 65]
+                    },
+                    {
+                        title: '04. Top model theo chi phí',
+                        subtitle: 'Các model có standard cost cao nhất sau khi lọc.',
+                        headers: ['Model', 'Standard cost TB', 'Max standard cost'],
+                        rows: currentDashboard.topCostModels.slice(0, 10).map(item => [item.modelName, this.formatCurrency(item.averageStandardCost), this.formatCurrency(item.maxStandardCost)]),
+                        widths: ['*', 90, 90]
+                    },
+                    {
+                        title: '05. Location load',
+                        subtitle: 'Routing steps và work orders theo location.',
+                        headers: ['Location', 'Routing steps', 'Work orders'],
+                        rows: currentDashboard.locationLoads.slice(0, 10).map(item => [item.locationName, item.routingSteps, item.workOrders]),
+                        widths: ['*', 75, 70]
+                    },
+                    {
+                        title: '06. BOM assemblies',
+                        subtitle: 'BOM complexity theo assembly trong bộ lọc hiện tại.',
+                        headers: ['Assembly', 'Components', 'Qty/assembly', 'Max level'],
+                        rows: currentDashboard.bomComplexities.slice(0, 10).map(item => [item.assemblyName, item.components, item.totalPerAssemblyQty, item.maxBomLevel]),
+                        widths: ['*', 65, 75, 55]
+                    },
+                    {
+                        title: '07. Vendor lead time',
+                        subtitle: 'Lead time và product count theo vendor.',
+                        headers: ['Vendor', 'Lead time TB', 'Số sản phẩm'],
+                        rows: currentDashboard.vendorLeadTimes.slice(0, 10).map(item => [item.name, item.averageLeadTime, item.productCount]),
+                        widths: ['*', 80, 70]
+                    }
+                ]
+            });
+        } catch (error) {
+            console.error('Không thể tạo PDF dashboard Tool Design', error);
+            alert('Không thể tạo file PDF. Vui lòng thử lại.');
+        }
+    }
+
+    private describeToolDesignFilters(dashboard: ToolDesignDashboardResponseDto): string[] {
+        const filters = dashboard.filters;
+        const productModel = dashboard.filterOptions.productModels.find(item => item.id === filters.productModelId)?.name ?? 'Tất cả';
+        const product = dashboard.filterOptions.products.find(item => item.id === filters.productId)?.name ?? 'Tất cả';
+        const category = dashboard.filterOptions.productCategories.find(item => item.id === filters.productCategoryId)?.name ?? 'Tất cả';
+        const location = dashboard.filterOptions.locations.find(item => item.id === filters.locationId)?.name ?? 'Tất cả';
+        const vendor = dashboard.filterOptions.vendors.find(item => item.id === filters.vendorId)?.name ?? 'Tất cả';
+
+        return [
+            `Product model: ${productModel}`,
+            `Sản phẩm: ${product}`,
+            `Danh mục: ${category}`,
+            `Location: ${location}`,
+            `Vendor: ${vendor}`,
+            `Make only: ${this.formatBooleanFilter(filters.makeOnly)}`,
+            `Finished goods: ${this.formatBooleanFilter(filters.finishedGoodsOnly)}`,
+            `Min days to manufacture: ${filters.minDaysToManufacture ?? 'Tất cả'}`,
+            `Min standard cost: ${filters.minStandardCost ?? 'Tất cả'}`
+        ];
+    }
+
+    private formatCurrency(value: number | null | undefined): string {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+    }
+
+    private formatBooleanFilter(value: boolean | null | undefined): string {
+        return value == null ? 'Tất cả' : value ? 'Có' : 'Không';
     }
 
     isChartChecked(chartId: string): boolean {
@@ -449,6 +559,12 @@ export class ToolDesignComponent implements OnInit {
     }
 
     saveFilter(): void {
-        alert('Chức năng lưu bộ lọc đang được phát triển');
+        saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+        this.loadDashboard(true);
     }
+
+    private restoreSavedFilter(): void {
+        this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, this.defaultFilter));
+    }
+
 }

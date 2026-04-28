@@ -6,7 +6,43 @@
 // custom tweaks for scrollbar styling (wip)
 @use "scrollbar";
 
- // custom calendar today cell color
+.ai-pdf-toggle {
+  height: 40px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--cui-border-color, #d8e0ea);
+  border-radius: 8px;
+  background: var(--cui-body-bg, #ffffff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+
+  .form-check-input {
+    cursor: pointer;
+  }
+
+  .form-check-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cui-body-color, #1f2937);
+    cursor: pointer;
+  }
+}
+
+.ai-pdf-toggle-active {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+@media (max-width: 576px) {
+  .sales-action-buttons .ai-pdf-toggle,
+  .executive-action-buttons .ai-pdf-toggle {
+    width: 100%;
+  }
+}
+
+// custom calendar today cell color
 .calendar-cell.today {
   --cui-calendar-cell-today-color: var(--cui-info) !important;
 }

@@ -8,7 +8,7 @@ declare module '@coreui/icons' {
   export const flagSet: any;
   export const freeSet: any;
   export const iconSubset: any;
-  
+
   // Brand icons
   export const cibCcAmex: any;
   export const cibCcApplePay: any;
@@ -21,7 +21,7 @@ declare module '@coreui/icons' {
   export const cibLinkedin: any;
   export const cibSkype: any;
   export const cibTwitter: any;
-  
+
   // Flag icons
   export const cifBr: any;
   export const cifEs: any;
@@ -29,7 +29,7 @@ declare module '@coreui/icons' {
   export const cifIn: any;
   export const cifPl: any;
   export const cifUs: any;
-  
+
   // CoreUI icons
   export const cilAccountLogout: any;
   export const cilAlignCenter: any;
@@ -129,4 +129,14 @@ declare module '@coreui/icons' {
   export const cilUserUnfollow: any;
   export const cilWarning: any;
   export const cilXCircle: any;
+}
+
+declare module 'pdfmake/build/pdfmake' {
+  const pdfMake: any;
+  export default pdfMake;
+}
+
+declare module 'pdfmake/build/vfs_fonts' {
+  const pdfFonts: any;
+  export default pdfFonts;
 }

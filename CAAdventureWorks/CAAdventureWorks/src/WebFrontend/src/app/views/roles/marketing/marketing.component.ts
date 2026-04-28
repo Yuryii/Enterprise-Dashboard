@@ -20,6 +20,8 @@ import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -55,6 +57,11 @@ export interface ChartDef {
 export class MarketingComponent {
   private readonly fb = new FormBuilder();
 
+  constructor() {
+    this.restoreSavedFilter();
+    this.applyFilters();
+  }
+
   private readonly widgetChartPalette = {
     primary: getStyle('--cui-primary') ?? '#5856d6',
     info: getStyle('--cui-info') ?? '#39f',
@@ -65,6 +72,10 @@ export class MarketingComponent {
 
   readonly title = 'Marketing';
   readonly subtitle = 'Dashboard';
+
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
+
 
   readonly appliedFilters = signal({
     campaignType: 'All',
@@ -78,6 +89,7 @@ export class MarketingComponent {
     targetSegment: ['All']
   });
 
+  readonly savedFilterStorageKey = 'marketing_saved_filter';
   readonly gridsterStorageKey = 'marketing_grid_layout';
   readonly hiddenChartsStorageKey = 'marketing_hidden_charts';
 
@@ -90,7 +102,7 @@ export class MarketingComponent {
     pushItems: true,
     minCols: 12,
     maxCols: 12,
-    minRows: 20,
+    minRows: 30,
     fixedRowHeight: 80,
     keepFixedHeightInMobile: false,
     keepFixedWidthInMobile: false,
@@ -107,7 +119,11 @@ export class MarketingComponent {
     { id: 'campaign-trend', label: 'Hiệu suất campaign theo thời gian' },
     { id: 'review-rating', label: 'Phân bổ rating review' },
     { id: 'review-volume', label: 'Khối lượng review theo tháng' },
-    { id: 'targeting-funnel', label: 'Funnel khách hàng mục tiêu' }
+    { id: 'targeting-funnel', label: 'Funnel khách hàng mục tiêu' },
+    { id: 'top-campaigns', label: 'Top campaign mang lại doanh thu' },
+    { id: 'low-rating-reviews', label: 'Review 1-2 sao cần xử lý' },
+    { id: 'target-stores', label: 'Danh sách cửa hàng mục tiêu' },
+    { id: 'remarketing-list', label: 'Data list remarketing' }
   ];
 
   readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
@@ -154,7 +170,11 @@ export class MarketingComponent {
       { id: 'campaign-trend', cols: 8, rows: 5, x: 4, y: 0 },
       { id: 'review-rating', cols: 7, rows: 6, x: 0, y: 5 },
       { id: 'review-volume', cols: 5, rows: 6, x: 7, y: 5 },
-      { id: 'targeting-funnel', cols: 6, rows: 5, x: 0, y: 11 }
+      { id: 'targeting-funnel', cols: 6, rows: 5, x: 0, y: 11 },
+      { id: 'top-campaigns', cols: 7, rows: 5, x: 0, y: 16 },
+      { id: 'low-rating-reviews', cols: 5, rows: 5, x: 7, y: 16 },
+      { id: 'target-stores', cols: 7, rows: 5, x: 0, y: 21 },
+      { id: 'remarketing-list', cols: 5, rows: 5, x: 7, y: 21 }
     ];
   }
 
@@ -480,10 +500,10 @@ export class MarketingComponent {
     const targetStores = this.filteredStoreSegments().length;
 
     return [
-      { label: 'Điểm rating trung bình', value: avgRating, suffix: '' },
-      { label: 'Tỷ lệ review tích cực', value: positiveRate * 100, suffix: '%' },
-      { label: 'Tỷ lệ review tiêu cực', value: negativeRate * 100, suffix: '%' },
-      { label: 'Cửa hàng mục tiêu', value: targetStores, suffix: '' }
+      { label: 'Điểm rating trung bình', value: avgRating, suffix: '', progress: avgRating * 20, tone: 'progress-info' },
+      { label: 'Tỷ lệ review tích cực', value: positiveRate * 100, suffix: '%', progress: positiveRate * 100, tone: 'progress-success' },
+      { label: 'Tỷ lệ review tiêu cực', value: negativeRate * 100, suffix: '%', progress: negativeRate * 100, tone: 'progress-warning' },
+      { label: 'Cửa hàng mục tiêu', value: targetStores, suffix: '', progress: Math.min(100, targetStores * 20), tone: 'progress-primary' }
     ];
   });
 
@@ -672,16 +692,107 @@ export class MarketingComponent {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      campaignType: 'All',
-      reviewSentiment: 'All',
-      targetSegment: 'All'
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ campaignType: 'All', reviewSentiment: 'All', targetSegment: 'All' });
     this.applyFilters();
   }
 
-  exportPDF(): void {
-    alert('Chức năng xuất PDF cho dashboard Marketing đang được phát triển');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.brandHealthCards(),
+      filters: this.filterForm.getRawValue(),
+      campaigns: this.filteredCampaigns(),
+      reviews: this.filteredReviews(),
+      storeSegments: this.filteredStoreSegments()
+    };
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'marketing', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'MarketingDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.brandHealthCards(),
+        filters: this.describeMarketingFilters(),
+        sections: [
+          {
+            title: '01. Campaign theo bộ lọc',
+            subtitle: 'Danh sách campaign đang được tính vào KPI Marketing hiện tại.',
+            headers: ['Campaign', 'Loại', 'Doanh thu', 'Đơn hàng', 'ROI'],
+            rows: this.topCampaignRows().map(item => [item.description, item.type, this.formatCurrency(item.revenue), item.orders, item.roi.toFixed(2)]),
+            widths: ['*', 70, 85, 55, 45]
+          },
+          {
+            title: '02. Xu hướng hiệu suất campaign',
+            subtitle: 'Hiệu suất theo tuần của các nhóm campaign chính.',
+            headers: ['Kỳ', 'Seasonal', 'Flash Sale', 'Acquisition'],
+            rows: this.campaignTrend().map(item => [item.period, item.seasonal, item.flashSale, item.acquisition]),
+            widths: ['*', 70, 70, 70]
+          },
+          {
+            title: '03. Review theo sentiment đang lọc',
+            subtitle: 'Review khách hàng sau khi áp dụng bộ lọc cảm xúc.',
+            headers: ['Sản phẩm', 'Người đánh giá', 'Rating', 'Sentiment', 'Ngày'],
+            rows: this.filteredReviews().map(item => [item.product, item.reviewer, item.rating, item.sentiment, this.formatReportDate(item.reviewDate)]),
+            widths: ['*', 75, 45, 65, 65]
+          },
+          {
+            title: '04. Review 1-2 sao cần xử lý',
+            subtitle: 'Các phản hồi tiêu cực cần CSKH xử lý trong bộ lọc hiện tại.',
+            headers: ['Sản phẩm', 'Người đánh giá', 'Rating', 'Ghi chú'],
+            rows: this.lowRatingReviews().map(item => [item.product, item.reviewer, item.rating, item.comment]),
+            widths: ['*', 75, 45, '*']
+          },
+          {
+            title: '05. Cửa hàng mục tiêu',
+            subtitle: 'Danh sách cửa hàng theo phân khúc mục tiêu đang chọn.',
+            headers: ['Cửa hàng', 'Vùng', 'Phân khúc', 'Doanh thu/năm', 'Lead score'],
+            rows: this.filteredStoreSegments().map(item => [item.name, item.region, item.segment, item.annualRevenueBand, item.leadScore]),
+            widths: ['*', 55, 75, 70, 55]
+          },
+          {
+            title: '06. Data list remarketing',
+            subtitle: 'Danh sách liên hệ phục vụ remarketing/campaign follow-up.',
+            headers: ['Họ tên', 'Email', 'Campaign', 'Audience'],
+            rows: this.leadContacts().map(item => [item.fullName, item.email, item.campaign, item.audience]),
+            widths: [75, '*', 80, 70]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard Marketing', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeMarketingFilters(): string[] {
+    const filters = this.appliedFilters();
+    return [
+      `Loại campaign: ${this.displayFilterValue(filters.campaignType)}`,
+      `Sentiment review: ${this.displayFilterValue(filters.reviewSentiment)}`,
+      `Phân khúc mục tiêu: ${this.displayFilterValue(filters.targetSegment)}`
+    ];
+  }
+
+  private displayFilterValue(value: string): string {
+    return value === 'All' ? 'Tất cả' : value;
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void {
@@ -689,6 +800,11 @@ export class MarketingComponent {
   }
 
   saveFilter(): void {
-    alert('Chức năng lưu bộ lọc Marketing đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.applyFilters();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { campaignType: 'All', reviewSentiment: 'All', targetSegment: 'All' }));
+  }
+
 }

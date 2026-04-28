@@ -142,6 +142,139 @@
 }
 
 // ============================================
+// Filter Card
+// ============================================
+
+.finance-filter-card {
+    border: 1px solid var(--cui-border-color, rgba(15, 23, 42, 0.08));
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    background: var(--cui-card-bg, var(--cui-body-bg, #ffffff));
+
+    c-card-body {
+        padding: 16px 20px;
+    }
+}
+
+.finance-filter-form {
+    width: 100%;
+}
+
+.finance-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) minmax(220px, 1.1fr) minmax(180px, 1fr);
+    gap: 16px 24px;
+    align-items: end;
+}
+
+.finance-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.25;
+        font-weight: 500;
+        color: var(--cui-body-color, #111827);
+    }
+
+    input,
+    select {
+        width: 100%;
+        min-height: 38px;
+        border-radius: 6px;
+        border: 1px solid var(--cui-border-color, #d8e0ea);
+        background-color: var(--cui-body-bg, #ffffff);
+        color: var(--cui-body-color, #1f2937);
+        font-size: 13px;
+        box-shadow: none;
+    }
+
+    input[type='date'] {
+        padding: 6px 10px;
+    }
+
+    select {
+        padding: 6px 34px 6px 12px;
+    }
+}
+
+.finance-filter-action {
+    display: flex;
+    align-items: end;
+
+    .apply-btn {
+        width: 100%;
+        min-height: 38px;
+        border: 0;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #5f5bdd 0%, #4f46c9 100%);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 6px 14px rgba(79, 70, 201, 0.22);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        &:hover,
+        &:focus,
+        &:active {
+            background: linear-gradient(135deg, #6864e8 0%, #5750d6 100%);
+            color: #ffffff;
+            box-shadow: 0 14px 28px rgba(79, 70, 201, 0.34);
+        }
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .finance-filter-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .finance-filter-card c-card-body {
+        padding: 18px 16px;
+    }
+
+    .finance-filter-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+:host-context([data-coreui-theme='dark']),
+:host-context([data-bs-theme='dark']),
+:host-context(.dark-theme) {
+    .finance-filter-card {
+        border-color: rgba(148, 163, 184, 0.22);
+        background: #1f2937;
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+    }
+
+    .finance-filter-field {
+        label {
+            color: #f8fafc;
+        }
+
+        input,
+        select {
+            border-color: rgba(148, 163, 184, 0.32);
+            background-color: #111827;
+            color: #f8fafc;
+        }
+
+        input[type='date'] {
+            color-scheme: dark;
+        }
+    }
+}
+
+// ============================================
 // Loading & Error States
 // ============================================
 
@@ -294,6 +427,64 @@ c-widget-stat-a {
             box-shadow: none !important;
         }
     }
+}
+
+.health-metric-card {
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: none;
+    background: var(--cui-card-bg, #ffffff);
+    height: 100%;
+
+    c-card-body {
+        padding: 20px 24px 14px;
+    }
+}
+
+.health-metric-value {
+    font-size: 1.34rem;
+    line-height: 1.15;
+    font-weight: 400;
+    color: var(--cui-body-color, #1f3349);
+    margin-bottom: 6px;
+}
+
+.health-metric-label {
+    font-size: 0.77rem;
+    line-height: 1.25;
+    font-weight: 400;
+    color: var(--cui-body-color, #1f3349);
+    margin-bottom: 10px;
+}
+
+.health-metric-progress {
+    width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.health-metric-progress-bar {
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+}
+
+.progress-success {
+    background: #22c55e;
+}
+
+.progress-info {
+    background: #3b82f6;
+}
+
+.progress-warning {
+    background: #f59e0b;
+}
+
+.progress-primary {
+    background: #6366f1;
 }
 
 .sales-widget-title-block {
@@ -485,55 +676,55 @@ gridster-item {
 // ============================================
 
 .gridster-edit-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #7c5cff 0%, #6d28d9 100%);
-  color: white;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(124, 92, 255, 0.25);
-
-  .banner-text {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 500;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #7c5cff 0%, #6d28d9 100%);
+    color: white;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.25);
 
-    .banner-icon {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-    }
-  }
-
-  .banner-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .reset-btn {
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.5);
-      background: transparent;
-
-      &:hover,
-      &:focus {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: #fff;
-        color: #fff;
-      }
-
-      .button-icon {
-        font-size: 14px;
-        line-height: 1;
-        display: inline-flex;
+    .banner-text {
+        display: flex;
         align-items: center;
-      }
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+
+        .banner-icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
     }
-  }
+
+    .banner-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .reset-btn {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+
+            &:hover,
+            &:focus {
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #fff;
+                color: #fff;
+            }
+
+            .button-icon {
+                font-size: 14px;
+                line-height: 1;
+                display: inline-flex;
+                align-items: center;
+            }
+        }
+    }
 }
 
 // ============================================
@@ -541,89 +732,89 @@ gridster-item {
 // ============================================
 
 .chart-picker-wrapper {
-  position: relative;
-  display: inline-block;
+    position: relative;
+    display: inline-block;
 }
 
 .chart-picker-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 1050;
-  min-width: 260px;
-  max-width: 320px;
-  max-height: 380px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  padding: 8px 0;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1050;
+    min-width: 260px;
+    max-width: 320px;
+    max-height: 380px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    padding: 8px 0;
 
-  .picker-section-title {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #9ca3af;
-    padding: 4px 12px 6px;
-    margin: 0;
+    .picker-section-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #9ca3af;
+        padding: 4px 12px 6px;
+        margin: 0;
 
-    &.mt-2 {
-      margin-top: 4px;
-    }
-  }
-
-  .picker-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #374151;
-    transition: background-color 0.15s;
-
-    &:hover {
-      background-color: #f3f4f6;
-    }
-
-    input[type="checkbox"] {
-      width: 14px;
-      height: 14px;
-      accent-color: #7c5cff;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .picker-label {
-      flex: 1;
-      line-height: 1.3;
-    }
-
-    &.hidden-chart-item {
-      background-color: #f9fafb;
-      border: 1px dashed #d1d5db;
-      border-radius: 6px;
-      margin: 2px 8px;
-      padding: 6px 8px;
-
-      .add-chart-btn {
-        flex-shrink: 0;
-        font-size: 11px;
-        padding: 2px 8px;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        border-radius: 4px;
-
-        svg {
-          width: 12px;
-          height: 12px;
+        &.mt-2 {
+            margin-top: 4px;
         }
-      }
     }
-  }
+
+    .picker-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #374151;
+        transition: background-color 0.15s;
+
+        &:hover {
+            background-color: #f3f4f6;
+        }
+
+        input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: #7c5cff;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .picker-label {
+            flex: 1;
+            line-height: 1.3;
+        }
+
+        &.hidden-chart-item {
+            background-color: #f9fafb;
+            border: 1px dashed #d1d5db;
+            border-radius: 6px;
+            margin: 2px 8px;
+            padding: 6px 8px;
+
+            .add-chart-btn {
+                flex-shrink: 0;
+                font-size: 11px;
+                padding: 2px 8px;
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                border-radius: 4px;
+
+                svg {
+                    width: 12px;
+                    height: 12px;
+                }
+            }
+        }
+    }
 }
 
 // ============================================
@@ -631,21 +822,21 @@ gridster-item {
 // ============================================
 
 .chart-card-header {
-  .chart-header-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
-  }
+    .chart-header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+    }
 }
 
 gridster-item:hover .chart-delete-btn {
-  opacity: 1;
+    opacity: 1;
 }
 
 .gridster-edit-banner {
-  .chart-delete-btn {
-    opacity: 1 !important;
-  }
+    .chart-delete-btn {
+        opacity: 1 !important;
+    }
 }

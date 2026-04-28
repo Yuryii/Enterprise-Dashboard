@@ -10,6 +10,9 @@
     "paths": {
       "@docs-components/*": [
         "./src/components/*"
+      ],
+      "@docs-components/public-api": [
+        "./src/components/public-api.ts"
       ]
     }
   },

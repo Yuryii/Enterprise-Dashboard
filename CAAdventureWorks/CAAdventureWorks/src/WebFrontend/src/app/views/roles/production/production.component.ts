@@ -39,6 +39,7 @@ import {
   ProductionTransactionTrendPointDto,
   ProductionTrendPointDto
 } from './production-dashboard.service';
+import { loadDashboardAiAssessment } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -105,6 +106,8 @@ export class ProductionComponent implements OnInit {
 
   readonly title = 'Sản xuất';
   readonly subtitle = 'Theo dõi lệnh sản xuất, công suất vận hành, tồn kho và biến động chi phí toàn xưởng';
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
 
   private readonly defaultFilter = {
     startDate: '2013-01-01',
@@ -126,6 +129,7 @@ export class ProductionComponent implements OnInit {
     this.productionDashboardService.getCachedDashboard(this.defaultFilter)
   );
 
+  private readonly savedFilterStorageKey = 'production_saved_filter';
   private readonly gridsterStorageKey = 'production_grid_layout';
   private readonly hiddenChartsStorageKey = 'production_hidden_charts';
 
@@ -675,7 +679,8 @@ export class ProductionComponent implements OnInit {
   readonly bomSummaryRows = computed(() => (this.dashboard()?.bomSummaries ?? []).slice(0, 6));
 
   ngOnInit(): void {
-    this.loadDashboard();
+    this.restoreSavedFilter();
+    this.loadDashboard(true);
   }
 
   loadDashboard(forceRefresh = false): void {
@@ -708,12 +713,577 @@ export class ProductionComponent implements OnInit {
   }
 
   resetFilters(): void {
+    localStorage.removeItem(this.savedFilterStorageKey);
     this.filterForm.reset(this.defaultFilter);
-    this.loadDashboard();
+    this.loadDashboard(true);
   }
 
-  exportPDF(): void {
-    console.log('Xuất PDF sản xuất');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard();
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo sản xuất.');
+      return;
+    }
+
+    const generatedAt = new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date());
+
+    try {
+      const aiAssessment = await loadDashboardAiAssessment({
+        title: this.title,
+        aiAssessment: {
+          enabled: this.includeAiAssessment(),
+          departmentId: 'production',
+          dashboard: currentDashboard,
+          filters: this.filterForm.getRawValue(),
+          setLoading: value => this.aiAssessmentLoading.set(value)
+        }
+      }, generatedAt);
+
+      const [pdfMakeModule, pdfFontsModule] = await Promise.all([
+        import('pdfmake/build/pdfmake' as string),
+        import('pdfmake/build/vfs_fonts' as string)
+      ]);
+      const pdfMake = (pdfMakeModule as any).default ?? pdfMakeModule;
+      const pdfFonts = (pdfFontsModule as any).default ?? pdfFontsModule;
+      const vfs = pdfFonts.vfs ?? pdfFonts.pdfMake?.vfs ?? pdfFonts;
+
+      if (typeof pdfMake.addVirtualFileSystem === 'function') {
+        pdfMake.addVirtualFileSystem(vfs);
+      } else {
+        pdfMake.vfs = vfs;
+      }
+      pdfMake
+        .createPdf(this.buildProductionPdfDefinition(currentDashboard, this.filterForm.getRawValue(), generatedAt, aiAssessment))
+        .download(`ProductionDashboard_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.pdf`);
+    } catch (error) {
+      console.error('Không thể tạo PDF sản xuất', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private buildProductionPdfDefinition(
+    dashboard: ProductionDashboardResponseDto,
+    filter: ReturnType<typeof this.filterForm.getRawValue>,
+    generatedAt: string,
+    aiAssessment: string | null = null
+  ): any {
+    const overview = dashboard.overview;
+    const periodText = `${this.formatReportDate(filter.startDate)} - ${this.formatReportDate(filter.endDate)}`;
+    const activeFilters = this.describeProductionFilters(filter, dashboard);
+    const varianceStatus = overview.costVariance > 0 ? 'Vượt kế hoạch' : overview.costVariance < 0 ? 'Tiết kiệm' : 'Đúng kế hoạch';
+    const scrapStatus = overview.scrapRate > 0.05 ? 'Cần kiểm soát' : overview.scrapRate > 0.02 ? 'Theo dõi' : 'Ổn định';
+
+    return {
+      pageSize: 'A4',
+      pageMargins: [30, 34, 30, 42],
+      info: {
+        title: 'Báo cáo Sản xuất',
+        author: 'Enterprise Operations Hub',
+        subject: 'Production Dashboard'
+      },
+      footer: (currentPage: number, pageCount: number) => ({
+        columns: [
+          { text: 'Dashboard-X | Enterprise Operations Hub | Confidential', alignment: 'left' },
+          { text: `Trang ${currentPage} / ${pageCount}`, alignment: 'right' }
+        ],
+        margin: [30, 0],
+        fontSize: 10,
+        color: '#64748b'
+      }),
+      content: [
+        {
+          table: {
+            widths: ['*', 150],
+            body: [[
+              {
+                stack: [
+                  { text: 'BÁO CÁO SẢN XUẤT', style: 'reportTitle' },
+                  { text: 'Production Performance & Operational Control Report', style: 'reportSubtitle' },
+                  { text: 'Enterprise Operations Hub', style: 'orgText', margin: [0, 8, 0, 0] }
+                ],
+                border: [false, false, false, false],
+                fillColor: '#0f172a',
+                margin: [14, 14, 14, 14]
+              },
+              {
+                stack: [
+                  { text: 'KỲ BÁO CÁO', style: 'coverLabel' },
+                  { text: periodText, style: 'coverValue' },
+                  { text: 'NGÀY XUẤT', style: 'coverLabel', margin: [0, 10, 0, 0] },
+                  { text: generatedAt, style: 'coverValue' }
+                ],
+                border: [false, false, false, false],
+                fillColor: '#1d4ed8',
+                margin: [12, 14, 12, 14]
+              }
+            ]]
+          },
+          layout: 'noBorders',
+          margin: [0, 0, 0, 14]
+        },
+        {
+          table: {
+            widths: ['*'],
+            body: [[{
+              stack: [
+                { text: 'Tóm tắt điều hành', style: 'sectionTitle', margin: [0, 0, 0, 6] },
+                {
+                  columns: [
+                    this.buildExecutiveMetric('Tình trạng chi phí', varianceStatus, this.formatCurrency(overview.costVariance), overview.costVariance > 0 ? '#dc2626' : '#059669'),
+                    this.buildExecutiveMetric('Chất lượng sản xuất', scrapStatus, this.formatPercent(overview.scrapRate), overview.scrapRate > 0.05 ? '#dc2626' : '#0f766e'),
+                    this.buildExecutiveMetric('Tiến độ', `${this.formatNumber(overview.delayedWorkOrders)} lệnh trễ`, `${this.formatPercent(overview.completionRate)} hoàn thành`, overview.delayedWorkOrders > 0 ? '#f59e0b' : '#059669')
+                  ],
+                  columnGap: 8
+                }
+              ],
+              margin: [10, 10, 10, 10]
+            }]]
+          },
+          layout: this.cardLayout('#dbe4f0'),
+          margin: [0, 0, 0, 12]
+        },
+        this.buildFilterSummary(activeFilters),
+        ...(aiAssessment ? [this.buildAiAssessmentSection(aiAssessment)] : []),
+        {
+          columns: [
+            this.buildKpiPdfCard('Lệnh sản xuất', this.formatNumber(overview.totalWorkOrders), `Đang mở: ${this.formatNumber(overview.openWorkOrders)}`, '#2563eb'),
+            this.buildKpiPdfCard('Sản lượng đặt', this.formatNumber(overview.totalOrderQty), `Nhập kho: ${this.formatNumber(overview.totalStockedQty)}`, '#059669'),
+            this.buildKpiPdfCard('Tỷ lệ phế phẩm', this.formatPercent(overview.scrapRate), `SL phế phẩm: ${this.formatNumber(overview.totalScrappedQty)}`, '#dc2626'),
+            this.buildKpiPdfCard('Biến động chi phí', this.formatCurrency(overview.costVariance), `Kế hoạch: ${this.formatCurrency(overview.plannedCost)}`, overview.costVariance > 0 ? '#dc2626' : '#059669')
+          ],
+          columnGap: 8,
+          margin: [0, 0, 0, 8]
+        },
+        {
+          columns: [
+            this.buildKpiPdfCard('Tỷ lệ hoàn thành', this.formatPercent(overview.completionRate), 'Nhập kho / sản lượng đặt', '#7c3aed'),
+            this.buildKpiPdfCard('Lệnh trễ hạn', this.formatNumber(overview.delayedWorkOrders), 'Ưu tiên xử lý', '#f59e0b'),
+            this.buildKpiPdfCard('Giờ nguồn lực', this.formatNumber(overview.actualResourceHours), 'Actual resource hours', '#0f766e'),
+            this.buildKpiPdfCard('Cảnh báo tồn kho', this.formatNumber(overview.safetyStockAlerts), `Tồn kho: ${this.formatNumber(overview.totalInventoryQty)}`, '#0891b2')
+          ],
+          columnGap: 8,
+          margin: [0, 0, 0, 14]
+        },
+        this.buildPdfSection(
+          '01. Xu hướng lệnh sản xuất',
+          'Theo dõi số lượng lệnh mở và lệnh trễ theo từng kỳ để nhận diện áp lực vận hành.',
+          ['Kỳ', 'Lệnh SX', 'Lệnh mở', 'Lệnh trễ'],
+          dashboard.workOrderTrend.slice(0, 12).map(item => [item.period, this.formatNumber(item.workOrders), this.formatNumber(item.openWorkOrders), this.formatNumber(item.delayedWorkOrders)]),
+          ['*', 60, 60, 60]
+        ),
+        this.buildPdfSection(
+          '02. Sản phẩm sản xuất nhiều nhất',
+          'Các sản phẩm có khối lượng sản xuất lớn nhất trong bộ lọc hiện tại.',
+          ['Sản phẩm', 'Ngành hàng', 'Lệnh', 'SL đặt', 'Nhập kho', 'Scrap'],
+          dashboard.topProducts.slice(0, 10).map(item => [item.productName, item.productCategoryName, this.formatNumber(item.workOrders), this.formatNumber(item.orderQty), this.formatNumber(item.stockedQty), this.formatPercent(item.scrapRate)]),
+          ['*', 88, 42, 55, 55, 45]
+        ),
+        this.buildPdfSection(
+          '03. Sản phẩm có phế phẩm cao',
+          'Danh sách sản phẩm cần kiểm soát chất lượng do phát sinh scrap cao.',
+          ['Sản phẩm', 'Ngành hàng', 'SL phế phẩm', 'Tỷ lệ scrap', 'SL đặt'],
+          dashboard.topScrapProducts.slice(0, 10).map(item => [item.productName, item.productCategoryName, this.formatNumber(item.scrappedQty), this.formatPercent(item.scrapRate), this.formatNumber(item.orderQty)]),
+          ['*', 100, 70, 60, 55]
+        ),
+        { text: '', pageBreak: 'before' },
+        this.buildPdfSection(
+          '04. Biến động chi phí theo khu vực',
+          'So sánh chi phí kế hoạch và chi phí thực tế theo khu vực sản xuất.',
+          ['Khu vực', 'Lệnh', 'Kế hoạch', 'Thực tế', 'Biến động'],
+          dashboard.locationCosts.slice(0, 10).map(item => [item.locationName, this.formatNumber(item.workOrders), this.formatCurrency(item.plannedCost), this.formatCurrency(item.actualCost), this.formatCurrency(item.costVariance)]),
+          ['*', 45, 78, 78, 78]
+        ),
+        this.buildPdfSection(
+          '05. Biến động chi phí theo công đoạn',
+          'Các công đoạn có mức chênh lệch chi phí cần phân tích nguyên nhân.',
+          ['Công đoạn', 'Kế hoạch', 'Thực tế', 'Biến động', 'Giờ nguồn lực'],
+          dashboard.operationVariances.slice(0, 10).map(item => [`Công đoạn ${item.operationSequence}`, this.formatCurrency(item.plannedCost), this.formatCurrency(item.actualCost), this.formatCurrency(item.costVariance), this.formatNumber(item.actualResourceHours)]),
+          ['*', 75, 75, 75, 70]
+        ),
+        this.buildPdfSection(
+          '06. Cảnh báo tồn kho an toàn',
+          'Các sản phẩm có tồn kho thấp hơn ngưỡng safety stock hoặc reorder point.',
+          ['Sản phẩm', 'Tồn kho', 'Safety stock', 'Reorder point', 'Thiếu hụt'],
+          dashboard.safetyStockAlerts.slice(0, 10).map(item => [item.productName, this.formatNumber(item.inventoryQty), this.formatNumber(item.safetyStockLevel), this.formatNumber(item.reorderPoint), this.formatNumber(item.shortageQty)]),
+          ['*', 65, 70, 75, 65]
+        ),
+        {
+          text: 'Ghi chú: Báo cáo được tạo tự động từ dữ liệu dashboard theo bộ lọc đang áp dụng tại thời điểm xuất. Các chỉ số chi phí sử dụng đơn vị tiền tệ USD theo dữ liệu AdventureWorks.',
+          style: 'note',
+          margin: [0, 12, 0, 0]
+        }
+      ],
+      styles: {
+        reportTitle: { fontSize: 24, bold: true, color: '#ffffff', characterSpacing: 0.5 },
+        reportSubtitle: { fontSize: 11, color: '#bfdbfe', margin: [0, 4, 0, 0] },
+        orgText: { fontSize: 11, color: '#e0f2fe', bold: true },
+        coverLabel: { fontSize: 9, color: '#bfdbfe', bold: true, characterSpacing: 0.5 },
+        coverValue: { fontSize: 12, color: '#ffffff', bold: true, margin: [0, 3, 0, 0] },
+        sectionTitle: { fontSize: 14, bold: true, color: '#0f172a' },
+        sectionSubtitle: { fontSize: 10, color: '#64748b', margin: [0, 2, 0, 6] },
+        tableHeader: { bold: true, color: '#1e3a8a', fillColor: '#dbeafe', fontSize: 10 },
+        tableCell: { fontSize: 10, color: '#111827' },
+        kpiLabel: { fontSize: 9, color: '#64748b', bold: true, characterSpacing: 0.3 },
+        kpiValue: { fontSize: 15, color: '#0f172a', bold: true },
+        kpiNote: { fontSize: 9, color: '#475569' },
+        metricLabel: { fontSize: 9, color: '#64748b', bold: true },
+        metricValue: { fontSize: 13, bold: true, color: '#0f172a' },
+        aiTitle: { fontSize: 14, bold: true, color: '#312e81' },
+        aiText: { fontSize: 10.5, color: '#1f2937', lineHeight: 1.2 },
+        note: { fontSize: 10, italics: true, color: '#64748b' }
+      },
+      defaultStyle: {
+        fontSize: 11,
+        color: '#111827'
+      }
+    };
+  }
+
+  private buildAiAssessmentSection(content: string): any {
+    const lines = content
+      .split(/\r?\n/)
+      .map(line => line.replace(/^[-*\d.\s]+/, '').trim())
+      .filter(Boolean);
+
+    const summary = lines.find(line => line.toLowerCase().includes('tổng quan')) ?? lines[0] ?? content;
+    const detailLines = lines.filter(line => line !== summary).slice(0, 7);
+
+    return {
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: [
+            { text: 'Đánh giá AI cho báo cáo', style: 'aiTitle', margin: [0, 0, 0, 5] },
+            { text: summary.replace(/^tổng quan ai\s*[:：-]?\s*/i, ''), style: 'aiText', margin: [0, 0, 0, 6] },
+            ...detailLines.map((line, index) => ({
+              text: `${index + 1}. ${line}`,
+              style: 'aiText',
+              margin: [0, 2, 0, 0]
+            }))
+          ],
+          fillColor: '#eef2ff',
+          margin: [10, 9, 10, 9]
+        }]]
+      },
+      layout: this.cardLayout('#a5b4fc'),
+      margin: [0, 0, 0, 12]
+    };
+  }
+
+  private buildFilterSummary(filters: string[]): any {
+    const pairs = filters.map(item => {
+      const separatorIndex = item.indexOf(':');
+      return separatorIndex >= 0
+        ? [item.slice(0, separatorIndex), item.slice(separatorIndex + 1).trim()]
+        : ['Bộ lọc', item];
+    });
+
+    return {
+      table: {
+        widths: ['*', '*', '*'],
+        body: [
+          [{ text: 'BỘ LỌC ĐANG ÁP DỤNG', colSpan: 3, style: 'tableHeader', fillColor: '#eef2ff' }, {}, {}],
+          ...Array.from({ length: Math.ceil(pairs.length / 3) }, (_, rowIndex) => {
+            const row = pairs.slice(rowIndex * 3, rowIndex * 3 + 3).map(([label, value]) => ({
+              stack: [
+                { text: label.toUpperCase(), fontSize: 6, bold: true, color: '#64748b' },
+                { text: value || 'Tất cả', fontSize: 8, color: '#0f172a', margin: [0, 2, 0, 0] }
+              ],
+              margin: [6, 4, 6, 4]
+            }) as any);
+
+            while (row.length < 3) {
+              row.push({ text: '' } as any);
+            }
+
+            return row;
+          })
+        ]
+      },
+      layout: this.cardLayout('#c7d2fe'),
+      margin: [0, 0, 0, 12]
+    };
+  }
+
+  private buildExecutiveMetric(label: string, value: string, note: string, color: string): any {
+    return {
+      table: {
+        widths: [4, '*'],
+        body: [[
+          { text: '', fillColor: color, border: [false, false, false, false] },
+          {
+            stack: [
+              { text: label, style: 'metricLabel' },
+              { text: value, style: 'metricValue', margin: [0, 2, 0, 1] },
+              { text: note, fontSize: 7, color }
+            ],
+            margin: [6, 5, 6, 5]
+          }
+        ]]
+      },
+      layout: this.cardLayout('#e5e7eb')
+    };
+  }
+
+  private buildKpiPdfCard(label: string, value: string, note: string, color: string): any {
+    return {
+      table: {
+        widths: [4, '*'],
+        body: [[
+          { text: '', fillColor: color, border: [false, false, false, false] },
+          {
+            stack: [
+              { text: label.toUpperCase(), style: 'kpiLabel' },
+              { text: value, style: 'kpiValue', margin: [0, 3, 0, 2] },
+              { text: note, style: 'kpiNote' }
+            ],
+            margin: [6, 6, 6, 6]
+          }
+        ]]
+      },
+      layout: this.cardLayout('#dbe4f0')
+    };
+  }
+
+  private buildPdfSection(title: string, subtitle: string, headers: string[], rows: string[][], widths: any[]): any {
+    if (!rows.length) {
+      return [
+        { text: title, style: 'sectionTitle' },
+        { text: subtitle, style: 'sectionSubtitle' },
+        { text: 'Không có dữ liệu trong bộ lọc hiện tại.', color: '#64748b', fontSize: 9, margin: [0, 0, 0, 8] }
+      ];
+    }
+
+    return [
+      { text: title, style: 'sectionTitle' },
+      { text: subtitle, style: 'sectionSubtitle' },
+      {
+        table: {
+          headerRows: 1,
+          widths,
+          body: [
+            headers.map(header => ({ text: header, style: 'tableHeader', margin: [3, 4, 3, 4] })),
+            ...rows.map(row => row.map((cell, index) => ({
+              text: cell,
+              style: 'tableCell',
+              alignment: index === 0 || index === 1 ? 'left' : 'right',
+              margin: [3, 4, 3, 4]
+            })))
+          ]
+        },
+        layout: {
+          hLineWidth: (i: number) => i === 0 || i === 1 ? 0.8 : 0.4,
+          vLineWidth: () => 0.3,
+          hLineColor: () => '#cbd5e1',
+          vLineColor: () => '#e2e8f0',
+          fillColor: (rowIndex: number) => rowIndex === 0 ? '#dbeafe' : rowIndex % 2 === 0 ? '#f8fafc' : null
+        },
+        margin: [0, 0, 0, 10]
+      }
+    ];
+  }
+
+  private cardLayout(lineColor: string): any {
+    return {
+      hLineColor: () => lineColor,
+      vLineColor: () => lineColor,
+      hLineWidth: () => 0.6,
+      vLineWidth: () => 0.6,
+      paddingLeft: () => 0,
+      paddingRight: () => 0,
+      paddingTop: () => 0,
+      paddingBottom: () => 0
+    };
+  }
+
+  private buildProductionReportHtml(
+    dashboard: ProductionDashboardResponseDto,
+    filter: ReturnType<typeof this.filterForm.getRawValue>,
+    generatedAt: string
+  ): string {
+    const overview = dashboard.overview;
+    const periodText = `${this.formatReportDate(filter.startDate)} - ${this.formatReportDate(filter.endDate)}`;
+    const activeFilters = this.describeProductionFilters(filter, dashboard);
+
+    return `<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Báo cáo sản xuất</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #111827; font-family: Arial, Helvetica, sans-serif; background: #ffffff; }
+    .report-page { min-height: 100vh; padding: 0; }
+    .header { border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 18px; }
+    .title { font-size: 28px; font-weight: 800; margin: 0 0 6px; color: #0f172a; }
+    .subtitle { font-size: 12px; color: #475569; margin: 0; line-height: 1.55; }
+    .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 8px; }
+    .meta-card { border: 1px solid #dbe4f0; border-radius: 10px; padding: 10px 12px; background: #f8fafc; }
+    .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin-bottom: 4px; }
+    .meta-value { font-size: 12px; font-weight: 700; color: #0f172a; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+    .kpi { border: 1px solid #dbe4f0; border-left: 4px solid #2563eb; border-radius: 10px; padding: 12px; min-height: 80px; }
+    .kpi.warning { border-left-color: #f59e0b; }
+    .kpi.danger { border-left-color: #dc2626; }
+    .kpi.success { border-left-color: #10b981; }
+    .kpi-label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 7px; }
+    .kpi-value { font-size: 21px; font-weight: 800; color: #0f172a; }
+    .kpi-note { margin-top: 5px; font-size: 11px; color: #475569; }
+    .section { margin-top: 18px; page-break-inside: avoid; }
+    .section-title { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 8px; padding-left: 8px; border-left: 4px solid #2563eb; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { text-align: left; background: #eff6ff; color: #1e3a8a; padding: 8px; border: 1px solid #dbeafe; }
+    td { padding: 7px 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .number { text-align: right; font-variant-numeric: tabular-nums; }
+    .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .filter-pill { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 999px; padding: 5px 9px; font-size: 10px; font-weight: 700; }
+    .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #64748b; font-size: 10px; display: flex; justify-content: space-between; }
+    .page-break { page-break-before: always; }
+    @media print { .report-page { padding: 0; } }
+  </style>
+</head>
+<body>
+  <main class="report-page">
+    <header class="header">
+      <h1 class="title">Báo cáo Sản xuất</h1>
+      <p class="subtitle">EOH - Enterprise Operations Hub | Kỳ báo cáo: ${periodText}<br>Thời điểm xuất: ${this.escapeHtml(generatedAt)}</p>
+      <div class="filters">${activeFilters.map(item => `<span class="filter-pill">${item}</span>`).join('')}</div>
+    </header>
+
+    <section class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Lệnh sản xuất</div><div class="kpi-value">${this.formatNumber(overview.totalWorkOrders)}</div><div class="kpi-note">Đang mở: ${this.formatNumber(overview.openWorkOrders)}</div></div>
+      <div class="kpi success"><div class="kpi-label">Sản lượng đặt</div><div class="kpi-value">${this.formatNumber(overview.totalOrderQty)}</div><div class="kpi-note">Nhập kho: ${this.formatNumber(overview.totalStockedQty)}</div></div>
+      <div class="kpi danger"><div class="kpi-label">Tỷ lệ phế phẩm</div><div class="kpi-value">${this.formatPercent(overview.scrapRate)}</div><div class="kpi-note">SL phế phẩm: ${this.formatNumber(overview.totalScrappedQty)}</div></div>
+      <div class="kpi warning"><div class="kpi-label">Biến động chi phí</div><div class="kpi-value">${this.formatCurrency(overview.costVariance)}</div><div class="kpi-note">Actual: ${this.formatCurrency(overview.actualCost)}</div></div>
+      <div class="kpi"><div class="kpi-label">Tỷ lệ hoàn thành</div><div class="kpi-value">${this.formatPercent(overview.completionRate)}</div><div class="kpi-note">Theo stocked/order qty</div></div>
+      <div class="kpi danger"><div class="kpi-label">Lệnh trễ hạn</div><div class="kpi-value">${this.formatNumber(overview.delayedWorkOrders)}</div><div class="kpi-note">Cần ưu tiên kiểm soát</div></div>
+      <div class="kpi"><div class="kpi-label">Giờ nguồn lực</div><div class="kpi-value">${this.formatNumber(overview.actualResourceHours)}</div><div class="kpi-note">Actual resource hours</div></div>
+      <div class="kpi warning"><div class="kpi-label">Cảnh báo tồn kho</div><div class="kpi-value">${this.formatNumber(overview.safetyStockAlerts)}</div><div class="kpi-note">Tồn kho: ${this.formatNumber(overview.totalInventoryQty)}</div></div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Tổng quan xu hướng lệnh sản xuất</h2>
+      ${this.renderReportTable(['Kỳ', 'Lệnh SX', 'Lệnh mở', 'Lệnh trễ'], dashboard.workOrderTrend.slice(0, 12).map(item => [item.period, this.formatNumber(item.workOrders), this.formatNumber(item.openWorkOrders), this.formatNumber(item.delayedWorkOrders)]), [1, 2, 3])}
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Sản phẩm sản xuất nhiều nhất</h2>
+      ${this.renderReportTable(['Sản phẩm', 'Ngành hàng', 'Lệnh', 'SL đặt', 'Nhập kho', 'Tỷ lệ scrap'], dashboard.topProducts.slice(0, 10).map(item => [item.productName, item.productCategoryName, this.formatNumber(item.workOrders), this.formatNumber(item.orderQty), this.formatNumber(item.stockedQty), this.formatPercent(item.scrapRate)]), [2, 3, 4, 5])}
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Top sản phẩm phế phẩm cao</h2>
+      ${this.renderReportTable(['Sản phẩm', 'Ngành hàng', 'SL phế phẩm', 'Tỷ lệ scrap', 'SL đặt'], dashboard.topScrapProducts.slice(0, 10).map(item => [item.productName, item.productCategoryName, this.formatNumber(item.scrappedQty), this.formatPercent(item.scrapRate), this.formatNumber(item.orderQty)]), [2, 3, 4])}
+    </section>
+
+    <section class="section page-break">
+      <h2 class="section-title">Biến động chi phí theo khu vực</h2>
+      ${this.renderReportTable(['Khu vực', 'Lệnh', 'Chi phí kế hoạch', 'Chi phí thực tế', 'Biến động'], dashboard.locationCosts.slice(0, 10).map(item => [item.locationName, this.formatNumber(item.workOrders), this.formatCurrency(item.plannedCost), this.formatCurrency(item.actualCost), this.formatCurrency(item.costVariance)]), [1, 2, 3, 4])}
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Biến động chi phí theo công đoạn</h2>
+      ${this.renderReportTable(['Công đoạn', 'Chi phí kế hoạch', 'Chi phí thực tế', 'Biến động', 'Giờ nguồn lực'], dashboard.operationVariances.slice(0, 10).map(item => [`Công đoạn ${item.operationSequence}`, this.formatCurrency(item.plannedCost), this.formatCurrency(item.actualCost), this.formatCurrency(item.costVariance), this.formatNumber(item.actualResourceHours)]), [1, 2, 3, 4])}
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Cảnh báo tồn kho an toàn</h2>
+      ${this.renderReportTable(['Sản phẩm', 'Tồn kho', 'Safety stock', 'Reorder point', 'Thiếu hụt'], dashboard.safetyStockAlerts.slice(0, 10).map(item => [item.productName, this.formatNumber(item.inventoryQty), this.formatNumber(item.safetyStockLevel), this.formatNumber(item.reorderPoint), this.formatNumber(item.shortageQty)]), [1, 2, 3, 4])}
+    </section>
+
+    <footer class="footer">
+      <span>Dashboard-X | Enterprise Operations Hub | Bảo mật nội bộ</span>
+      <span>Báo cáo theo bộ lọc hiện tại</span>
+    </footer>
+  </main>
+</body>
+</html>`;
+  }
+
+  private describeProductionFilters(
+    filter: ReturnType<typeof this.filterForm.getRawValue>,
+    dashboard: ProductionDashboardResponseDto
+  ): string[] {
+    const options = dashboard.filterOptions;
+    const filters = [
+      `Từ ngày: ${this.formatReportDate(filter.startDate)}`,
+      `Đến ngày: ${this.formatReportDate(filter.endDate)}`,
+      `Sản phẩm: ${this.lookupFilterName(options.products, filter.productId)}`,
+      `Ngành hàng: ${this.lookupFilterName(options.productCategories, filter.productCategoryId)}`,
+      `Khu vực: ${this.lookupFilterName(options.locations, filter.locationId)}`,
+      `Lý do scrap: ${this.lookupFilterName(options.scrapReasons, filter.scrapReasonId)}`,
+      `Make only: ${this.formatBooleanFilter(filter.makeOnly)}`,
+      `Finished goods: ${this.formatBooleanFilter(filter.finishedGoodsOnly)}`,
+      `Chỉ lệnh mở: ${this.formatBooleanFilter(filter.openOnly)}`,
+      `Chỉ lệnh trễ: ${this.formatBooleanFilter(filter.delayedOnly)}`,
+      `Thiếu safety stock: ${this.formatBooleanFilter(filter.safetyStockOnly)}`
+    ];
+
+    return filters.map(item => this.escapeHtml(item));
+  }
+
+  private lookupFilterName(items: Array<{ id: number; name: string }>, id: number | null | undefined): string {
+    if (id == null) return 'Tất cả';
+    return items.find(item => item.id === id)?.name ?? `ID ${id}`;
+  }
+
+  private formatBooleanFilter(value: boolean | null | undefined): string {
+    if (value == null) return 'Tất cả';
+    return value ? 'Có' : 'Không';
+  }
+
+  private renderReportTable(headers: string[], rows: string[][], numericColumns: number[] = []): string {
+    if (!rows.length) {
+      return '<p style="color:#64748b;font-size:12px;margin:8px 0 0;">Không có dữ liệu trong bộ lọc hiện tại.</p>';
+    }
+
+    return `<table><thead><tr>${headers.map(header => `<th>${this.escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map((cell, index) => `<td class="${numericColumns.includes(index) ? 'number' : ''}">${this.escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'Không giới hạn';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN').format(date);
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(value ?? 0);
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'percent',
+      maximumFractionDigits: 1
+    }).format(value ?? 0);
+  }
+
+  private formatNumber(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', {
+      maximumFractionDigits: 2
+    }).format(value ?? 0);
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   customizeLayout(): void {
@@ -790,7 +1360,21 @@ export class ProductionComponent implements OnInit {
   }
 
   saveFilter(): void {
-    console.log('Lưu bộ lọc sản xuất');
+    const filter = this.filterForm.getRawValue();
+    localStorage.setItem(this.savedFilterStorageKey, JSON.stringify(filter));
+    this.loadDashboard(true);
+  }
+
+  private restoreSavedFilter(): void {
+    const raw = localStorage.getItem(this.savedFilterStorageKey);
+    if (!raw) return;
+
+    try {
+      const savedFilter = JSON.parse(raw) as Partial<typeof this.defaultFilter>;
+      this.filterForm.patchValue({ ...this.defaultFilter, ...savedFilter });
+    } catch {
+      localStorage.removeItem(this.savedFilterStorageKey);
+    }
   }
 
   bomLevelLabel(item: ProductionBomItemDto): string {

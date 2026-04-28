@@ -20,9 +20,11 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
-import { ISDashboardService } from './is-dashboard.service';
+import { ISDashboardResponseDto, ISDashboardService } from './is-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -72,9 +74,12 @@ export class InformationServicesComponent implements OnInit {
   readonly subtitle = 'Dashboard';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
+  readonly savedFilterStorageKey = 'information_services_saved_filter';
   readonly gridsterStorageKey = 'is_grid_layout';
   readonly hiddenChartsStorageKey = 'is_hidden_charts';
 
@@ -257,11 +262,19 @@ export class InformationServicesComponent implements OnInit {
 
   readonly errorTrendChartData = computed<ChartData<'line'>>(() => {
     const trend = this.dashboard()?.errorTrend ?? [];
+    const fallbackTrend = [
+      { period: 'Tuần 1', errorCount: 0 },
+      { period: 'Tuần 2', errorCount: 0 },
+      { period: 'Tuần 3', errorCount: 0 },
+      { period: 'Tuần 4', errorCount: 0 }
+    ];
+    const chartItems = trend.length > 0 ? trend : fallbackTrend;
+
     return {
-      labels: trend.map((item: any) => item.period),
+      labels: chartItems.map((item: any) => item.period),
       datasets: [{
         label: 'Số lỗi',
-        data: trend.map((item: any) => item.errorCount),
+        data: chartItems.map((item: any) => item.errorCount),
         borderColor: '#dc3545',
         backgroundColor: 'rgba(220, 53, 69, 0.12)',
         fill: true,
@@ -295,10 +308,15 @@ export class InformationServicesComponent implements OnInit {
 
   readonly topErrorsChartData = computed<ChartData<'bar'>>(() => {
     const items = this.dashboard()?.topErrors ?? [];
+    const fallbackErrors = [
+      { errorNumber: 0, errorCount: 0, errorMessage: 'Không có lỗi' }
+    ];
+    const chartItems = (items.length > 0 ? items : fallbackErrors).slice(0, 8);
+
     return {
-      labels: items.slice(0, 8).map((item: any) => `Error ${item.errorNumber}`),
+      labels: chartItems.map((item: any) => item.errorNumber ? `Error ${item.errorNumber}` : item.errorMessage),
       datasets: [{
-        data: items.slice(0, 8).map((item: any) => item.errorCount),
+        data: chartItems.map((item: any) => item.errorCount),
         backgroundColor: '#dc3545',
         borderRadius: 6,
         barThickness: 18
@@ -319,10 +337,15 @@ export class InformationServicesComponent implements OnInit {
 
   readonly eventTypeChartData = computed<ChartData<'doughnut'>>(() => {
     const items = this.dashboard()?.eventTypeDistribution ?? [];
+    const fallbackEvents = [
+      { eventType: 'Không có dữ liệu', eventCount: 1 }
+    ];
+    const chartItems = items.length > 0 ? items : fallbackEvents;
+
     return {
-      labels: items.map((item: any) => item.eventType),
+      labels: chartItems.map((item: any) => item.eventType),
       datasets: [{
-        data: items.map((item: any) => item.eventCount),
+        data: chartItems.map((item: any) => item.eventCount),
         backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b'],
         borderWidth: 0
       }]
@@ -354,17 +377,17 @@ export class InformationServicesComponent implements OnInit {
     return {
       labels: items.map((item: any) => item.departmentName),
       datasets: [
-        { 
-          label: 'Tổng TK', 
-          data: items.map((item: any) => item.userCount), 
-          backgroundColor: '#667eea', 
-          borderRadius: 6 
+        {
+          label: 'Tổng TK',
+          data: items.map((item: any) => item.userCount),
+          backgroundColor: '#667eea',
+          borderRadius: 6
         },
-        { 
-          label: 'TK hoạt động', 
-          data: items.map((item: any) => item.activeUserCount), 
-          backgroundColor: '#11998e', 
-          borderRadius: 6 
+        {
+          label: 'TK hoạt động',
+          data: items.map((item: any) => item.activeUserCount),
+          backgroundColor: '#11998e',
+          borderRadius: 6
         }
       ]
     };
@@ -404,6 +427,7 @@ export class InformationServicesComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -426,12 +450,8 @@ export class InformationServicesComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: this.getDefaultStartDate(),
-      endDate: this.getDefaultEndDate(),
-      departmentId: null,
-      errorNumber: null
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: this.getDefaultStartDate(), endDate: this.getDefaultEndDate(), departmentId: null, errorNumber: null });
     this.loadDashboard();
   }
 
@@ -452,15 +472,127 @@ export class InformationServicesComponent implements OnInit {
     }).format(value);
   }
 
-  exportPDF(): void {
-    console.log('Exporting dashboard to PDF...');
-    alert('Chức năng xuất PDF đang được phát triển');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as ISDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo Information Services.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'information-services', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: 'Information Services',
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'InformationServicesDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.systemInfoCards().map(item => ({
+          ...item,
+          value: item.type === 'date' ? this.formatReportDate(String(item.value ?? '')) : item.value
+        })),
+        filters: this.describeIsFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Xu hướng lỗi hệ thống theo bộ lọc',
+            subtitle: 'Số lỗi hệ thống theo từng kỳ trong phạm vi ngày, phòng ban và mã lỗi đang chọn.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Ngày', 'Số lỗi'],
+            rows: currentDashboard.errorTrend.slice(0, 14).map(item => [item.period, item.year, item.month, item.day, item.errorCount]),
+            widths: ['*', 45, 45, 45, 60]
+          },
+          {
+            title: '02. Top lỗi phổ biến',
+            subtitle: 'Các mã lỗi xuất hiện nhiều nhất sau khi áp dụng bộ lọc hiện tại.',
+            headers: ['Mã lỗi', 'Thông điệp lỗi', 'Số lần', 'Lần cuối'],
+            rows: currentDashboard.topErrors.slice(0, 10).map(item => [item.errorNumber, item.errorMessage, item.errorCount, this.formatReportDateTime(item.lastOccurrence)]),
+            widths: [55, '*', 55, 85]
+          },
+          {
+            title: '03. Người dùng phát sinh lỗi nhiều nhất',
+            subtitle: 'Tài khoản có nhiều lỗi hệ thống trong phạm vi dữ liệu đã lọc.',
+            headers: ['Người dùng', 'Số lỗi', 'Lỗi gần nhất'],
+            rows: currentDashboard.usersWithMostErrors.slice(0, 10).map(item => [item.userName, item.errorCount, this.formatReportDateTime(item.lastError)]),
+            widths: ['*', 55, 95]
+          },
+          {
+            title: '04. Hoạt động cơ sở dữ liệu',
+            subtitle: 'Các thao tác DB theo người dùng và loại sự kiện trong bộ lọc hiện tại.',
+            headers: ['DB user', 'Sự kiện', 'Số lần', 'Lần cuối'],
+            rows: currentDashboard.databaseActivity.slice(0, 10).map(item => [item.databaseUser, item.event, item.activityCount, this.formatReportDateTime(item.lastActivity)]),
+            widths: ['*', '*', 55, 95]
+          },
+          {
+            title: '05. Phân loại sự kiện DB',
+            subtitle: 'Tỷ trọng từng loại sự kiện trong dữ liệu đã lọc.',
+            headers: ['Loại sự kiện', 'Số lượng', 'Tỷ lệ'],
+            rows: currentDashboard.eventTypeDistribution.map(item => [item.eventType, item.eventCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 70, 60]
+          },
+          {
+            title: '06. Tài khoản theo phòng ban',
+            subtitle: 'Tổng tài khoản và tài khoản hoạt động theo phòng ban đang áp dụng.',
+            headers: ['Phòng ban', 'Tổng TK', 'TK hoạt động'],
+            rows: currentDashboard.userAccountsByDepartment.slice(0, 12).map(item => [item.departmentName, item.userCount, item.activeUserCount]),
+            widths: ['*', 65, 75]
+          },
+          {
+            title: '07. Phân bố tuổi mật khẩu',
+            subtitle: 'Nhóm tuổi mật khẩu của tài khoản theo bộ lọc hiện tại.',
+            headers: ['Nhóm tuổi mật khẩu', 'Số tài khoản', 'Tỷ lệ'],
+            rows: currentDashboard.passwordAgeDistribution.map(item => [item.ageRange, item.userCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 80, 60]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard Information Services', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeIsFilters(dashboard: ISDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const department = dashboard.filterOptions.departments.find(item => item.id === filters.departmentId)?.name ?? 'Tất cả';
+    const errorNumber = dashboard.filterOptions.errorNumbers.find(item => item.id === filters.errorNumber)?.name ?? filters.errorNumber ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Phòng ban: ${department}`,
+      `Mã lỗi: ${errorNumber}`
+    ];
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    const normalizedValue = numericValue > 1 ? numericValue / 100 : numericValue;
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(normalizedValue);
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+  }
+
+  private formatReportDateTime(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
   }
 
   customizeLayout(): void { this.toggleEditMode(); }
 
   saveFilter(): void {
-    console.log('Saving current filter settings...');
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: this.getDefaultStartDate(), endDate: this.getDefaultEndDate(), departmentId: null, errorNumber: null }));
+  }
+
 }

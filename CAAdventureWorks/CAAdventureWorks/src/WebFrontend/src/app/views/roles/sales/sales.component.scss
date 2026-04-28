@@ -347,6 +347,8 @@ c-widget-stat-a {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.08);
             min-height: 80px;
+            height: 100%;
+            overflow: hidden;
         }
 
         .card-body>div:first-child {
@@ -365,16 +367,23 @@ c-widget-stat-a {
 
         .card-body {
             padding: 0.75rem 0.85rem 0.35rem !important;
+            overflow: hidden;
         }
 
         .chart-wrapper,
         c-chart {
-            height: 80px !important;
-            min-height: 80px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 56px !important;
+            min-height: 56px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            overflow: hidden;
         }
 
         canvas {
-            max-height: 80px !important;
+            max-width: 100% !important;
+            max-height: 56px !important;
         }
 
         .chartjs-tooltip {
@@ -640,89 +649,89 @@ gridster-item {
 // ============================================
 
 .chart-picker-wrapper {
-  position: relative;
-  display: inline-block;
+    position: relative;
+    display: inline-block;
 }
 
 .chart-picker-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 1050;
-  min-width: 260px;
-  max-width: 320px;
-  max-height: 380px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  padding: 8px 0;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1050;
+    min-width: 260px;
+    max-width: 320px;
+    max-height: 380px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    padding: 8px 0;
 
-  .picker-section-title {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #9ca3af;
-    padding: 4px 12px 6px;
-    margin: 0;
+    .picker-section-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #9ca3af;
+        padding: 4px 12px 6px;
+        margin: 0;
 
-    &.mt-2 {
-      margin-top: 4px;
-    }
-  }
-
-  .picker-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #374151;
-    transition: background-color 0.15s;
-
-    &:hover {
-      background-color: #f3f4f6;
-    }
-
-    input[type="checkbox"] {
-      width: 14px;
-      height: 14px;
-      accent-color: #5b5bd6;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .picker-label {
-      flex: 1;
-      line-height: 1.3;
-    }
-
-    &.hidden-chart-item {
-      background-color: #f9fafb;
-      border: 1px dashed #d1d5db;
-      border-radius: 6px;
-      margin: 2px 8px;
-      padding: 6px 8px;
-
-      .add-chart-btn {
-        flex-shrink: 0;
-        font-size: 11px;
-        padding: 2px 8px;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        border-radius: 4px;
-
-        svg {
-          width: 12px;
-          height: 12px;
+        &.mt-2 {
+            margin-top: 4px;
         }
-      }
     }
-  }
+
+    .picker-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #374151;
+        transition: background-color 0.15s;
+
+        &:hover {
+            background-color: #f3f4f6;
+        }
+
+        input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: #5b5bd6;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .picker-label {
+            flex: 1;
+            line-height: 1.3;
+        }
+
+        &.hidden-chart-item {
+            background-color: #f9fafb;
+            border: 1px dashed #d1d5db;
+            border-radius: 6px;
+            margin: 2px 8px;
+            padding: 6px 8px;
+
+            .add-chart-btn {
+                flex-shrink: 0;
+                font-size: 11px;
+                padding: 2px 8px;
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                border-radius: 4px;
+
+                svg {
+                    width: 12px;
+                    height: 12px;
+                }
+            }
+        }
+    }
 }
 
 // ============================================
@@ -730,55 +739,55 @@ gridster-item {
 // ============================================
 
 .gridster-edit-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #5b5bd6 0%, #4c51bf 100%);
-  color: white;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(91, 91, 214, 0.25);
-
-  .banner-text {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 500;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #5b5bd6 0%, #4c51bf 100%);
+    color: white;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(91, 91, 214, 0.25);
 
-    .banner-icon {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-    }
-  }
-
-  .banner-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .reset-btn {
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.5);
-      background: transparent;
-
-      &:hover,
-      &:focus {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: #fff;
-        color: #fff;
-      }
-
-      .button-icon {
-        font-size: 14px;
-        line-height: 1;
-        display: inline-flex;
+    .banner-text {
+        display: flex;
         align-items: center;
-      }
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+
+        .banner-icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
     }
-  }
+
+    .banner-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .reset-btn {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+
+            &:hover,
+            &:focus {
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #fff;
+                color: #fff;
+            }
+
+            .button-icon {
+                font-size: 14px;
+                line-height: 1;
+                display: inline-flex;
+                align-items: center;
+            }
+        }
+    }
 }
 
 
@@ -787,52 +796,51 @@ gridster-item {
 // ============================================
 
 .chart-card-header {
-  .chart-header-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .chart-delete-btn {
-    flex-shrink: 0;
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #fee2e2 !important;
-    color: #dc2626 !important;
-    border: 1px solid #fca5a5 !important;
-    opacity: 0;
-    transition: opacity 0.15s ease, background-color 0.15s ease;
-
-    svg {
-      width: 12px;
-      height: 12px;
+    .chart-header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
     }
 
-    &:hover,
-    &:focus {
-      background-color: #ef4444 !important;
-      color: #fff !important;
-      border-color: #ef4444 !important;
-      opacity: 1 !important;
+    .chart-delete-btn {
+        flex-shrink: 0;
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fee2e2 !important;
+        color: #dc2626 !important;
+        border: 1px solid #fca5a5 !important;
+        opacity: 0;
+        transition: opacity 0.15s ease, background-color 0.15s ease;
+
+        svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        &:hover,
+        &:focus {
+            background-color: #ef4444 !important;
+            color: #fff !important;
+            border-color: #ef4444 !important;
+            opacity: 1 !important;
+        }
     }
-  }
 }
 
 gridster-item:hover .chart-delete-btn {
-  opacity: 1;
+    opacity: 1;
 }
 
 .gridster-edit-banner {
-  .chart-delete-btn {
-    opacity: 1 !important;
-  }
+    .chart-delete-btn {
+        opacity: 1 !important;
+    }
 }
-

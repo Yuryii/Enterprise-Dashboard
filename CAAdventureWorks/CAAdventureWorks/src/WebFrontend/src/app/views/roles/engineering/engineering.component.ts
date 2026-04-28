@@ -21,6 +21,8 @@ import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -57,6 +59,11 @@ export class EngineeringComponent {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
+  constructor() {
+    this.restoreSavedFilter();
+    this.applyFilters();
+  }
+
   private readonly widgetChartPalette = {
     primary: getStyle('--cui-primary') ?? '#5856d6',
     info: getStyle('--cui-info') ?? '#39f',
@@ -68,7 +75,12 @@ export class EngineeringComponent {
   readonly title = 'Engineering';
   readonly subtitle = 'Dashboard';
 
-  private readonly gridsterStorageKey = 'engineering_grid_layout';
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
+
+
+  private readonly savedFilterStorageKey = 'engineering_saved_filter';
+  readonly gridsterStorageKey = 'engineering_grid_layout';
   private readonly hiddenChartsStorageKey = 'engineering_hidden_charts';
 
   readonly isEditMode = signal(false);
@@ -79,7 +91,7 @@ export class EngineeringComponent {
     pushItems: true,
     minCols: 12,
     maxCols: 12,
-    minRows: 20,
+    minRows: 22,
     fixedRowHeight: 80,
     keepFixedHeightInMobile: false,
     keepFixedWidthInMobile: false,
@@ -98,7 +110,9 @@ export class EngineeringComponent {
     { id: 'make-vs-buy', label: 'Make vs Buy' },
     { id: 'sku-per-model', label: 'SKU per model' },
     { id: 'scrap-rate', label: 'Scrap rate' },
-    { id: 'scrap-reason-distribution', label: 'Scrap reason distribution' }
+    { id: 'scrap-reason-distribution', label: 'Scrap reason distribution' },
+    { id: 'bom-hierarchy', label: 'BOM Hierarchy' },
+    { id: 'missing-drawings', label: 'Model thiếu bản vẽ / mô tả' }
   ];
 
   readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
@@ -145,7 +159,9 @@ export class EngineeringComponent {
       { id: 'make-vs-buy', cols: 4, rows: 5, x: 4, y: 0 },
       { id: 'sku-per-model', cols: 4, rows: 5, x: 8, y: 0 },
       { id: 'scrap-rate', cols: 7, rows: 6, x: 0, y: 5 },
-      { id: 'scrap-reason-distribution', cols: 5, rows: 6, x: 7, y: 5 }
+      { id: 'scrap-reason-distribution', cols: 5, rows: 6, x: 7, y: 5 },
+      { id: 'bom-hierarchy', cols: 7, rows: 5, x: 0, y: 11 },
+      { id: 'missing-drawings', cols: 5, rows: 5, x: 7, y: 11 }
     ];
   }
 
@@ -506,16 +522,86 @@ export class EngineeringComponent {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      bomLevel: 'All',
-      makeStrategy: 'All',
-      scrapFocus: 'All'
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ bomLevel: 'All', makeStrategy: 'All', scrapFocus: 'All' });
     this.applyFilters();
   }
 
-  exportPDF(): void {
-    alert('Chức năng xuất PDF đang được phát triển');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.engineeringHealthCards(),
+      filters: this.filterForm.getRawValue(),
+      bomHierarchy: this.bomHierarchyRows(),
+      productModels: this.filteredProductModels(),
+      scrapFeedback: this.filteredScrapFeedback(),
+      scrapReasonMix: this.filteredScrapReasonMix()
+    };
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'engineering', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'EngineeringDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.engineeringHealthCards(),
+        filters: this.describeEngineeringFilters(),
+        sections: [
+          {
+            title: '01. BOM hierarchy theo bộ lọc',
+            subtitle: 'Cấu trúc assembly - component đang hiển thị sau khi lọc cấp BOM.',
+            headers: ['Assembly', 'Component', 'Level', 'Quantity'],
+            rows: this.bomHierarchyRows().map(item => [item.assembly, item.component, item.level, item.quantity]),
+            widths: ['*', '*', 45, 55]
+          },
+          {
+            title: '02. Product model theo chiến lược make/buy',
+            subtitle: 'Danh sách model đang được tính vào KPI kỹ thuật hiện tại.',
+            headers: ['Model', 'SKU', 'Có bản vẽ', 'Make', 'Catalog ready'],
+            rows: this.filteredProductModels().map(item => [item.model, item.skuCount, item.hasIllustration ? 'Có' : 'Không', item.makeFlag ? 'Make' : 'Buy', item.catalogReady ? 'Có' : 'Không']),
+            widths: ['*', 45, 60, 50, 65]
+          },
+          {
+            title: '03. Model thiếu bản vẽ / mô tả',
+            subtitle: 'Các model cần bổ sung illustration hoặc catalog.',
+            headers: ['Model', 'SKU', 'Có bản vẽ', 'Catalog ready'],
+            rows: this.missingDrawings().map(item => [item.model, item.skuCount, item.hasIllustration ? 'Có' : 'Không', item.catalogReady ? 'Có' : 'Không']),
+            widths: ['*', 55, 75, 75]
+          },
+          {
+            title: '04. Scrap feedback theo bộ lọc',
+            subtitle: 'R&D backlog và phản hồi scrap cần xem xét.',
+            headers: ['Sản phẩm', 'Scrap rate', 'SL scrap', 'Lý do'],
+            rows: this.filteredScrapFeedback().map(item => [item.product, `${item.scrapRate}%`, item.scrapQty, item.reason]),
+            widths: ['*', 65, 55, 80]
+          },
+          {
+            title: '05. Cơ cấu lý do scrap',
+            subtitle: 'Tỷ trọng nguyên nhân scrap trong bộ lọc hiện tại.',
+            headers: ['Lý do', 'Tỷ lệ'],
+            rows: this.filteredScrapReasonMix().map(item => [item.reason, `${item.percentage}%`]),
+            widths: ['*', 60]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard Engineering', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeEngineeringFilters(): string[] {
+    const filters = this.appliedFilters();
+    return [
+      `Cấp BOM: ${filters.bomLevel === 'All' ? 'Tất cả' : filters.bomLevel}`,
+      `Make strategy: ${filters.makeStrategy === 'All' ? 'Tất cả' : filters.makeStrategy}`,
+      `Scrap focus: ${filters.scrapFocus === 'All' ? 'Tất cả' : filters.scrapFocus}`
+    ];
   }
 
   customizeLayout(): void {
@@ -523,6 +609,11 @@ export class EngineeringComponent {
   }
 
   saveFilter(): void {
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.applyFilters();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { bomLevel: 'All', makeStrategy: 'All', scrapFocus: 'All' }));
+  }
+
 }

@@ -20,6 +20,8 @@ import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -55,6 +57,11 @@ export interface ChartDef {
 export class FacilitiesComponent {
   private readonly fb = new FormBuilder();
 
+  constructor() {
+    this.restoreSavedFilter();
+    this.applyFilters();
+  }
+
   private readonly widgetChartPalette = {
     primary: getStyle('--cui-primary') ?? '#5856d6',
     info: getStyle('--cui-info') ?? '#39f',
@@ -63,8 +70,10 @@ export class FacilitiesComponent {
     danger: getStyle('--cui-danger') ?? '#e55353'
   };
 
-  readonly title = 'Facilities & Maintenance';
-  readonly subtitle = 'Dashboard';
+  readonly title = 'Cơ sở vật chất & Bảo trì';
+  readonly subtitle = 'Bảng điều khiển';
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
 
   readonly appliedFilters = signal({
     facilityType: 'All',
@@ -79,43 +88,43 @@ export class FacilitiesComponent {
   });
 
   readonly locations = signal([
-    { locationId: 10, name: 'Assembly Cell A', facilityType: 'Production Line', costRate: 78, availability: 160, actualHours: 142, plannedCost: 10800, actualCost: 11540, variance: 740, priority: 'Medium' },
-    { locationId: 20, name: 'Paint Storage', facilityType: 'Warehouse', costRate: 52, availability: 120, actualHours: 86, plannedCost: 4600, actualCost: 4980, variance: 380, priority: 'Low' },
-    { locationId: 30, name: 'Machining Bay 2', facilityType: 'Machine Station', costRate: 95, availability: 180, actualHours: 171, plannedCost: 14900, actualCost: 16320, variance: 1420, priority: 'High' },
-    { locationId: 40, name: 'Final Assembly Dock', facilityType: 'Production Line', costRate: 88, availability: 168, actualHours: 149, plannedCost: 13150, actualCost: 13610, variance: 460, priority: 'Medium' },
-    { locationId: 50, name: 'Finished Goods Hub', facilityType: 'Warehouse', costRate: 61, availability: 144, actualHours: 101, plannedCost: 6250, actualCost: 6720, variance: 470, priority: 'Low' }
+    { locationId: 10, name: 'Ô lắp ráp A', facilityType: 'Production Line', costRate: 78, availability: 160, actualHours: 142, plannedCost: 10800, actualCost: 11540, variance: 740, priority: 'Medium' },
+    { locationId: 20, name: 'Kho sơn', facilityType: 'Warehouse', costRate: 52, availability: 120, actualHours: 86, plannedCost: 4600, actualCost: 4980, variance: 380, priority: 'Low' },
+    { locationId: 30, name: 'Khu gia công 2', facilityType: 'Machine Station', costRate: 95, availability: 180, actualHours: 171, plannedCost: 14900, actualCost: 16320, variance: 1420, priority: 'High' },
+    { locationId: 40, name: 'Bến lắp ráp cuối', facilityType: 'Production Line', costRate: 88, availability: 168, actualHours: 149, plannedCost: 13150, actualCost: 13610, variance: 460, priority: 'Medium' },
+    { locationId: 50, name: 'Kho thành phẩm', facilityType: 'Warehouse', costRate: 61, availability: 144, actualHours: 101, plannedCost: 6250, actualCost: 6720, variance: 470, priority: 'Low' }
   ]);
 
   readonly machineRuntimeTrend = signal([
-    { month: 'Apr', assembly: 118, machining: 149, warehouse: 82 },
-    { month: 'May', assembly: 124, machining: 155, warehouse: 88 },
-    { month: 'Jun', assembly: 129, machining: 161, warehouse: 90 },
-    { month: 'Jul', assembly: 133, machining: 166, warehouse: 93 },
-    { month: 'Aug', assembly: 140, machining: 169, warehouse: 98 },
-    { month: 'Sep', assembly: 146, machining: 171, warehouse: 101 }
+    { month: 'Th4', assembly: 118, machining: 149, warehouse: 82 },
+    { month: 'Th5', assembly: 124, machining: 155, warehouse: 88 },
+    { month: 'Th6', assembly: 129, machining: 161, warehouse: 90 },
+    { month: 'Th7', assembly: 133, machining: 166, warehouse: 93 },
+    { month: 'Th8', assembly: 140, machining: 169, warehouse: 98 },
+    { month: 'Th9', assembly: 146, machining: 171, warehouse: 101 }
   ]);
 
   readonly inventoryCapacity = signal([
-    { zone: 'Paint Storage', quantity: 1480, shelvesUsed: 14, binsUsed: 48, fillRate: 0.72, areaType: 'Warehouse' },
-    { zone: 'Assembly Cell A', quantity: 940, shelvesUsed: 8, binsUsed: 22, fillRate: 0.58, areaType: 'Production Line' },
-    { zone: 'Final Assembly Dock', quantity: 1180, shelvesUsed: 10, binsUsed: 31, fillRate: 0.66, areaType: 'Production Line' },
-    { zone: 'Finished Goods Hub', quantity: 1660, shelvesUsed: 16, binsUsed: 53, fillRate: 0.81, areaType: 'Warehouse' },
-    { zone: 'Machining Bay 2', quantity: 760, shelvesUsed: 6, binsUsed: 19, fillRate: 0.49, areaType: 'Machine Station' }
+    { zone: 'Kho sơn', quantity: 1480, shelvesUsed: 14, binsUsed: 48, fillRate: 0.72, areaType: 'Warehouse' },
+    { zone: 'Ô lắp ráp A', quantity: 940, shelvesUsed: 8, binsUsed: 22, fillRate: 0.58, areaType: 'Production Line' },
+    { zone: 'Bến lắp ráp cuối', quantity: 1180, shelvesUsed: 10, binsUsed: 31, fillRate: 0.66, areaType: 'Production Line' },
+    { zone: 'Kho thành phẩm', quantity: 1660, shelvesUsed: 16, binsUsed: 53, fillRate: 0.81, areaType: 'Warehouse' },
+    { zone: 'Khu gia công 2', quantity: 760, shelvesUsed: 6, binsUsed: 19, fillRate: 0.49, areaType: 'Machine Station' }
   ]);
 
   readonly maintenanceSchedule = signal([
-    { workOrderId: 5101, location: 'Machining Bay 2', orderQty: 124, scrapReason: 'Overheating', plannedDate: '2024-09-18', actualStartDate: '2024-09-19', actualResourceHrs: 171, status: 'Urgent' },
-    { workOrderId: 5102, location: 'Assembly Cell A', orderQty: 88, scrapReason: 'Alignment drift', plannedDate: '2024-09-21', actualStartDate: '2024-09-21', actualResourceHrs: 142, status: 'Planned' },
-    { workOrderId: 5103, location: 'Paint Storage', orderQty: 42, scrapReason: 'Humidity check', plannedDate: '2024-09-24', actualStartDate: '2024-09-24', actualResourceHrs: 86, status: 'Planned' },
-    { workOrderId: 5104, location: 'Finished Goods Hub', orderQty: 57, scrapReason: 'Forklift traffic bottleneck', plannedDate: '2024-09-26', actualStartDate: '2024-09-27', actualResourceHrs: 101, status: 'Monitor' }
+    { workOrderId: 5101, location: 'Khu gia công 2', orderQty: 124, scrapReason: 'Quá nhiệt', plannedDate: '2024-09-18', actualStartDate: '2024-09-19', actualResourceHrs: 171, status: 'Urgent' },
+    { workOrderId: 5102, location: 'Ô lắp ráp A', orderQty: 88, scrapReason: 'Lệch căn chỉnh', plannedDate: '2024-09-21', actualStartDate: '2024-09-21', actualResourceHrs: 142, status: 'Planned' },
+    { workOrderId: 5103, location: 'Kho sơn', orderQty: 42, scrapReason: 'Kiểm tra độ ẩm', plannedDate: '2024-09-24', actualStartDate: '2024-09-24', actualResourceHrs: 86, status: 'Planned' },
+    { workOrderId: 5104, location: 'Kho thành phẩm', orderQty: 57, scrapReason: 'Nghẽn luồng xe nâng', plannedDate: '2024-09-26', actualStartDate: '2024-09-27', actualResourceHrs: 101, status: 'Monitor' }
   ]);
 
   readonly operatingCostMix = signal([
-    { location: 'Machining Bay 2', fixedCost: 9200, usageCost: 7120 },
-    { location: 'Final Assembly Dock', fixedCost: 8040, usageCost: 5570 },
-    { location: 'Assembly Cell A', fixedCost: 7380, usageCost: 4160 },
-    { location: 'Finished Goods Hub', fixedCost: 4320, usageCost: 2400 },
-    { location: 'Paint Storage', fixedCost: 3550, usageCost: 1430 }
+    { location: 'Khu gia công 2', fixedCost: 9200, usageCost: 7120 },
+    { location: 'Bến lắp ráp cuối', fixedCost: 8040, usageCost: 5570 },
+    { location: 'Ô lắp ráp A', fixedCost: 7380, usageCost: 4160 },
+    { location: 'Kho thành phẩm', fixedCost: 4320, usageCost: 2400 },
+    { location: 'Kho sơn', fixedCost: 3550, usageCost: 1430 }
   ]);
 
   readonly filteredLocations = computed(() => {
@@ -158,7 +167,7 @@ export class FacilitiesComponent {
     return [
       { label: 'Tỷ lệ hoạt động thực tế', value: totalAvailability === 0 ? 0 : (totalHours / totalAvailability) * 100, format: 'percent' },
       { label: 'Chênh lệch chi phí vận hành', value: totalVariance, format: 'number' },
-      { label: 'Tổng chi phí facility', value: totalCost, format: 'number' },
+      { label: 'Tổng chi phí cơ sở', value: totalCost, format: 'number' },
       { label: 'Số khu vực đang theo dõi', value: locations.length, format: 'number' }
     ];
   });
@@ -171,10 +180,10 @@ export class FacilitiesComponent {
     const plannedCount = this.maintenanceSchedule().filter((item) => item.status === 'Planned').length;
 
     return [
-      { label: 'Tổng tồn lưu trữ', value: totalQuantity, suffix: '' },
-      { label: 'Tỷ lệ lấp đầy TB', value: avgFillRate * 100, suffix: '%' },
-      { label: 'Lịch bảo trì khẩn', value: urgentCount, suffix: '' },
-      { label: 'Lịch bảo trì kế hoạch', value: plannedCount, suffix: '' }
+      { label: 'Tổng tồn lưu trữ', value: totalQuantity, suffix: '', progress: Math.min(100, totalQuantity / 80), tone: 'progress-info' },
+      { label: 'Tỷ lệ lấp đầy TB', value: avgFillRate * 100, suffix: '%', progress: avgFillRate * 100, tone: 'progress-success' },
+      { label: 'Lịch bảo trì khẩn', value: urgentCount, suffix: '', progress: Math.min(100, urgentCount * 25), tone: 'progress-warning' },
+      { label: 'Lịch bảo trì kế hoạch', value: plannedCount, suffix: '', progress: Math.min(100, plannedCount * 25), tone: 'progress-primary' }
     ];
   });
 
@@ -182,13 +191,13 @@ export class FacilitiesComponent {
     labels: this.filteredLocations().map((item) => item.name),
     datasets: [
       {
-        label: 'Planned Cost',
+        label: 'Chi phí kế hoạch',
         data: this.filteredLocations().map((item) => item.plannedCost),
         backgroundColor: this.widgetChartPalette.info,
         borderRadius: 6
       },
       {
-        label: 'Actual Cost',
+        label: 'Chi phí thực tế',
         data: this.filteredLocations().map((item) => item.actualCost),
         backgroundColor: this.widgetChartPalette.warning,
         borderRadius: 6
@@ -215,7 +224,7 @@ export class FacilitiesComponent {
     labels: this.machineRuntimeTrend().map((item) => item.month),
     datasets: [
       {
-        label: 'Assembly',
+        label: 'Lắp ráp',
         data: this.machineRuntimeTrend().map((item) => item.assembly),
         borderColor: this.widgetChartPalette.primary,
         backgroundColor: 'rgba(88, 86, 214, 0.15)',
@@ -223,7 +232,7 @@ export class FacilitiesComponent {
         tension: 0.35
       },
       {
-        label: 'Machining',
+        label: 'Gia công',
         data: this.machineRuntimeTrend().map((item) => item.machining),
         borderColor: this.widgetChartPalette.danger,
         backgroundColor: 'rgba(229, 83, 83, 0.10)',
@@ -231,7 +240,7 @@ export class FacilitiesComponent {
         tension: 0.35
       },
       {
-        label: 'Warehouse',
+        label: 'Kho',
         data: this.machineRuntimeTrend().map((item) => item.warehouse),
         borderColor: this.widgetChartPalette.success,
         backgroundColor: 'rgba(46, 184, 92, 0.10)',
@@ -287,13 +296,13 @@ export class FacilitiesComponent {
     labels: this.operatingCostMix().map((item) => item.location),
     datasets: [
       {
-        label: 'Fixed Cost',
+        label: 'Chi phí cố định',
         data: this.operatingCostMix().map((item) => item.fixedCost),
         backgroundColor: this.widgetChartPalette.primary,
         borderRadius: 6
       },
       {
-        label: 'Usage Cost',
+        label: 'Chi phí sử dụng',
         data: this.operatingCostMix().map((item) => item.usageCost),
         backgroundColor: this.widgetChartPalette.warning,
         borderRadius: 6
@@ -318,6 +327,7 @@ export class FacilitiesComponent {
 
   readonly capacityHeatmapRows = computed(() => [...this.filteredInventoryCapacity()].sort((a, b) => b.fillRate - a.fillRate));
 
+  readonly savedFilterStorageKey = 'facilities_saved_filter';
   readonly gridsterStorageKey = 'facilities_grid_layout';
   readonly hiddenChartsStorageKey = 'facilities_hidden_charts';
 
@@ -330,7 +340,7 @@ export class FacilitiesComponent {
     pushItems: true,
     minCols: 12,
     maxCols: 12,
-    minRows: 20,
+    minRows: 32,
     fixedRowHeight: 80,
     keepFixedHeightInMobile: false,
     keepFixedWidthInMobile: false,
@@ -343,10 +353,14 @@ export class FacilitiesComponent {
   );
 
   readonly availableCharts: ChartDef[] = [
-    { id: 'cost-variance', label: 'Planned vs Actual Cost' },
+    { id: 'cost-variance', label: 'Chi phí kế hoạch so với thực tế' },
     { id: 'runtime-trend', label: 'Biến động giờ chạy máy' },
     { id: 'inventory-capacity', label: 'Phân bổ tồn kho' },
-    { id: 'operating-cost', label: 'Chi phí vận hành' }
+    { id: 'operating-cost', label: 'Chi phí vận hành' },
+    { id: 'capacity-heatmap', label: 'Bản đồ nhiệt sức chứa' },
+    { id: 'utilization-table', label: 'Tình trạng sử dụng khu vực' },
+    { id: 'maintenance-schedule', label: 'Lịch bảo trì' },
+    { id: 'storage-capacity', label: 'Chi tiết sức chứa lưu trữ' }
   ];
 
   readonly hiddenChartIds = signal<Set<string>>(this.loadHiddenChartsFromStorage());
@@ -392,7 +406,11 @@ export class FacilitiesComponent {
       { id: 'cost-variance', cols: 6, rows: 6, x: 0, y: 0 },
       { id: 'runtime-trend', cols: 6, rows: 6, x: 6, y: 0 },
       { id: 'inventory-capacity', cols: 5, rows: 6, x: 0, y: 6 },
-      { id: 'operating-cost', cols: 12, rows: 6, x: 0, y: 12 }
+      { id: 'operating-cost', cols: 7, rows: 6, x: 5, y: 6 },
+      { id: 'capacity-heatmap', cols: 7, rows: 5, x: 0, y: 12 },
+      { id: 'maintenance-schedule', cols: 5, rows: 5, x: 7, y: 12 },
+      { id: 'utilization-table', cols: 12, rows: 6, x: 0, y: 17 },
+      { id: 'storage-capacity', cols: 12, rows: 5, x: 0, y: 23 }
     ];
   }
 
@@ -474,21 +492,142 @@ export class FacilitiesComponent {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      facilityType: 'All',
-      maintenancePriority: 'All',
-      storageZone: 'All'
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ facilityType: 'All', maintenancePriority: 'All', storageZone: 'All' });
     this.applyFilters();
   }
 
-  exportPDF(): void {
-    alert('Chức năng xuất PDF cho dashboard Facilities & Maintenance đang được phát triển');
+  displayFacilityType(value: string): string {
+    const labels: Record<string, string> = {
+      'All': 'Tất cả',
+      'Production Line': 'Dây chuyền sản xuất',
+      'Warehouse': 'Kho',
+      'Machine Station': 'Trạm máy'
+    };
+    return labels[value] ?? value;
+  }
+
+  displayPriority(value: string): string {
+    const labels: Record<string, string> = {
+      'All': 'Tất cả',
+      'High': 'Cao',
+      'Medium': 'Trung bình',
+      'Low': 'Thấp'
+    };
+    return labels[value] ?? value;
+  }
+
+  displayStatus(value: string): string {
+    const labels: Record<string, string> = {
+      'Urgent': 'Khẩn cấp',
+      'Planned': 'Đã lên kế hoạch',
+      'Monitor': 'Theo dõi'
+    };
+    return labels[value] ?? value;
+  }
+
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = {
+      metrics: this.kpiCards(),
+      secondaryMetrics: this.maintenanceCards(),
+      filters: this.filterForm.getRawValue(),
+      utilization: this.utilizationRows(),
+      inventoryCapacity: this.filteredInventoryCapacity(),
+      maintenanceSchedule: this.maintenanceSchedule(),
+      operatingCostMix: this.operatingCostMix(),
+      capacityHeatmap: this.capacityHeatmapRows()
+    };
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'facilities', dashboard: currentDashboard, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'FacilitiesDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.maintenanceCards(),
+        filters: this.describeFacilitiesFilters(),
+        sections: [
+          {
+            title: '01. Tình trạng sử dụng khu vực',
+            subtitle: 'Mức sẵn sàng, giờ thực tế, chênh lệch và ưu tiên bảo trì theo bộ lọc.',
+            headers: ['Khu vực', 'Loại', 'Khả dụng', 'Giờ TT', 'Sử dụng', 'Ưu tiên'],
+            rows: this.utilizationRows().map(item => [item.name, this.displayFacilityType(item.facilityType), item.availability, item.actualHours, this.formatPercent(item.utilizationRate), this.displayPriority(item.priority)]),
+            widths: ['*', 70, 55, 55, 55, 60]
+          },
+          {
+            title: '02. Chi tiết sức chứa khu vực lưu trữ',
+            subtitle: 'Tồn kho, kệ, bin và tỷ lệ lấp đầy theo storage zone đang lọc.',
+            headers: ['Khu vực', 'Loại', 'Tồn', 'Kệ', 'Bin', 'Lấp đầy'],
+            rows: this.filteredInventoryCapacity().map(item => [item.zone, this.displayFacilityType(item.areaType), item.quantity, item.shelvesUsed, item.binsUsed, this.formatPercent(item.fillRate)]),
+            widths: ['*', 70, 55, 45, 45, 60]
+          },
+          {
+            title: '03. Lịch bảo trì',
+            subtitle: 'Lịch bảo trì tham chiếu WorkOrder trong dashboard hiện tại.',
+            headers: ['WO', 'Khu vực', 'SL', 'Lý do', 'Ngày KH', 'Trạng thái'],
+            rows: this.maintenanceSchedule().map(item => [item.workOrderId, item.location, item.orderQty, item.scrapReason, this.formatReportDate(item.plannedDate), this.displayStatus(item.status)]),
+            widths: [45, '*', 45, 70, 65, 70]
+          },
+          {
+            title: '04. Chi phí vận hành',
+            subtitle: 'Chi phí cố định và chi phí sử dụng theo khu vực.',
+            headers: ['Khu vực', 'Chi phí cố định', 'Chi phí sử dụng', 'Tổng'],
+            rows: this.operatingCostMix().map(item => [item.location, this.formatCurrency(item.fixedCost), this.formatCurrency(item.usageCost), this.formatCurrency(item.fixedCost + item.usageCost)]),
+            widths: ['*', 85, 85, 85]
+          },
+          {
+            title: '05. Bản đồ nhiệt sức chứa',
+            subtitle: 'Các vùng có tỷ lệ lấp đầy cao nhất theo bộ lọc.',
+            headers: ['Khu vực', 'Số lượng', 'Tỷ lệ lấp đầy'],
+            rows: this.capacityHeatmapRows().map(item => [item.zone, item.quantity, this.formatPercent(item.fillRate)]),
+            widths: ['*', 75, 80]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard cơ sở vật chất', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeFacilitiesFilters(): string[] {
+    const filters = this.appliedFilters();
+    return [
+      `Loại cơ sở: ${this.displayFacilityType(filters.facilityType)}`,
+      `Ưu tiên bảo trì: ${this.displayPriority(filters.maintenancePriority)}`,
+      `Khu lưu trữ: ${this.displayFacilityType(filters.storageZone)}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(numericValue > 1 ? numericValue / 100 : numericValue);
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void { this.toggleEditMode(); }
 
   saveFilter(): void {
-    alert('Chức năng lưu bộ lọc Facilities & Maintenance đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.applyFilters();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { facilityType: 'All', maintenancePriority: 'All', storageZone: 'All' }));
+  }
+
 }

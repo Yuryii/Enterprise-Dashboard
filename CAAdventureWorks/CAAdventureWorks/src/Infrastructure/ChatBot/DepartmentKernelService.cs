@@ -56,9 +56,13 @@ public class DepartmentKernelService : Application.ChatBot.Services.ISemanticKer
 
                 var kernel = kernelBuilder.Build();
 
-                // Add Text2SQL plugin
-                var textToSqlPlugin = new Plugins.TextToSqlPlugin(_connectionString, config.AllowedTables);
-                kernel.Plugins.AddFromObject(textToSqlPlugin, "TextToSql");
+                // Add Text2SQL plugin only for departments that explicitly allow database tables.
+                // Executive PDF AI assessment uses already-filtered dashboard JSON, so it must not invoke SQL tools.
+                if (config.AllowedTables.Count > 0)
+                {
+                    var textToSqlPlugin = new Plugins.TextToSqlPlugin(_connectionString, config.AllowedTables);
+                    kernel.Plugins.AddFromObject(textToSqlPlugin, "TextToSql");
+                }
 
                 _kernels[deptId] = kernel;
                 _logger.LogInformation("Semantic Kernel built successfully for department: {DeptId}", deptId);
@@ -133,11 +137,11 @@ public class DepartmentKernelService : Application.ChatBot.Services.ISemanticKer
         _logger.LogInformation("Getting chat response for department: {DeptId}, user: {UserId}", deptId, userId);
 
         var chatService = kernel.GetRequiredService<IChatCompletionService>();
-            var settings = new OpenAIPromptExecutionSettings
-            {
-                Temperature = 0.7,
-                ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
-            };
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            Temperature = 0.7,
+            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+        };
 
         var history = new Microsoft.SemanticKernel.ChatCompletion.ChatHistory();
         history.AddSystemMessage(GetSystemPrompt(deptId));

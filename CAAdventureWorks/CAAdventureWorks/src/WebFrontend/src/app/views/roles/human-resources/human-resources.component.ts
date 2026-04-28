@@ -21,9 +21,11 @@ import {
 } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
-import { HRDashboardService } from './hr-dashboard.service';
+import { HRDashboardResponseDto, HRDashboardService } from './hr-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -79,9 +81,12 @@ export class HumanResourcesComponent implements OnInit {
   readonly subtitle = 'Dashboard';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
+  readonly savedFilterStorageKey = 'human_resources_saved_filter';
   readonly gridsterStorageKey = 'hr_grid_layout';
   readonly hiddenChartsStorageKey = 'hr_hidden_charts';
 
@@ -515,14 +520,15 @@ export class HumanResourcesComponent implements OnInit {
     if (!overview) return [];
 
     return [
-      { label: 'Nghỉ phép TB', value: overview.averageVacationHours, suffix: ' giờ' },
-      { label: 'Nghỉ ốm TB', value: overview.averageSickLeaveHours, suffix: ' giờ' },
-      { label: 'Thâm niên TB', value: overview.averageTenureYears, suffix: ' năm' },
-      { label: 'NV lương tháng', value: overview.salariedEmployees, suffix: '' }
+      { label: 'Nghỉ phép TB', value: overview.averageVacationHours, suffix: ' giờ', digits: '1.0-1', progress: Math.min(100, overview.averageVacationHours) },
+      { label: 'Nghỉ ốm TB', value: overview.averageSickLeaveHours, suffix: ' giờ', digits: '1.0-1', progress: Math.min(100, overview.averageSickLeaveHours) },
+      { label: 'Thâm niên TB', value: overview.averageTenureYears, suffix: ' năm', digits: '1.0-1', progress: Math.min(100, overview.averageTenureYears * 5) },
+      { label: 'NV lương tháng', value: overview.salariedEmployees, suffix: '', digits: '1.0-0', progress: Math.min(100, overview.salariedEmployees) }
     ];
   });
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -545,27 +551,132 @@ export class HumanResourcesComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: '2009-01-01',
-      endDate: '2014-12-31',
-      departmentId: null,
-      gender: null,
-      salariedOnly: null,
-      activeOnly: true
-    });
-
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2009-01-01', endDate: '2014-12-31', departmentId: null, gender: null, salariedOnly: null, activeOnly: true });
     this.loadDashboard();
   }
 
-  exportPDF(): void {
-    console.log('Exporting HR dashboard to PDF...');
-    alert('Chức năng xuất PDF đang được phát triển');
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as HRDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo nhân sự.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'human-resources', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: this.title,
+        subtitle: this.subtitle,
+        filePrefix: 'HumanResourcesDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.healthCards(),
+        filters: this.describeHrFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Xu hướng tuyển dụng theo bộ lọc',
+            subtitle: 'Số lượng tuyển mới theo từng kỳ trong phạm vi ngày đang chọn.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Tuyển mới', 'Tổng NV'],
+            rows: currentDashboard.employeeTrend.slice(0, 12).map(item => [item.period, item.year, item.month, item.newHires, item.totalEmployees]),
+            widths: ['*', 45, 45, 65, 65]
+          },
+          {
+            title: '02. Nhân viên theo phòng ban',
+            subtitle: 'Dữ liệu phòng ban sau khi áp dụng bộ lọc hiện tại.',
+            headers: ['Phòng ban', 'Số nhân viên', 'Lương TB/giờ'],
+            rows: currentDashboard.employeesByDepartment.slice(0, 12).map(item => [item.departmentName, item.employeeCount, this.formatCurrency(item.averagePayRate)]),
+            widths: ['*', 75, 85]
+          },
+          {
+            title: '03. Top chức danh',
+            subtitle: 'Các chức danh có số lượng nhân viên cao nhất trong bộ lọc hiện tại.',
+            headers: ['Chức danh', 'Số nhân viên', 'Lương TB/giờ', 'Nghỉ phép TB'],
+            rows: currentDashboard.topJobTitles.slice(0, 10).map(item => [item.jobTitle, item.employeeCount, this.formatCurrency(item.averagePayRate), `${this.formatNumber(item.averageVacationHours)} giờ`]),
+            widths: ['*', 65, 80, 80]
+          },
+          {
+            title: '04. Phân bố giới tính',
+            subtitle: 'Cơ cấu giới tính theo dữ liệu đã lọc.',
+            headers: ['Giới tính', 'Số nhân viên', 'Tỷ lệ'],
+            rows: currentDashboard.genderDistribution.map(item => [item.genderLabel, item.employeeCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 75, 75]
+          },
+          {
+            title: '05. Mức lương theo phòng ban',
+            subtitle: 'Min / Avg / Max pay rate theo phòng ban trong bộ lọc.',
+            headers: ['Phòng ban', 'Min', 'Avg', 'Max'],
+            rows: currentDashboard.payRateByDepartment.slice(0, 10).map(item => [item.departmentName, this.formatCurrency(item.minPayRate), this.formatCurrency(item.averagePayRate), this.formatCurrency(item.maxPayRate)]),
+            widths: ['*', 70, 70, 70]
+          },
+          {
+            title: '06. Thâm niên nhân viên',
+            subtitle: 'Phân bố thâm niên theo nhân sự đang nằm trong bộ lọc.',
+            headers: ['Khoảng thâm niên', 'Số nhân viên', 'Tỷ lệ'],
+            rows: currentDashboard.employeeTenure.map(item => [item.tenureRange, item.employeeCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 75, 75]
+          },
+          {
+            title: '07. Phân bố ca làm việc',
+            subtitle: 'Cơ cấu nhân sự theo ca làm việc sau khi áp dụng bộ lọc.',
+            headers: ['Ca', 'Số nhân viên', 'Tỷ lệ'],
+            rows: currentDashboard.shiftDistribution.map(item => [item.shiftName, item.employeeCount, this.formatPercent(item.percentage)]),
+            widths: ['*', 75, 75]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard nhân sự', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describeHrFilters(dashboard: HRDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const department = dashboard.filterOptions.departments.find(item => item.id === filters.departmentId)?.name ?? 'Tất cả';
+    const gender = filters.gender === 'M' ? 'Nam' : filters.gender === 'F' ? 'Nữ' : 'Tất cả';
+    const salaried = filters.salariedOnly == null ? 'Tất cả' : filters.salariedOnly ? 'Chỉ nhân viên lương tháng' : 'Không chỉ lương tháng';
+    const active = filters.activeOnly == null ? 'Tất cả' : filters.activeOnly ? 'Chỉ nhân viên hoạt động' : 'Bao gồm lịch sử';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Phòng ban: ${department}`,
+      `Giới tính: ${gender}`,
+      `Lương tháng: ${salaried}`,
+      `Trạng thái: ${active}`
+    ];
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatNumber(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Number(value ?? 0));
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
 
   customizeLayout(): void { this.toggleEditMode(); }
 
   saveFilter(): void {
-    console.log('Saving HR dashboard filters...');
-    alert('Chức năng lưu bộ lọc đang được phát triển');
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
   }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2009-01-01', endDate: '2014-12-31', departmentId: null, gender: null, salariedOnly: null, activeOnly: true }));
+  }
+
 }

@@ -33,6 +33,8 @@ public static class DependencyInjection
         builder.Services.AddCors();
 
         builder.Services.AddSignalR();
+
+        builder.Services.AddScoped<SalesOrderImportJob>();
     }
 
     public static void AddKeyVaultIfConfigured(this IHostApplicationBuilder builder)

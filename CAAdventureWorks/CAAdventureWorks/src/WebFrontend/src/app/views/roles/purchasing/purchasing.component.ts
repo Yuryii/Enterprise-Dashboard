@@ -7,9 +7,11 @@ import { getStyle } from '@coreui/utils';
 import { ButtonDirective, CardBodyComponent, CardComponent, CardHeaderComponent, ColComponent, FormCheckComponent, FormCheckInputDirective, FormControlDirective, FormLabelDirective, FormSelectDirective, ProgressComponent, RowComponent, TemplateIdDirective, WidgetStatAComponent, WidgetStatBComponent } from '@coreui/angular';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { IconDirective } from '@coreui/icons-angular';
-import { PurchasingDashboardService } from './purchasing-dashboard.service';
+import { PurchasingDashboardResponseDto, PurchasingDashboardService } from './purchasing-dashboard.service';
 import { Gridster as GridsterComponent, GridsterItem as GridsterItemComponent } from 'angular-gridster2';
 import type { GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
+import { clearDashboardFilter, restoreDashboardFilter, saveDashboardFilter } from '../shared/filter-storage';
+import { exportDashboardPdf } from '../shared/dashboard-pdf-export';
 
 export interface ChartDef {
   id: string;
@@ -72,10 +74,13 @@ export class PurchasingComponent implements OnInit {
   readonly subtitle = 'Hiệu suất nhà cung cấp, đơn mua và vận hành nhập hàng';
 
   readonly loading = signal(false);
+  readonly includeAiAssessment = signal(false);
+  readonly aiAssessmentLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly dashboard = signal<any>(null);
 
-  private readonly gridsterStorageKey = 'purchasing_grid_layout';
+  private readonly savedFilterStorageKey = 'purchasing_saved_filter';
+  readonly gridsterStorageKey = 'purchasing_grid_layout';
   private readonly hiddenChartsStorageKey = 'purchasing_hidden_charts';
 
   readonly isEditMode = signal(false);
@@ -433,6 +438,7 @@ export class PurchasingComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.restoreSavedFilter();
     this.loadDashboard();
   }
 
@@ -455,19 +461,142 @@ export class PurchasingComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filterForm.reset({
-      startDate: '2013-01-01',
-      endDate: '2014-12-31',
-      vendorId: null,
-      status: null,
-      shipMethodId: null,
-      productId: null,
-      preferredVendorOnly: null,
-      activeVendorOnly: true
-    });
+    clearDashboardFilter(this.savedFilterStorageKey);
+    this.filterForm.reset({ startDate: '2013-01-01', endDate: '2014-12-31', vendorId: null, status: null, shipMethodId: null, productId: null, preferredVendorOnly: null, activeVendorOnly: true });
     this.loadDashboard();
   }
 
-  exportPDF(): void { alert('Chức năng xuất PDF đang được phát triển'); }
-  saveFilter(): void { alert('Chức năng lưu bộ lọc đang được phát triển'); }
+  toggleAiAssessment(enabled: boolean): void {
+    this.includeAiAssessment.set(enabled);
+  }
+
+  async exportPDF(): Promise<void> {
+    const currentDashboard = this.dashboard() as PurchasingDashboardResponseDto | null;
+    if (!currentDashboard) {
+      alert('Chưa có dữ liệu để tải báo cáo mua hàng.');
+      return;
+    }
+
+    try {
+      await exportDashboardPdf({
+        aiAssessment: { enabled: this.includeAiAssessment(), departmentId: 'purchasing', dashboard: currentDashboard ?? null, filters: this.filterForm.getRawValue(), setLoading: value => this.aiAssessmentLoading.set(value) },
+        title: this.title,
+        subtitle: 'Báo cáo theo bộ lọc hiện tại',
+        filePrefix: 'PurchasingDashboard',
+        metrics: this.kpiCards(),
+        secondaryMetrics: this.healthCards(),
+        filters: this.describePurchasingFilters(currentDashboard),
+        sections: [
+          {
+            title: '01. Xu hướng chi mua theo bộ lọc',
+            subtitle: 'Tổng chi mua và số đơn theo từng kỳ trong phạm vi đang chọn.',
+            headers: ['Kỳ', 'Năm', 'Tháng', 'Chi mua', 'Đơn mua'],
+            rows: currentDashboard.spendTrend.slice(0, 12).map(item => [item.period, item.year, item.month, this.formatCurrency(item.totalSpend), item.orders]),
+            widths: ['*', 45, 45, 85, 55]
+          },
+          {
+            title: '02. Trạng thái đơn mua',
+            subtitle: 'Phân bổ trạng thái đơn mua sau khi áp dụng bộ lọc.',
+            headers: ['Mã trạng thái', 'Trạng thái', 'Số đơn', 'Tổng chi'],
+            rows: currentDashboard.orderStatuses.map(item => [item.status, this.translatePurchaseStatus(item.statusLabel), item.orders, this.formatCurrency(item.totalSpend)]),
+            widths: [65, '*', 55, 85]
+          },
+          {
+            title: '03. Top nhà cung cấp',
+            subtitle: 'Nhà cung cấp có tổng chi mua cao nhất trong dữ liệu đã lọc.',
+            headers: ['Nhà cung cấp', 'Tổng chi', 'Đơn mua', 'TB/đơn'],
+            rows: currentDashboard.topVendors.slice(0, 10).map(item => [item.vendorName, this.formatCurrency(item.totalSpend), item.orders, this.formatCurrency(item.averageOrderValue)]),
+            widths: ['*', 85, 55, 85]
+          },
+          {
+            title: '04. Top sản phẩm đặt mua',
+            subtitle: 'Sản phẩm có chi mua cao theo bộ lọc hiện tại.',
+            headers: ['Sản phẩm', 'SL đặt', 'Tổng tiền', 'Đơn giá TB'],
+            rows: currentDashboard.topProducts.slice(0, 10).map(item => [item.productName, item.orderedQty, this.formatCurrency(item.lineTotal), this.formatCurrency(item.averageUnitPrice)]),
+            widths: ['*', 60, 85, 85]
+          },
+          {
+            title: '05. Tỷ lệ giao hàng nhà cung cấp',
+            subtitle: 'Tỷ lệ nhận, reject và stocked rate theo nhà cung cấp.',
+            headers: ['Nhà cung cấp', 'Nhận hàng', 'Từ chối', 'Stocked'],
+            rows: currentDashboard.vendorDeliveryRates.slice(0, 10).map(item => [item.vendorName, this.formatPercent(item.receiveRate), this.formatPercent(item.rejectRate), this.formatPercent(item.stockedRate)]),
+            widths: ['*', 65, 65, 65]
+          },
+          {
+            title: '06. Lead time nhà cung cấp',
+            subtitle: 'Thời gian chờ trung bình và số sản phẩm theo nhà cung cấp.',
+            headers: ['Nhà cung cấp', 'Lead time TB', 'Số sản phẩm', 'Giá chuẩn TB'],
+            rows: currentDashboard.vendorLeadTimes.slice(0, 10).map(item => [item.vendorName, `${item.averageLeadTimeDays} ngày`, item.productCount, this.formatCurrency(item.averageStandardPrice)]),
+            widths: ['*', 75, 65, 85]
+          },
+          {
+            title: '07. Nhà cung cấp theo vùng',
+            subtitle: 'Phân bổ nhà cung cấp theo quốc gia và tỉnh/bang.',
+            headers: ['Quốc gia', 'Tỉnh/Bang', 'Số NCC'],
+            rows: currentDashboard.vendorsByRegion.slice(0, 12).map(item => [item.country, item.stateProvince, item.vendorCount]),
+            widths: ['*', '*', 60]
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Không thể tạo PDF dashboard mua hàng', error);
+      alert('Không thể tạo file PDF. Vui lòng thử lại.');
+    }
+  }
+
+  private describePurchasingFilters(dashboard: PurchasingDashboardResponseDto): string[] {
+    const filters = dashboard.filters;
+    const vendor = dashboard.filterOptions.vendors.find(item => item.id === filters.vendorId)?.name ?? 'Tất cả';
+    const shipMethod = dashboard.filterOptions.shipMethods.find(item => item.id === filters.shipMethodId)?.name ?? 'Tất cả';
+    const product = dashboard.filterOptions.products.find(item => item.id === filters.productId)?.name ?? 'Tất cả';
+
+    return [
+      `Thời gian: ${this.formatReportDate(filters.startDate)} - ${this.formatReportDate(filters.endDate)}`,
+      `Nhà cung cấp: ${vendor}`,
+      `Trạng thái: ${filters.status ?? 'Tất cả'}`,
+      `Ship method: ${shipMethod}`,
+      `Sản phẩm: ${product}`,
+      `NCC ưu tiên: ${this.formatBooleanFilter(filters.preferredVendorOnly)}`,
+      `NCC hoạt động: ${this.formatBooleanFilter(filters.activeVendorOnly)}`
+    ];
+  }
+
+  private translatePurchaseStatus(status: string): string {
+    const statusLabelMap: Record<string, string> = {
+      Pending: 'Chờ duyệt',
+      Approved: 'Đã duyệt',
+      Rejected: 'Từ chối',
+      Complete: 'Hoàn tất'
+    };
+    return statusLabelMap[status] ?? status;
+  }
+
+  private formatCurrency(value: number | null | undefined): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value ?? 0));
+  }
+
+  private formatPercent(value: number | null | undefined): string {
+    const numericValue = Number(value ?? 0);
+    return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(numericValue > 1 ? numericValue / 100 : numericValue);
+  }
+
+  private formatBooleanFilter(value: boolean | null | undefined): string {
+    return value == null ? 'Tất cả' : value ? 'Có' : 'Không';
+  }
+
+  private formatReportDate(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+  }
+
+  saveFilter(): void {
+    saveDashboardFilter(this.savedFilterStorageKey, this.filterForm.getRawValue());
+    this.loadDashboard();
+  }
+  private restoreSavedFilter(): void {
+    this.filterForm.patchValue(restoreDashboardFilter(this.savedFilterStorageKey, { startDate: '2013-01-01', endDate: '2014-12-31', vendorId: null, status: null, shipMethodId: null, productId: null, preferredVendorOnly: null, activeVendorOnly: true }));
+  }
+
 }

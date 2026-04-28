@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     data: {
-      title: 'Theme'
+      title: 'Giao diện'
     },
     children: [
       {
@@ -16,14 +16,14 @@ export const routes: Routes = [
         path: 'colors',
         loadComponent: () => import('./colors.component').then(m => m.ColorsComponent),
         data: {
-          title: 'Colors'
+          title: 'Màu sắc'
         }
       },
       {
         path: 'typography',
         loadComponent: () => import('./typography.component').then(m => m.TypographyComponent),
         data: {
-          title: 'Typography'
+          title: 'Kiểu chữ'
         }
       }
     ]
