@@ -123,6 +123,12 @@ BEGIN
 END;
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[ChatBot].[AlertConfiguration]') AND name = N'UserEmail')
+BEGIN
+    ALTER TABLE [ChatBot].[AlertConfiguration] ADD [UserEmail] NVARCHAR(256) NULL;
+END;
+GO
+
 IF OBJECT_ID(N'[ChatBot].[AlertHistory]', N'U') IS NULL
 BEGIN
     CREATE TABLE [ChatBot].[AlertHistory]

@@ -62,6 +62,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAlertEvaluationService, AlertEvaluationService>();
         builder.Services.AddScoped<IAlertScheduler, AlertRecurringJobScheduler>();
         builder.Services.AddScoped<AlertEvaluationJob>();
+        builder.Services.Configure<AlertEmailSettings>(builder.Configuration.GetSection("AlertEmailSettings"));
+        builder.Services.AddScoped<IAlertEmailNotificationService, AlertEmailNotificationService>();
 
         // Alert Compute Services (one per department)
         builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.SalesAlertComputeService>();

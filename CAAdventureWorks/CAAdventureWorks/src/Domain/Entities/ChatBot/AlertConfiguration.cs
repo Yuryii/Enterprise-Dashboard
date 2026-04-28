@@ -23,6 +23,9 @@ public class AlertConfiguration
     [StringLength(256)]
     public string UserId { get; set; } = string.Empty;
 
+    [StringLength(256)]
+    public string? UserEmail { get; set; }
+
     [Required]
     [StringLength(64)]
     public string DepartmentCode { get; set; } = string.Empty;

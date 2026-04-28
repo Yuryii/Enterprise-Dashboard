@@ -37,6 +37,7 @@ public class CreateAlertConfigurationCommandHandler(
             existingConfig.ScanIntervalDays = request.ScanIntervalDays;
             existingConfig.ScanIntervalSeconds = request.ScanIntervalSeconds;
             existingConfig.ExtraParameters = request.ExtraParameters;
+            existingConfig.UserEmail = user.Email;
             existingConfig.UpdatedAt = DateTime.UtcNow;
 
             db.AlertConfigurations.Update(existingConfig);
@@ -52,6 +53,7 @@ public class CreateAlertConfigurationCommandHandler(
             AlertDefinitionId = request.AlertDefinitionId,
             UserId = userId,
             DepartmentCode = definition.DepartmentCode,
+            UserEmail = user.Email,
             IsEnabled = true,
             ThresholdValue = request.ThresholdValue ?? definition.DefaultThreshold,
             ScanIntervalDays = request.ScanIntervalDays,

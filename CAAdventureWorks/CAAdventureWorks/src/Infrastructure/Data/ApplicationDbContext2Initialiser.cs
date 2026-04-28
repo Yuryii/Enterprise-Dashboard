@@ -192,6 +192,26 @@ public class ApplicationDbContext2Initialiser
             new AlertDefinition { Code = "EXEC_CUSTOMER_SATISFACTION", Name = "Mức độ hài lòng khách hàng thấp", Description = "Cảnh báo khi điểm hài lòng khách hàng dưới X%", DepartmentCode = "Executive", DefaultThreshold = 75m, ThresholdUnit = "Percent", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
         });
 
+        // ===== EXECUTIVE - DEBT OPTIMIZATION =====
+        alertDefinitions.AddRange(new[]
+        {
+            new AlertDefinition { Code = "EXEC_DEBT_DEFERRED_AMOUNT", Name = "Tổng công nợ bị hoãn cao", Description = "Cảnh báo khi tổng số tiền các khoản công nợ bị hoãn thanh toán vượt ngưỡng cho phép", DepartmentCode = "Executive", DefaultThreshold = 500_000_000m, ThresholdUnit = "VND", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "EXEC_DEBT_DEFERRED_COUNT", Name = "Số lượng công nợ bị hoãn nhiều", Description = "Cảnh báo khi số lượng vendor bị hoãn thanh toán vượt ngưỡng", DepartmentCode = "Executive", DefaultThreshold = 10m, ThresholdUnit = "Count", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "EXEC_DEBT_BUDGET_UTILIZATION_LOW", Name = "Tỷ lệ sử dụng ngân sách thấp", Description = "Cảnh báo khi tỷ lệ sử dụng ngân sách thanh toán thấp hơn X%", DepartmentCode = "Executive", DefaultThreshold = 70m, ThresholdUnit = "Percent", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "EXEC_DEBT_IMPORTANCE_SCORE_LOW", Name = "Điểm quan trọng tổng thể thấp", Description = "Cảnh báo khi tổng importance score của các khoản được thanh toán thấp hơn kỳ vọng", DepartmentCode = "Executive", DefaultThreshold = 500m, ThresholdUnit = "Score", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "EXEC_DEBT_DEFERRED_CATEGORY_HIGH", Name = "Công nợ hoãn tập trung theo danh mục", Description = "Cảnh báo khi tỷ lệ công nợ hoãn trong một danh mục vượt X%", DepartmentCode = "Executive", DefaultThreshold = 50m, ThresholdUnit = "Percent", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+        });
+
+        // ===== FINANCE - DEBT OPTIMIZATION =====
+        alertDefinitions.AddRange(new[]
+        {
+            new AlertDefinition { Code = "FINANCE_DEBT_OVERDUE_DAYS", Name = "Công nợ quá hạn nhiều ngày", Description = "Cảnh báo khi số ngày quá hạn trung bình của các khoản công nợ lớn hơn X ngày", DepartmentCode = "Finance", DefaultThreshold = 7m, ThresholdUnit = "Days", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "FINANCE_DEBT_HIGH_VALUE_VENDOR", Name = "Vendor có công nợ lớn", Description = "Cảnh báo khi tổng công nợ của một vendor vượt ngưỡng giới hạn tín dụng", DepartmentCode = "Finance", DefaultThreshold = 100_000_000m, ThresholdUnit = "VND", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "FINANCE_DEBT_PAYMENT_EFFICIENCY", Name = "Hiệu suất thanh toán thấp", Description = "Cảnh báo khi tỷ lệ số tiền đã thanh toán trên tổng công nợ thấp hơn X%", DepartmentCode = "Finance", DefaultThreshold = 60m, ThresholdUnit = "Percent", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "FINANCE_DEBT_CORE_MATERIAL_EXPOSURE", Name = "Rủi ro nguyên liệu lõi", Description = "Cảnh báo khi tổng công nợ với vendors 'Core Material' vượt ngưỡng", DepartmentCode = "Finance", DefaultThreshold = 1_000_000_000m, ThresholdUnit = "VND", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new AlertDefinition { Code = "FINANCE_DEBT_URGENT_DUE", Name = "Công nợ đến hạn trong 3 ngày", Description = "Cảnh báo khi số lượng công nợ có due date trong 3 ngày tới vượt ngưỡng", DepartmentCode = "Finance", DefaultThreshold = 5m, ThresholdUnit = "Count", RequiresParameters = true, IsActive = true, CreatedAt = DateTime.UtcNow },
+        });
+
         _context.AlertDefinitions.AddRange(alertDefinitions);
         await _context.SaveChangesAsync();
         _logger.LogInformation("Seeded {Count} alert definitions for {DeptCount} departments.", alertDefinitions.Count, 15);

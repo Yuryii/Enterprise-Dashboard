@@ -84,5 +84,21 @@ public class AlertEvaluationJob
         {
             _logger.LogError(ex, "[AlertJob] SaveChanges failed for ConfigId={ConfigId}", configurationId);
         }
+
+        // Send email notification if alert is triggered
+        _logger.LogWarning("[EmailDebug] Checking email trigger: IsTriggered={IsTriggered}", result.IsTriggered);
+        if (result.IsTriggered)
+        {
+            var emailService = scope.ServiceProvider.GetRequiredService<IAlertEmailNotificationService>();
+            try
+            {
+                await emailService.SendAlertEmailAsync(history, config, ct);
+                _logger.LogInformation("[AlertJob] Email notification sent for ConfigId={ConfigId}", configurationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[AlertJob] Email notification failed for ConfigId={ConfigId}", configurationId);
+            }
+        }
     }
 }

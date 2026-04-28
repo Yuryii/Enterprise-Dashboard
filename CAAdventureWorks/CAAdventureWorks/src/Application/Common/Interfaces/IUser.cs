@@ -6,5 +6,7 @@ public interface IUser
 
     string? UserName { get; }
 
+    string? Email { get; }
+
     List<string>? Roles { get; }
 }

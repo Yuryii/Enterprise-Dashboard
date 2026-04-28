@@ -87,6 +87,18 @@ public class AlertEvaluationService : IAlertEvaluationService
         ["EXEC_INVENTORY_TURNS"] = ("Executive", "INVENTORY_TURNS", (actual, threshold) => actual < threshold),
         ["EXEC_EMPLOYEE_SATISFACTION"] = ("Executive", "EMPLOYEE_SATISFACTION", (actual, threshold) => actual < threshold),
         ["EXEC_CUSTOMER_SATISFACTION"] = ("Executive", "CUSTOMER_SATISFACTION", (actual, threshold) => actual < threshold),
+        // Executive - Debt Optimization
+        ["EXEC_DEBT_DEFERRED_AMOUNT"] = ("Executive", "DEBT_DEFERRED_AMOUNT", (actual, threshold) => actual > threshold),
+        ["EXEC_DEBT_DEFERRED_COUNT"] = ("Executive", "DEBT_DEFERRED_COUNT", (actual, threshold) => actual > threshold),
+        ["EXEC_DEBT_BUDGET_UTILIZATION_LOW"] = ("Executive", "DEBT_BUDGET_UTILIZATION", (actual, threshold) => actual < threshold),
+        ["EXEC_DEBT_IMPORTANCE_SCORE_LOW"] = ("Executive", "DEBT_IMPORTANCE_SCORE", (actual, threshold) => actual < threshold),
+        ["EXEC_DEBT_DEFERRED_CATEGORY_HIGH"] = ("Executive", "DEBT_DEFERRED_CATEGORY_RATIO", (actual, threshold) => actual > threshold),
+        // Finance - Debt Optimization
+        ["FINANCE_DEBT_OVERDUE_DAYS"] = ("Finance", "DEBT_OVERDUE_DAYS", (actual, threshold) => actual > threshold),
+        ["FINANCE_DEBT_HIGH_VALUE_VENDOR"] = ("Finance", "DEBT_HIGH_VALUE_VENDOR", (actual, threshold) => actual > threshold),
+        ["FINANCE_DEBT_PAYMENT_EFFICIENCY"] = ("Finance", "DEBT_PAYMENT_EFFICIENCY", (actual, threshold) => actual < threshold),
+        ["FINANCE_DEBT_CORE_MATERIAL_EXPOSURE"] = ("Finance", "DEBT_CORE_MATERIAL_EXPOSURE", (actual, threshold) => actual > threshold),
+        ["FINANCE_DEBT_URGENT_DUE"] = ("Finance", "DEBT_URGENT_DUE", (actual, threshold) => actual > threshold),
     };
 
     public AlertEvaluationService(

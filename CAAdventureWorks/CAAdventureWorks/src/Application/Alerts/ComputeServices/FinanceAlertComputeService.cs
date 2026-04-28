@@ -1,10 +1,13 @@
 using CAAdventureWorks.Application.Alerts.Interfaces;
 using CAAdventureWorks.Application.Common.Interfaces;
+using CAAdventureWorks.Domain.Entities.ChatBot;
 using Microsoft.EntityFrameworkCore;
 
 namespace CAAdventureWorks.Application.Alerts.ComputeServices;
 
-public class FinanceAlertComputeService(IApplicationDbContext db) : IAlertComputeService
+public class FinanceAlertComputeService(
+    IApplicationDbContext db,
+    IChatBotDbContext chatBotDb) : IAlertComputeService
 {
     public string DepartmentCode => "Finance";
 
@@ -48,6 +51,55 @@ public class FinanceAlertComputeService(IApplicationDbContext db) : IAlertComput
         var avgOrderValue = totalOrders > 0 ? totalDue / totalOrders : 0m;
         values["CREDIT_LIMIT"] = avgOrderValue;
         messages["CREDIT_LIMIT"] = $"Giá trị đơn TB: ${avgOrderValue:N0}";
+
+        // --- Debt Optimization Metrics ---
+        var now = DateTime.UtcNow;
+
+        // DEBT_OVERDUE_DAYS: Average overdue days for pending debts past due date
+        var overdueDebts = await chatBotDb.VendorDebts
+            .Where(d => d.Status == DebtStatus.Pending && d.DueDate < now)
+            .ToListAsync(ct);
+        decimal avgOverdueDays = overdueDebts.Count > 0
+            ? (decimal)overdueDebts.Average(d => (now - d.DueDate).TotalDays)
+            : 0m;
+        values["DEBT_OVERDUE_DAYS"] = avgOverdueDays;
+        messages["DEBT_OVERDUE_DAYS"] = $"Số ngày quá hạn TB: {avgOverdueDays:N1} ngày ({overdueDebts.Count} khoản)";
+
+        // DEBT_HIGH_VALUE_VENDOR: Largest total debt by single vendor
+        decimal maxVendorDebt = await chatBotDb.VendorDebts
+            .Where(d => d.Status == DebtStatus.Pending)
+            .GroupBy(d => d.VendorName)
+            .Select(g => g.Sum(x => x.Amount))
+            .DefaultIfEmpty(0m)
+            .MaxAsync(ct);
+        values["DEBT_HIGH_VALUE_VENDOR"] = maxVendorDebt;
+        messages["DEBT_HIGH_VALUE_VENDOR"] = $"Công nợ vendor lớn nhất: {maxVendorDebt:N0} VND";
+
+        // DEBT_PAYMENT_EFFICIENCY: Paid amount / Total debt amount ratio
+        var allDebts = await chatBotDb.VendorDebts.ToListAsync(ct);
+        decimal totalDebtAmount = allDebts.Sum(d => d.Amount);
+        decimal paidDebtAmount = allDebts.Where(d => d.Status == DebtStatus.Paid).Sum(d => d.Amount);
+        decimal paymentEfficiency = totalDebtAmount > 0
+            ? paidDebtAmount / totalDebtAmount * 100m
+            : 0m;
+        values["DEBT_PAYMENT_EFFICIENCY"] = paymentEfficiency;
+        messages["DEBT_PAYMENT_EFFICIENCY"] = $"Hiệu suất thanh toán: {paymentEfficiency:N1}% ({paidDebtAmount:N0}/{totalDebtAmount:N0} VND)";
+
+        // DEBT_CORE_MATERIAL_EXPOSURE: Total unpaid debt in Core Material category
+        decimal coreMaterialDebt = await chatBotDb.VendorDebts
+            .Where(d => d.Status != DebtStatus.Paid && d.Category == "Core Material")
+            .SumAsync(d => d.Amount, ct);
+        values["DEBT_CORE_MATERIAL_EXPOSURE"] = coreMaterialDebt;
+        messages["DEBT_CORE_MATERIAL_EXPOSURE"] = $"Rủi ro nguyên liệu lõi (Core Material): {coreMaterialDebt:N0} VND";
+
+        // DEBT_URGENT_DUE: Count of pending debts due within 3 days
+        var urgentCount = await chatBotDb.VendorDebts
+            .Where(d => d.Status == DebtStatus.Pending
+                && d.DueDate >= now
+                && d.DueDate <= now.AddDays(3))
+            .CountAsync(ct);
+        values["DEBT_URGENT_DUE"] = urgentCount;
+        messages["DEBT_URGENT_DUE"] = $"Công nợ đến hạn trong 3 ngày: {urgentCount} khoản";
 
         return new DepartmentAlertMetrics("Finance", values, messages);
     }

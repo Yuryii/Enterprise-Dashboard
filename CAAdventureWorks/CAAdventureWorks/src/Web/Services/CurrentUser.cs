@@ -18,5 +18,8 @@ public class CurrentUser : IUser
     public string? UserName => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
         ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("preferred_username");
 
+    public string? Email => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("email");
+
     public List<string>? Roles => _httpContextAccessor.HttpContext?.User?.FindAll(ClaimTypes.Role).Select(x => x.Value).ToList();
 }
