@@ -39,3 +39,28 @@ var frontend = builder.AddJavaScriptApp(Services.WebFrontend, "../WebFrontend", 
     });
 
 builder.Build().Run();
+//                       _oo0oo_
+//                      o8888888o
+//                      88" . "88
+//                      (| -_- |)
+//                      0\  =  /0
+//                    ___/`---'\___
+//                  .' \\|     |// '.
+//                 / \\|||  :  |||// \
+//                / _||||| -:- |||||- \
+//               |   | \\\  -  /// |   |
+//               | \_|  ''\---/''  |_/ |
+//               \  .-\__  '-'  ___/-. /
+//             ___'. .'  /--.--\  `. .'___
+//          ."" '<  `.___\_<|>_/___.' >' "".
+//         | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+//         \  \ `_.   \_ __\ /__ _/   .-` /  /
+//     =====`-.____`.___ \_____/___.-`___.-'=====
+//                       `=---='
+//
+//     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//            Phật phù hộ, không bao giờ BUG
+//     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Chúng con chỉ còn 60 phút thôi ạ, xin hãy phù hộ cho chúng con hoàn thành tốt đẹp phần demo này,
+// không bị lỗi gì nghiêm trọng xảy ra. Chúng con cảm tạ ơn trên đã luôn che chở và bảo vệ chúng con trong suốt thời gian qua.
+// Nam mô A di đà phật!

@@ -3,12 +3,14 @@ using System.Text.Json;
 using CAAdventureWorks.Application.Alerts.ComputeServices;
 using CAAdventureWorks.Application.Alerts.Interfaces;
 using CAAdventureWorks.Application.Common.Interfaces;
+using CAAdventureWorks.Application.DebtOptimization;
 using CAAdventureWorks.Infrastructure.Alerts;
 using CAAdventureWorks.Infrastructure.BackgroundJobs;
 using CAAdventureWorks.Infrastructure.ChatBot;
 using CAAdventureWorks.Infrastructure.Data;
 using CAAdventureWorks.Infrastructure.Data.Interceptors;
 using CAAdventureWorks.Infrastructure.Identity;
+using CAAdventureWorks.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -77,6 +79,13 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.FacilitiesAlertComputeService>();
         builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.InformationServicesAlertComputeService>();
         builder.Services.AddScoped<IAlertComputeService, CAAdventureWorks.Application.Alerts.ComputeServices.ExecutiveAlertComputeService>();
+
+        // Debt Optimization services
+        var smtpSection = builder.Configuration.GetSection("SmtpSettings");
+        builder.Services.Configure<SmtpSettings>(smtpSection);
+        builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+        builder.Services.AddScoped<IDebtCfoKernelService, DebtCfoKernelService>();
+        builder.Services.AddSingleton<CAAdventureWorks.Application.DebtOptimization.KnapsackSolver>();
 
         var keycloakAuthority = builder.Configuration["Keycloak:Authority"];
         var keycloakAudience = builder.Configuration["Keycloak:Audience"];

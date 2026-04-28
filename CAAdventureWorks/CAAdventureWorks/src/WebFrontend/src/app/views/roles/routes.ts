@@ -25,9 +25,9 @@ export const routes: Routes = [
   },
   {
     path: 'finance',
-    canActivate: [roleGuard(['Finance', 'Executive'])],
-    loadComponent: () =>
-      import('./finance/finance.component').then((m) => m.FinanceComponent),
+    canActivate: [authGuard, roleGuard(['Finance', 'Executive'])],
+    loadChildren: () =>
+      import('./finance/routes').then((m) => m.financeRoutes),
     data: { title: 'Tài chính' }
   },
   {

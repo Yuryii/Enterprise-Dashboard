@@ -9,13 +9,16 @@ public class ApplicationDbContext2Initialiser
 {
     private readonly ILogger<ApplicationDbContext2Initialiser> _logger;
     private readonly ApplicationDbContext2 _context;
+    private readonly IServiceProvider _serviceProvider;
 
     public ApplicationDbContext2Initialiser(
         ILogger<ApplicationDbContext2Initialiser> logger,
-        ApplicationDbContext2 context)
+        ApplicationDbContext2 context,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _context = context;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task InitialiseAsync()
@@ -32,6 +35,7 @@ public class ApplicationDbContext2Initialiser
             _logger.LogInformation("ChatBot database created successfully.");
 
             await SeedAlertDefinitionsAsync();
+            await SeedVendorDebtsAsync();
 
             await _context.Database.CanConnectAsync();
             _logger.LogInformation("ChatBot database connection verified successfully.");
@@ -191,5 +195,12 @@ public class ApplicationDbContext2Initialiser
         _context.AlertDefinitions.AddRange(alertDefinitions);
         await _context.SaveChangesAsync();
         _logger.LogInformation("Seeded {Count} alert definitions for {DeptCount} departments.", alertDefinitions.Count, 15);
+    }
+
+    private async Task SeedVendorDebtsAsync()
+    {
+        var initializer = new VendorDebtInitializer(
+            _serviceProvider.GetRequiredService<ILogger<VendorDebtInitializer>>());
+        await initializer.InitializeAsync(_context);
     }
 }

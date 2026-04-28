@@ -11,5 +11,8 @@ public interface IChatBotDbContext
     DbSet<AlertDefinition> AlertDefinitions { get; }
     DbSet<AlertConfiguration> AlertConfigurations { get; }
     DbSet<AlertHistory> AlertHistories { get; }
+    DbSet<VendorDebt> VendorDebts { get; }
+    DbSet<VendorImportance> VendorImportances { get; }
+    DbSet<PaymentPlan> PaymentPlans { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

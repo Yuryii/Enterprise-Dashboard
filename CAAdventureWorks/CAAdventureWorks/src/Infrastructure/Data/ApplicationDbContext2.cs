@@ -17,6 +17,9 @@ public class ApplicationDbContext2 : DbContext, IChatBotDbContext
     public DbSet<AlertDefinition> AlertDefinitions => Set<AlertDefinition>();
     public DbSet<AlertConfiguration> AlertConfigurations => Set<AlertConfiguration>();
     public DbSet<AlertHistory> AlertHistories => Set<AlertHistory>();
+    public DbSet<VendorDebt> VendorDebts => Set<VendorDebt>();
+    public DbSet<VendorImportance> VendorImportances => Set<VendorImportance>();
+    public DbSet<PaymentPlan> PaymentPlans => Set<PaymentPlan>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +81,26 @@ public class ApplicationDbContext2 : DbContext, IChatBotDbContext
                   .WithMany(a => a.Histories)
                   .HasForeignKey(e => e.AlertDefinitionId)
                   .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<VendorDebt>(entity =>
+        {
+            entity.Property(e => e.VendorDebtId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.Status).HasConversion<byte>();
+            entity.HasIndex(e => e.Status).HasDatabaseName("IX_ChatBot_VendorDebt_Status");
+            entity.HasIndex(e => e.Amount).HasDatabaseName("IX_ChatBot_VendorDebt_Amount");
+        });
+
+        modelBuilder.Entity<VendorImportance>(entity =>
+        {
+            entity.Property(e => e.VendorImportanceId).ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<PaymentPlan>(entity =>
+        {
+            entity.Property(e => e.PaymentPlanId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
     }
 }

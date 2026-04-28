@@ -1,0 +1,53 @@
+.debt-optimization-app {
+  position: relative;
+  padding-bottom: 2rem;
+
+  .debt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--cui-primary);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .debt-header-text {
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--cui-primary);
+      margin: 0;
+    }
+  }
+
+  .email-preview {
+    font-size: 0.9rem;
+
+    .email-meta {
+      border-left: 3px solid var(--cui-info);
+    }
+
+    .email-body {
+      border-left: 3px solid var(--cui-success);
+    }
+  }
+
+  .loading-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2rem 3rem;
+    border-radius: 0.75rem;
+    text-align: center;
+    box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+  }
+
+  .white-pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+}

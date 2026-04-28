@@ -29,6 +29,12 @@ export const navItems: INavData[] = [
     roles: ['Finance', 'Executive-General-And-Administration-Manager'],
   } as NavRole,
   {
+    name: 'Tối ưu Công nợ',
+    url: '/roles/finance/debt-optimization',
+    iconComponent: { name: 'cil-wallet' },
+    roles: ['Finance', 'Executive-General-And-Administration-Manager'],
+  } as NavRole,
+  {
     name: 'Dịch Vụ Thông Tin',
     url: '/roles/information-services',
     iconComponent: { name: 'cil-code' },

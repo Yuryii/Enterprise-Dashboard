@@ -1,0 +1,351 @@
+<div class="debt-optimization-app">
+
+  <!-- Header -->
+  <div class="debt-header mb-4">
+    <div class="debt-header-text">
+      <h2 class="mb-1">{{ title }}</h2>
+      <span class="text-body-secondary">{{ subtitle }}</span>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  @if (errorMessage()) {
+  <c-alert color="danger" class="mb-3 d-flex align-items-center">
+    <svg cIcon name="cilWarning" class="me-2"></svg>
+    {{ errorMessage() }}
+  </c-alert>
+  }
+  @if (successMessage()) {
+  <c-alert color="success" class="mb-3 d-flex align-items-center">
+    <svg cIcon name="cilCheckCircle" class="me-2"></svg>
+    {{ successMessage() }}
+  </c-alert>
+  }
+
+  <!-- Optimization Controls -->
+  <c-card class="mb-4">
+    <c-card-body>
+      <form [formGroup]="budgetForm" (ngSubmit)="optimizePayment()" class="d-flex align-items-end gap-3 flex-wrap">
+        <div class="flex-grow-1" style="min-width: 280px;">
+          <label cLabel for="budget">Ngân sách giải ngân hiện có (VNĐ)</label>
+          <input cFormControl type="number" formControlName="budget" id="budget"
+            placeholder="Nhập số ngân sách, ví dụ: 800000000" min="0" step="1000000" />
+        </div>
+        <button cButton color="primary" type="submit"
+          [disabled]="optimizing() || loading()"
+          style="min-width: 180px;">
+          @if (optimizing()) {
+          <c-spinner diameter="16" color="light" class="me-2"></c-spinner>
+          Đang tối ưu...
+          } @else {
+          <svg cIcon name="cil-bolt" class="me-1"></svg>
+          Tối ưu Thanh toán
+          }
+        </button>
+        <button cButton color="secondary" variant="outline" type="button"
+          (click)="loadPendingDebts()"
+          [disabled]="optimizing()">
+          <svg cIcon name="cilReload" class="me-1"></svg>
+          Tải lại
+        </button>
+      </form>
+    </c-card-body>
+  </c-card>
+
+  <!-- Summary Cards -->
+  @if (optimizationResult()) {
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+      <c-card class="h-100 text-center border-primary">
+        <c-card-body>
+          <div class="text-primary-emphasis text-body-secondary small text-uppercase fw-semibold">Tổng ngân sách</div>
+          <div class="fw-bold fs-5 text-primary">{{ formatCurrency(optimizationResult()!.totalBudget) }}</div>
+        </c-card-body>
+      </c-card>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <c-card class="h-100 text-center border-success">
+        <c-card-body>
+          <div class="text-success-emphasis text-body-secondary small text-uppercase fw-semibold">Đã giải ngân</div>
+          <div class="fw-bold fs-5 text-success">{{ formatCurrency(optimizationResult()!.usedBudget) }}</div>
+        </c-card-body>
+      </c-card>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <c-card class="h-100 text-center border-warning">
+        <c-card-body>
+          <div class="text-warning-emphasis text-body-secondary small text-uppercase fw-semibold">Còn dư</div>
+          <div class="fw-bold fs-5 text-warning">{{ formatCurrency(optimizationResult()!.remainingBudget) }}</div>
+        </c-card-body>
+      </c-card>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <c-card class="h-100 text-center border-info">
+        <c-card-body>
+          <div class="text-info-emphasis text-body-secondary small text-uppercase fw-semibold">Điểm Uy tín</div>
+          <div class="fw-bold fs-5 text-info">{{ optimizationResult()!.totalImportanceScore }}</div>
+        </c-card-body>
+      </c-card>
+    </div>
+  </div>
+
+  <!-- Two Column Layout: Paid vs Deferred -->
+  <div class="row g-3 mb-4">
+    <!-- Paid Debts (Left Column) -->
+    <div class="col-lg-6">
+      <c-card class="h-100 border-success">
+        <c-card-header class="bg-success-subtle">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <svg cIcon name="cilCheckCircle" class="text-success"></svg>
+              <strong class="text-success">Giải ngân ngay ({{ optimizationResult()!.paidDebtsCount }})</strong>
+            </div>
+            <c-badge color="success" shape="rounded-pill">
+              {{ formatCurrency(optimizationResult()!.usedBudget) }}
+            </c-badge>
+          </div>
+        </c-card-header>
+        <c-card-body class="p-0">
+          <div style="max-height: 400px; overflow-y: auto;">
+            <table cTable hover class="mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Nhà cung cấp</th>
+                  <th scope="col">Số hóa đơn</th>
+                  <th scope="col" class="text-end">Số tiền</th>
+                  <th scope="col" class="text-center">Điểm</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (debt of optimizationResult()!.paidDebts; track debt.id) {
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ debt.vendorName }}</div>
+                    <div class="small text-body-secondary">
+                      <svg cIcon name="cil-industry" class="me-1"></svg>{{ debt.category }}
+                    </div>
+                  </td>
+                  <td class="text-body-secondary small">{{ debt.invoiceNumber }}</td>
+                  <td class="text-end fw-semibold text-success">{{ formatCurrency(debt.amount) }}</td>
+                  <td class="text-center">
+                    <c-badge [color]="getScoreColor(debt.importanceScore)" shape="rounded-pill">
+                      {{ debt.importanceScore }}
+                    </c-badge>
+                  </td>
+                </tr>
+                }
+                @if (optimizationResult()!.paidDebts.length === 0) {
+                <tr>
+                  <td colspan="4" class="text-center text-body-secondary py-4">
+                    Không có hóa đơn nào được giải ngân.
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </c-card-body>
+      </c-card>
+    </div>
+
+    <!-- Deferred Debts (Right Column) -->
+    <div class="col-lg-6">
+      <c-card class="h-100 border-danger">
+        <c-card-header class="bg-danger-subtle">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <svg cIcon name="cilWarning" class="text-danger"></svg>
+              <strong class="text-danger">Xin khất nợ ({{ optimizationResult()!.deferredDebtsCount }})</strong>
+            </div>
+            <c-badge color="danger" shape="rounded-pill">
+              {{ optimizationResult()!.deferredDebtsCount }} hóa đơn
+            </c-badge>
+          </div>
+        </c-card-header>
+        <c-card-body class="p-0">
+          <div style="max-height: 400px; overflow-y: auto;">
+            <table cTable hover class="mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Nhà cung cấp</th>
+                  <th scope="col">Số hóa đơn</th>
+                  <th scope="col" class="text-end">Số tiền</th>
+                  <th scope="col" class="text-center">Điểm</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (debt of optimizationResult()!.deferredDebts; track debt.id) {
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ debt.vendorName }}</div>
+                    <div class="small text-body-secondary">
+                      <svg cIcon name="cil-industry" class="me-1"></svg>{{ debt.category }}
+                    </div>
+                  </td>
+                  <td class="text-body-secondary small">{{ debt.invoiceNumber }}</td>
+                  <td class="text-end fw-semibold text-danger">{{ formatCurrency(debt.amount) }}</td>
+                  <td class="text-center">
+                    <c-badge [color]="getScoreColor(debt.importanceScore)" shape="rounded-pill">
+                      {{ debt.importanceScore }}
+                    </c-badge>
+                  </td>
+                </tr>
+                }
+                @if (optimizationResult()!.deferredDebts.length === 0) {
+                <tr>
+                  <td colspan="4" class="text-center text-body-secondary py-4">
+                    Không có hóa đơn nào bị hoãn.
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </c-card-body>
+      </c-card>
+    </div>
+  </div>
+
+  <!-- AI Email Draft -->
+  @if (optimizationResult()!.aiEmailDraft) {
+  <c-card class="mb-4 border-info">
+    <c-card-header class="bg-info-subtle d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <svg cIcon name="cil-speech" class="text-info"></svg>
+        <strong class="text-info">Email ngoại giao từ AI-CFO</strong>
+        <c-badge color="info" shape="rounded-pill">{{ optimizationResult()!.aiEmailDraft!.generatedBy }}</c-badge>
+      </div>
+      <button cButton color="primary" size="sm"
+        [disabled]="sendingEmail()"
+        (click)="sendEmail()">
+        @if (sendingEmail()) {
+        <c-spinner diameter="14" color="light" class="me-1"></c-spinner>
+        Đang gửi...
+        } @else {
+        <svg cIcon name="cilSend" class="me-1"></svg>
+        Gửi Email
+        }
+      </button>
+    </c-card-header>
+    <c-card-body>
+      <div class="email-preview">
+        <div class="email-meta mb-3 p-3 bg-body-tertiary rounded">
+          <div class="mb-2">
+            <strong class="text-body-secondary me-2">Subject:</strong>
+            <span>{{ optimizationResult()!.aiEmailDraft!.subject }}</span>
+          </div>
+          <div class="mb-2">
+            <strong class="text-body-secondary me-2">To:</strong>
+            <span class="small">{{ optimizationResult()!.aiEmailDraft!.recipients.join(', ') }}</span>
+          </div>
+          <div>
+            <strong class="text-body-secondary me-2">CC:</strong>
+            <span class="small">{{ optimizationResult()!.aiEmailDraft!.cc.join(', ') }}</span>
+          </div>
+        </div>
+        <div class="email-body p-3 bg-white border rounded">
+          <pre class="mb-0 white-pre" style="white-space: pre-wrap; font-family: inherit;">{{ optimizationResult()!.aiEmailDraft!.body }}</pre>
+        </div>
+      </div>
+    </c-card-body>
+  </c-card>
+  }
+  }
+
+  <!-- Pending Debts Table (before optimization) -->
+  @if (!optimizationResult() && pendingDebts()) {
+  <c-card>
+    <c-card-header>
+      <div class="d-flex justify-content-between align-items-center">
+        <strong>Danh sách công nợ chờ xử lý ({{ pendingDebts()!.totalCount }})</strong>
+        <span class="badge bg-secondary rounded-pill">
+          Tổng: {{ formatCurrency(pendingDebts()!.totalAmount) }}
+        </span>
+      </div>
+    </c-card-header>
+    <c-card-body class="p-0">
+      <div style="max-height: 500px; overflow-y: auto;">
+        <table cTable hover class="mb-0">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Nhà cung cấp</th>
+              <th scope="col">Loại</th>
+              <th scope="col">Số hóa đơn</th>
+              <th scope="col" class="text-end">Số tiền (VNĐ)</th>
+              <th scope="col" class="text-center">Điểm Uy tín</th>
+              <th scope="col">Hạn thanh toán</th>
+              <th scope="col">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (debt of pendingDebts()!.debts; track debt.id; let i = $index) {
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td class="fw-semibold">{{ debt.vendorName }}</td>
+              <td class="small text-body-secondary">{{ debt.category }}</td>
+              <td class="small text-body-secondary">{{ debt.invoiceNumber }}</td>
+              <td class="text-end">{{ formatCurrency(debt.amount) }}</td>
+              <td class="text-center">
+                <c-badge [color]="getScoreColor(debt.importanceScore)" shape="rounded-pill">
+                  {{ debt.importanceScore }}
+                </c-badge>
+              </td>
+              <td class="small">{{ debt.dueDate | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <c-badge [color]="getStatusColor(debt.status)" shape="rounded-pill">
+                  {{ debt.status === 'Pending' ? 'Chờ' : debt.status === 'Paid' ? 'Đã trả' : 'Hoãn' }}
+                </c-badge>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </c-card-body>
+  </c-card>
+  }
+
+  <!-- Vendor Score Legend -->
+  @if (vendorScores().length > 0) {
+  <c-card class="mt-4">
+    <c-card-header>
+      <strong>Bảng điểm Uy tín / Quan trọng của đối tác</strong>
+    </c-card-header>
+    <c-card-body class="p-0">
+      <div style="max-height: 300px; overflow-y: auto;">
+        <table cTable hover class="mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Loại nhà cung cấp</th>
+              <th scope="col" class="text-center">Điểm</th>
+              <th scope="col">Giải thích</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (score of vendorScores(); track score.id) {
+            <tr>
+              <td class="fw-semibold">{{ score.vendorCategory }}</td>
+              <td class="text-center">
+                <c-badge [color]="getScoreColor(score.score)" shape="rounded-pill">
+                  {{ score.score }}
+                </c-badge>
+              </td>
+              <td class="small text-body-secondary">{{ score.reason }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </c-card-body>
+  </c-card>
+  }
+
+  <!-- Loading Overlay -->
+  @if (loading()) {
+  <div class="loading-overlay">
+    <c-spinner color="primary" size="sm"></c-spinner>
+    <div class="mt-3 text-body-secondary">Đang tải dữ liệu...</div>
+  </div>
+  }
+</div>
